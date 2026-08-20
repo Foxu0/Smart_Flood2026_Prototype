@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model TelemetryLog {
+  id              Int      @id @default(autoincrement())
+  timestamp       DateTime @default(now())
+  water_level_m   Float
+  raw_distance_cm Float
+  rainfall_rate   Float
+  tip_count       Int      @default(0)
+  rssi_dbm        Int
+  supply_voltage  Float
+  uptime_sec      Int
+  sensor_status   String   @default("OK")
+
+  @@index([timestamp])
+}
+
+model SystemEvent {
+  id         Int      @id @default(autoincrement())
+  timestamp  DateTime @default(now())
+  event_code String
+  message    String
+  severity   String   @default("INFO")
+
+  @@index([timestamp])
+}
+
+model MLProjection {
+  id               Int      @id @default(autoincrement())
+  timestamp        DateTime @default(now())
+  horizon_30m_m    Float
+  horizon_60m_m    Float
+  confidence_score Float
+
+  @@index([timestamp])
+}
+
+model SystemSetting {
+  key_name   String   @id
+  value      String
+  updated_at DateTime @updatedAt
+}

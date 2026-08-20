@@ -1,0 +1,275 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+@import "tailwindcss";
+
+/* ── Base reset ──────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+html {
+  font: 16px/1.5 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  background-image:
+    linear-gradient(180deg, rgba(18, 58, 84, 0.40) 0%, rgba(31, 111, 148, 0.45) 100%),
+    url('/rain-bg.webp');
+  background-size: cover;
+  background-position: center center;
+  background-attachment: fixed;
+  background-color: #eaf6fb;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.font-display { font-family: 'Outfit', sans-serif; }
+.font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   KEYFRAMES — all animation definitions
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 1. Card entrance — slides up from 24px below + fades in */
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 2. Slide in from right (toast notifications) */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(120px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* 3. Slide out to right (toast dismiss) */
+@keyframes slideOutRight {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(120px); }
+}
+
+/* 4. Pulsing glow — live chart tail point breathing */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; r: 5px; filter: drop-shadow(0 0 4px #2b6e8f); }
+  50%       { opacity: 0.7; r: 7px; filter: drop-shadow(0 0 10px #2b6e8f); }
+}
+
+/* 5. Siren shake — urgent vibration when siren is active */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80%       { transform: translateX( 4px); }
+}
+
+/* 6. Ping ring — expanding ripple at Leaflet map marker (3 layered rings) */
+@keyframes ping-ring {
+  0%   { transform: scale(1);   opacity: 0.75; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+
+/* 7. Water wave — oscillating sine surface inside tank */
+@keyframes water-wave {
+  0%, 100% { transform: translateX(0); }
+  50%       { transform: translateX(8px); }
+}
+
+/* 8. Bubble rise — inside the water tank */
+@keyframes bubble-rise {
+  0%   { transform: translateY(0) scale(1);   opacity: 0.7; }
+  50%  { transform: translateY(-40%) scale(1.2); opacity: 0.5; }
+  100% { transform: translateY(-90%) scale(0.8); opacity: 0; }
+}
+
+/* 9. Shimmer — skeleton loading effect */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* 10. Fade in (simple) */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* 11. Progress bar drain — toast auto-dismiss timer */
+@keyframes drain {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+/* 12. Gentle float — hero badge subtle bob */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-3px); }
+}
+
+/* 13. Number flash — brief highlight when a metric updates */
+@keyframes number-flash {
+  0%   { color: inherit; }
+  30%  { color: #2b6e8f; filter: brightness(1.3); }
+  100% { color: inherit; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   ANIMATION UTILITY CLASSES
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Card entrance stagger */
+.card-enter {
+  animation: slideInUp 0.45s ease-out both;
+}
+.card-enter-d1 { animation-delay: 0ms; }
+.card-enter-d2 { animation-delay: 80ms; }
+.card-enter-d3 { animation-delay: 160ms; }
+.card-enter-d4 { animation-delay: 240ms; }
+.card-enter-d5 { animation-delay: 320ms; }
+.card-enter-d6 { animation-delay: 400ms; }
+.card-enter-d7 { animation-delay: 480ms; }
+
+/* Live glow tail */
+.glow-tail {
+  animation: pulse-glow 2.2s ease-in-out infinite;
+}
+
+/* Siren shake */
+.siren-shake {
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+/* Floating badge */
+.float-badge {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Number metric update flash */
+.metric-flash {
+  animation: number-flash 0.6s ease-out;
+}
+
+/* Shimmer skeleton */
+.shimmer {
+  background: linear-gradient(90deg, #f0f4f8 25%, #e0ecf5 50%, #f0f4f8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+/* Glassmorphism card */
+.glass-card {
+  backdrop-filter: blur(8px) saturate(1.4);
+  -webkit-backdrop-filter: blur(8px) saturate(1.4);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.40);
+  box-shadow: 0 2px 12px rgba(18, 58, 84, 0.07);
+}
+
+/* Ping rings (layered at map marker) */
+.station-beacon-marker {
+  background: transparent !important;
+  border: none !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+.ping-ring {
+  border-radius: 50%;
+  position: absolute;
+  animation: ping-ring 2s ease-out infinite;
+}
+.ping-ring-2 { animation-delay: 0.6s; }
+.ping-ring-3 { animation-delay: 1.2s; }
+
+/* ── Animated rain (used by RainOverlay.jsx) ────────────────────────────── */
+.raindrop-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.raindrop {
+  position: absolute;
+  top: -12%;
+  width: 2px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, transparent, #7fc4e0);
+  animation-name: raindrop-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes raindrop-fall {
+  0%   { transform: translate(0, 0); }
+  100% { transform: translate(var(--drift), 340px); }
+}
+
+/* Water-surface wave used inside the jar/tank gauge */
+.water-wave { animation: water-wave 3.2s ease-in-out infinite; }
+
+/* Bubble rise used in tank */
+.bubble { animation: bubble-rise ease-in infinite; }
+
+/* ── Toast notification ─────────────────────────────────────────────────── */
+.toast-enter { animation: slideInRight 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+.toast-exit  { animation: slideOutRight 0.3s ease-in both; }
+
+/* ── Reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .raindrop, .water-wave, .bubble, .card-enter,
+  .glow-tail, .siren-shake, .float-badge,
+  .ping-ring, .toast-enter, .toast-exit,
+  .shimmer, .metric-flash { animation: none !important; }
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  background: transparent;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Custom sleek scrollbars ────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #2563eb; }
+
+/* ── Micro-screens (down to 200px) ──────────────────────────────────────── */
+@media (max-width: 480px) { html { font-size: 14px; } }
+@media (max-width: 340px) { html { font-size: 12px; } }
+@media (max-width: 250px) { html { font-size: 10px; } }
+
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
+input[type="range"] { cursor: pointer; }
+
+/* ── Leaflet tooltip override (flood zone hover cards) ──────────────────── */
+.leaflet-tooltip,
+.leaflet-tooltip-custom {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1px solid #dbe4de !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(18, 58, 84, 0.20) !important;
+  padding: 8px 12px !important;
+  font-family: 'Nunito Sans', sans-serif !important;
+  color: #3f5361 !important;
+  white-space: normal !important;
+  width: max-content !important;
+  max-width: 220px !important;
+  min-width: 140px !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+.leaflet-tooltip::before,
+.leaflet-tooltip::after {
+  display: none !important;
+}
