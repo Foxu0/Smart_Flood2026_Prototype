@@ -1,0 +1,22 @@
+{
+  "short_name": "SmartFlood",
+  "name": "SmartFlood Antipolo — Flood Monitoring System",
+  "description": "Real-time AI-powered flood monitoring, PAGASA radar map, and CDRRMO emergency alert system for Antipolo City.",
+  "icons": [
+    {
+      "src": "/PUBMAT3.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/PUBMAT3.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#123a54",
+  "theme_color": "#123a54",
+  "display": "standalone",
+  "orientation": "portrait-primary"
+}
