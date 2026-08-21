@@ -973,31 +973,8 @@ export default function FloodMonitoringDashboard() {
                 </span>
               </div>
 
-              {/* Hardware Telemetry Summary */}
-              <div>
-                <h3 className="text-xs font-bold text-[#123a54] mb-2 flex items-center gap-1.5">
-                  <Wifi size={14} className="text-[#2f9463]" /> Hardware Telemetry &amp; Diagnostics
-                </h3>
-                <div className="space-y-1.5 text-xs bg-[#fbfdfe] rounded-xl p-3 border border-[#eef2f3]">
-                  {[
-                    { label: 'ESP32 Connection', value: 'Wi-Fi Online (192.168.1.105)', ok: true },
-                    { label: 'Signal (RSSI)', value: `${telemetry.wifiRssi} dBm`, ok: telemetry.wifiRssi > -75 },
-                    { label: 'Power (Buck Converter)', value: `${telemetry.gridVoltage} V Steady`, ok: true },
-                    { label: 'System Uptime', value: telemetry.espUptime, ok: true },
-                    { label: 'JSN-SR04T Sensor', value: telemetry.waterDistanceCm <= 25 ? '⚠️ Blind Spot Limit (≤25cm)' : `${telemetry.waterDistanceCm} cm to sensor`, ok: telemetry.waterDistanceCm > 25 },
-                    { label: 'Rain Gauge', value: `${telemetry.rainTips} tips counted`, ok: true },
-                    { label: '12V Siren Relay', value: sirenActive ? 'ACTIVE (NO)' : 'STANDBY (NC)', ok: !sirenActive },
-                  ].map(({ label, value, ok }) => (
-                    <div key={label} className="flex justify-between items-center py-1 border-b border-[#f1f5f6] last:border-0 text-[11px]">
-                      <span className="text-[#6d818d]">{label}</span>
-                      <span className={`font-semibold ${ok ? 'text-[#2f9463]' : 'text-[#e0522f]'}`}>{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* Alert Threshold Sliders */}
-              <div className="pt-1">
+              <div>
                 <h3 className="text-xs font-bold text-[#123a54] mb-1 flex items-center gap-1.5">
                   <Sliders size={14} className="text-[#2b6e8f]" /> Alert Threshold Settings (Meters)
                 </h3>
