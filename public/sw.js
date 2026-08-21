@@ -61,5 +61,48 @@ self.addEventListener('fetch', (event) => {
           }
         });
       })
+// ── Push Event: Background OS Notification Popup ─────────────────────────────
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  let data = {};
+  try {
+    data = event.data.json();
+  } catch (e) {
+    data = { title: '🌊 Smart Flood Alert', body: event.data.text() };
+  }
+
+  const options = {
+    body: data.body || 'Flood threshold breached in Lower Antipolo.',
+    icon: '/PUBMAT3.png',
+    badge: '/PUBMAT3.png',
+    vibrate: [200, 100, 200, 100, 200],
+    tag: 'smartflood-alert-' + (data.level || 'info'),
+    renotify: true,
+    data: { url: data.url || '/' },
+    actions: [{ action: 'open', title: 'Open Portal' }]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || '🌊 Smart Flood Alert', options)
+  );
+});
+
+// ── Notification Click Event: Focus or Open Window ────────────────────────────
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const destinationUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(destinationUrl) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(destinationUrl);
+      }
+    })
   );
 });

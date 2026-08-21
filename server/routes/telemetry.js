@@ -3,6 +3,7 @@ import { prisma } from '../db.js';
 import { broadcast } from '../websocket.js';
 import { buildHistoryBuffer, getPrediction, runPredictionInference } from '../services/dlService.js';
 import { purgeOldData } from '../services/retentionService.js';
+import { broadcastPushAlert } from '../services/webpushService.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -207,6 +208,21 @@ router.post('/', async (req, res) => {
     if (event)       broadcast({ type: 'EVENT',        data: event });
     if (projection)  broadcast({ type: 'PROJECTION',   data: projection });
     broadcast({      type: 'ALERT_STATUS', data: alertStatus });
+
+    // ── 11. Trigger Web Push Notifications on Level 2+ (Warning/Emergency) ─
+    if (alertStatus.level >= 2) {
+      const alertTitle = alertStatus.level === 3 ? '🚨 LEVEL 3 EMERGENCY ALERT' : '⚠️ LEVEL 2 WARNING ALARM';
+      const alertBody  = alertStatus.level === 3
+        ? `EMERGENCY: Water level reached ${water_level_m.toFixed(2)}m. Immediate evacuation required in Lower Antipolo.`
+        : `WARNING: Water level reached ${water_level_m.toFixed(2)}m. Prepare for potential evacuation.`;
+
+      broadcastPushAlert({
+        title: alertTitle,
+        body:  alertBody,
+        level: alertStatus.level,
+        url:   '/',
+      }).catch(err => console.error('[POST /telemetry] Web Push Alert error:', err.message));
+    }
 
     res.status(201).json({ success: true, log, event, projection, alertStatus });
   } catch (err) {

@@ -3,7 +3,7 @@ import {
   AlertTriangle, CheckCircle2, Info, CloudRain,
   Droplets, Phone, MapPin, ChevronDown, ChevronUp,
   Zap, Shield, Waves, Radio, Timer, Lock, ArrowRight,
-  HelpCircle, Compass, LifeBuoy, ExternalLink
+  HelpCircle, Compass, LifeBuoy, ExternalLink, Bell, BellRing
 } from 'lucide-react';
 import RainOverlay from '../RainOverlay.jsx';
 import WeatherMapCard from '../WeatherMapCard.jsx';
@@ -161,11 +161,24 @@ const EMERGENCY = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ── Helper: Convert Base64 URL to Uint8Array for VAPID Key ────────────────
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 export default function PublicPortal() {
   const { pst, date } = usePSTClock();
   const [initialLoading, setInitialLoading] = useState(true);
-
   const [wsConnected, setWsConnected] = useState(false);
+  const [pushStatus, setPushStatus] = useState('default'); // 'default' | 'subscribing' | 'active' | 'denied' | 'unsupported'
+
   const [telemetry, setTelemetry] = useState({
     waterLevelM: 1.05,
     waterDistanceCm: 75,
@@ -183,6 +196,79 @@ export default function PublicPortal() {
   const [secondsAgo, setSecondsAgo] = useState(0);
   const secRef = useRef(null);
   const [showContacts, setShowContacts] = useState(false);
+
+  // Check existing push subscription status on mount
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setPushStatus('unsupported');
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      navigator.serviceWorker.ready.then(reg => {
+        reg.pushManager.getSubscription().then(sub => {
+          if (sub) setPushStatus('active');
+        });
+      }).catch(() => {});
+    } else if (Notification.permission === 'denied') {
+      setPushStatus('denied');
+    }
+  }, []);
+
+  const handleEnablePush = async () => {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        alert('Web Push Notifications are not supported by this browser.');
+        return;
+      }
+
+      setPushStatus('subscribing');
+
+      // 1. Request Notification permission
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        setPushStatus('denied');
+        alert('Notification permission was denied. Please allow notifications in your browser settings to receive flood alerts.');
+        return;
+      }
+
+      // 2. Register Service Worker
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+
+      // 3. Fetch VAPID Public Key from backend
+      const vapidRes = await fetch(`${API_BASE_URL}/api/v1/notifications/vapid-public-key`);
+      const vapidData = await vapidRes.json();
+      if (!vapidData.success || !vapidData.publicKey) {
+        throw new Error('Failed to fetch VAPID public key from backend server');
+      }
+
+      const applicationServerKey = urlBase64ToUint8Array(vapidData.publicKey);
+
+      // 4. Subscribe via PushManager
+      const subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+
+      // 5. Save subscription to backend PostgreSQL database
+      const subRes = await fetch(`${API_BASE_URL}/api/v1/notifications/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription),
+      });
+
+      const subData = await subRes.json();
+      if (subData.success) {
+        setPushStatus('active');
+      } else {
+        throw new Error(subData.error || 'Failed to save push subscription');
+      }
+    } catch (err) {
+      console.error('Push notification subscription failed:', err);
+      setPushStatus('default');
+      alert('Could not enable push alerts: ' + err.message);
+    }
+  };
 
   const resetSecondsAgo = () => {
     setSecondsAgo(0);
@@ -320,6 +406,43 @@ export default function PublicPortal() {
                 <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-[#2f9463] animate-ping' : 'bg-amber-400'}`} />
                 {wsConnected ? 'LIVE WS' : 'CONNECTING WS'}
               </div>
+
+              {/* Push Alert Subscription Button */}
+              <button
+                onClick={handleEnablePush}
+                disabled={pushStatus === 'subscribing' || pushStatus === 'active'}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm ${
+                  pushStatus === 'active'
+                    ? 'bg-emerald-500/25 border border-emerald-400/50 text-emerald-300 cursor-default'
+                    : pushStatus === 'denied'
+                    ? 'bg-red-500/25 border border-red-400/50 text-red-300 hover:bg-red-500/40'
+                    : pushStatus === 'subscribing'
+                    ? 'bg-amber-500/25 border border-amber-400/50 text-amber-300 animate-pulse'
+                    : 'bg-sky-500/25 border border-sky-400/50 text-sky-200 hover:bg-sky-500/40 active:scale-95'
+                }`}
+                title={
+                  pushStatus === 'active'
+                    ? 'Flood Push Notifications are active for this browser'
+                    : 'Enable live OS push notifications for flood warnings'
+                }
+              >
+                {pushStatus === 'active' ? (
+                  <>
+                    <BellRing size={13} className="text-emerald-400" />
+                    <span>Flood Alerts Active</span>
+                  </>
+                ) : pushStatus === 'subscribing' ? (
+                  <>
+                    <Bell size={13} className="animate-spin" />
+                    <span>Subscribing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Bell size={13} />
+                    <span>Enable Flood Alerts</span>
+                  </>
+                )}
+              </button>
 
               {/* Local Clock */}
               <div className="text-right hidden sm:block">
