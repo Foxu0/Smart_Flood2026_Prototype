@@ -952,7 +952,7 @@ export default function FloodMonitoringDashboard() {
           </div>
 
           {/* RIGHT COLUMN: Weather Map & ESP32 Controls (5/12 width) */}
-          <div className="lg:col-span-5 flex flex-col justify-between">
+          <div className="lg:col-span-5 flex flex-col gap-4">
 
             {/* Interactive Dynamic Leaflet Weather Map Card with severity beacon */}
             <WeatherMapCard severity={floodLevel.id} />
