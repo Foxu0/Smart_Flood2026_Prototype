@@ -54,7 +54,7 @@ async function runSimulation() {
 
     const payload = {
       rawDistance,
-      rainTips:       step.rainTips,
+      rainfall_rate:  step.rain || 0,
       batteryVoltage: step.voltage,
       wifiRssi:       step.rssi,
       uptime:         step.uptime,

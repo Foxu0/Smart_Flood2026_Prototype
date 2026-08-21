@@ -72,34 +72,17 @@ router.post('/', async (req, res) => {
       ? parseFloat(rawDistance)
       : parseFloat(((MOUNT_HEIGHT_CM - water_level_m * 100)).toFixed(1));
 
-    // ── 3. Compute rainfall rate from delta tip count ──────────────────────
-    // rainTips: number of tips since last POST (delta counter)
-    // rainRate (mm/h) = (tips * TIP_VOLUME_MM) * (3600 / interval_s)
+    // ── 3. Compute rainfall rate ───────────────────────────────────────────
     let rainfall_rate = 0;
     const rainTipsDelta = body.rainTips ?? body.tip_count ?? 0;
 
-    if (rainTipsDelta > 0) {
-      // Fetch the timestamp of the most recent previous reading to compute interval
-      let intervalSecs = 10; // default fallback (10-second polling)
-      try {
-        const prevLog = await prisma.telemetryLog.findFirst({
-          orderBy: { timestamp: 'desc' },
-          select: { timestamp: true },
-        });
-        if (prevLog) {
-          const deltaSecs = (now.getTime() - prevLog.timestamp.getTime()) / 1000;
-          // Clamp interval: minimum 1s (avoid divide-by-zero), maximum 3600s
-          intervalSecs = Math.min(3600, Math.max(1, deltaSecs));
-        }
-      } catch {
-        // Keep default interval on DB error
-      }
-      rainfall_rate = parseFloat(
-        ((rainTipsDelta * TIP_VOLUME_MM) * (3600 / intervalSecs)).toFixed(2)
-      );
-    } else if (body.rainfall_rate != null) {
-      // Legacy direct format
+    if (body.rainfall_rate != null) {
       rainfall_rate = parseFloat(body.rainfall_rate);
+    } else if (body.rainRate != null) {
+      rainfall_rate = parseFloat(body.rainRate);
+    } else if (rainTipsDelta > 0) {
+      // 1 tip = 0.2 mm. Standard 10-minute physical timestep = 600s
+      rainfall_rate = parseFloat(((rainTipsDelta * TIP_VOLUME_MM) * (3600 / 600)).toFixed(2));
     }
 
     // ── 4. Map remaining ESP32 fields ─────────────────────────────────────
