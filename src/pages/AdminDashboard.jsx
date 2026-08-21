@@ -358,7 +358,7 @@ export default function FloodMonitoringDashboard() {
           rangeParam = `${customValue}${unitShort}`;
         }
 
-        const res = await fetch(`http://localhost:3001/api/v1/telemetry/history?range=${rangeParam}`);
+        const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/history?range=${rangeParam}`);
         if (!res.ok) throw new Error('History fetch failed');
         const json = await res.json();
 
@@ -392,26 +392,38 @@ export default function FloodMonitoringDashboard() {
     fetchHistory();
   }, [timeFrame, customValue, customUnit]);
 
-  // Fallback data generator if DB history is empty
-  const getFallbackHistory = (frame, currentLevel) => {
-    const level = currentLevel || 1.05;
+  const getFallbackHistory = (range, level) => {
     return [
-      { time: '-30m', waterLevel: Math.max(0.2, level - 0.25) },
-      { time: '-24m', waterLevel: Math.max(0.2, level - 0.19) },
-      { time: '-18m', waterLevel: Math.max(0.2, level - 0.14) },
-      { time: '-12m', waterLevel: Math.max(0.2, level - 0.09) },
-      { time: '-6m', waterLevel: Math.max(0.2, level - 0.04) },
       { time: 'Now', waterLevel: level },
     ];
   };
 
   const activeHistory = dbHistory.length > 0 ? dbHistory : getFallbackHistory(timeFrame, telemetry.waterLevelM);
 
-  const [logs, setLogs] = useState([
-    { id: 'init-1', time: '18:01:00', type: 'notice', msg: 'RATE_WARN: Rapid level increase (+0.12 m/h detected)' },
-    { id: 'init-2', time: '17:55:00', type: 'weather', msg: 'MET_ADVISORY: Heavy rainfall outlook active (14.5 mm/h)' },
-    { id: 'init-3', time: '17:45:00', type: 'system', msg: 'SYS_INIT: ESP32 Telemetry & JSN-SR04T Sensor Online' },
-  ]);
+  const [logs, setLogs] = useState([]);
+
+  // Fetch real initial events from database
+  useEffect(() => {
+    async function loadEvents() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/v1/events?limit=10`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.success && json.data && json.data.length > 0) {
+          const mapped = json.data.map(ev => ({
+            id: `event-${ev.id}`,
+            time: new Date(ev.timestamp).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
+            type: ev.severity === 'WARNING' || ev.severity === 'CRITICAL' ? 'alarm' : 'notice',
+            msg: ev.message,
+          }));
+          setLogs(mapped);
+        }
+      } catch (err) {
+        console.error('[Load Events Error]', err);
+      }
+    }
+    loadEvents();
+  }, []);
 
   const addLog = (type, msg) => {
     const timeStr = new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
