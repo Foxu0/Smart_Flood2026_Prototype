@@ -1340,9 +1340,9 @@ export default function FloodMonitoringDashboard() {
               <div className="pt-2 border-t border-[#f1f5f6]">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-xs font-bold text-[#123a54] flex items-center gap-1.5">
-                    <Target size={13} className="text-[#2b6e8f]" /> Actual vs. Predicted (+30m) Log
+                    <Target size={13} className="text-[#2b6e8f]" /> Shifted Horizon (+30m) Evaluation Log
                   </h3>
-                  <span className="text-[10px] text-[#6d818d] font-mono">Samples: {aiMetrics.history?.length || 0}</span>
+                  <span className="text-[10px] text-[#6d818d] font-mono">Matched Pairs: {aiMetrics.history?.length || 0}</span>
                 </div>
 
                 <div className="overflow-x-auto max-h-48 overflow-y-auto rounded-xl border border-[#eef2f3] text-[10px]">
@@ -1350,8 +1350,8 @@ export default function FloodMonitoringDashboard() {
                     <thead className="bg-[#f4f7f8] text-[#6d818d] font-bold uppercase sticky top-0 border-b border-[#eef2f3]">
                       <tr>
                         <th className="p-2">Time</th>
-                        <th className="p-2">Actual</th>
-                        <th className="p-2">+30m Pred</th>
+                        <th className="p-2">Actual (Now)</th>
+                        <th className="p-2">Forecast (From -30m)</th>
                         <th className="p-2">Error</th>
                         <th className="p-2">Accuracy</th>
                       </tr>
@@ -1359,20 +1359,20 @@ export default function FloodMonitoringDashboard() {
                     <tbody className="divide-y divide-[#f1f5f6] font-mono">
                       {(!aiMetrics.history || aiMetrics.history.length === 0) ? (
                         <tr>
-                          <td colSpan={5} className="p-3 text-center text-[#6d818d] italic">
-                            No comparison samples evaluated yet. Click "RUN SIMULATION" to generate live storm metrics.
+                          <td colSpan={5} className="p-3 text-center text-[#2b6e8f] bg-[#f0f9ff] font-sans font-medium text-[11px]">
+                            ℹ️ Gathering baseline steps (Evaluations begin at Step 4)...
                           </td>
                         </tr>
                       ) : (
                         aiMetrics.history.map((row) => (
-                          <tr key={row.id} className="hover:bg-[#fbfdfe]">
+                          <tr key={row.id || row.stepEvaluated} className="hover:bg-[#fbfdfe]">
                             <td className="p-2 text-[#6d818d]">
-                              {new Date(row.timestamp).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                              {row.time || (row.timestamp ? new Date(row.timestamp).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '--:--')}
                             </td>
-                            <td className="p-2 font-bold text-[#123a54]">{row.actual_m.toFixed(2)} m</td>
-                            <td className="p-2 text-[#2b6e8f]">{row.predicted30m_m.toFixed(2)} m</td>
-                            <td className="p-2 text-[#e69138]">±{row.error30m_m.toFixed(2)} m</td>
-                            <td className="p-2 font-bold text-[#2f9463]">{row.accuracy30m_pct}%</td>
+                            <td className="p-2 font-bold text-[#123a54]">{row.actual ?? row.actual_m?.toFixed(2)} m</td>
+                            <td className="p-2 text-[#2b6e8f]">{row.predicted ?? row.predicted30m_m?.toFixed(2)} m</td>
+                            <td className="p-2 text-[#e69138]">±{row.error ?? row.error30m_m?.toFixed(2)} m</td>
+                            <td className="p-2 font-bold text-[#2f9463]">{row.accuracy ?? `${row.accuracy30m_pct}%`}</td>
                           </tr>
                         ))
                       )}

@@ -64,8 +64,10 @@ export function buildHistoryBuffer(chronologicalLogs) {
   return chronologicalLogs.map((item, i) => {
     const prev = i > 0 ? chronologicalLogs[i - 1] : item;
     // Surge velocity in m/hour for 10-minute physical timesteps (dh / 0.1667 hr = dh * 6.0)
+    let rawSurge = (item.water_level_m - prev.water_level_m) * 6.0;
+    // Clamp surge_velocity between -2.0 m/h and +3.5 m/h to match scaler_params.json bounds
     const surge_velocity = parseFloat(
-      ((item.water_level_m - prev.water_level_m) * 6.0).toFixed(4)
+      Math.max(-2.0, Math.min(3.5, rawSurge)).toFixed(4)
     );
     return {
       water_level_m: item.water_level_m,
