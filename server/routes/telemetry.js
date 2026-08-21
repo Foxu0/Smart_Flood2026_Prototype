@@ -2,6 +2,8 @@ import express from 'express';
 import { prisma } from '../db.js';
 import { broadcast } from '../websocket.js';
 import { buildHistoryBuffer, getPrediction, runPredictionInference } from '../services/dlService.js';
+import { purgeOldData } from '../services/retentionService.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -346,6 +348,20 @@ router.get('/export/csv', async (req, res) => {
   } catch (err) {
     console.error('[GET /telemetry/export/csv]', err);
     res.status(500).json({ error: 'Internal server error', detail: err.message });
+  }
+});
+
+// ── POST /api/v1/telemetry/purge ─────────────────────────────────────────────
+// Admin-authenticated endpoint to trigger database log purge older than N days.
+// Body: { days?: number } (default: 30 days)
+router.post('/purge', authMiddleware, async (req, res) => {
+  try {
+    const days = parseInt(req.body.days) || 30;
+    const stats = await purgeOldData(days);
+    res.json({ success: true, ...stats });
+  } catch (err) {
+    console.error('[POST /telemetry/purge]', err);
+    res.status(500).json({ error: 'Failed to purge database logs', detail: err.message });
   }
 });
 
