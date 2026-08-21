@@ -9,6 +9,7 @@ import controlRouter from './routes/control.js';
 import settingsRouter from './routes/settings.js';
 import weatherRouter from './routes/weather.js';
 import notificationsRouter from './routes/notifications.js';
+import testRouter from './routes/testRoutes.js';
 import { startWeatherPoller } from './services/weatherService.js';
 import { startRetentionScheduler } from './services/retentionService.js';
 import { login, logout } from './controllers/authController.js';
@@ -54,6 +55,7 @@ app.use('/api/v1/control', controlRouter);
 app.use('/api/v1/settings', settingsRouter);
 app.use('/api/v1/weather', weatherRouter);
 app.use('/api/v1/notifications', notificationsRouter);
+app.use('/api/v1/test', testRouter);
 
 // ── Health Check ─────────────────────────────────────────────────────────────
 app.get('/api/v1/health', (_req, res) => {

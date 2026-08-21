@@ -4,6 +4,7 @@ import { broadcast } from '../websocket.js';
 import { buildHistoryBuffer, getPrediction, runPredictionInference } from '../services/dlService.js';
 import { purgeOldData } from '../services/retentionService.js';
 import { broadcastPushAlert } from '../services/webpushService.js';
+import { recordPrediction, recordActualAndEvaluate, getEvaluationMetrics } from '../services/aiEvaluationService.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -127,6 +128,9 @@ router.post('/', async (req, res) => {
       },
     });
 
+    // Evaluate actual reading against past predictions
+    recordActualAndEvaluate(log);
+
     // ── 7. Evaluate thresholds → auto event log ────────────────────────────
     const thresholds = await getThresholds();
     let eventCode = null;
@@ -176,6 +180,9 @@ router.post('/', async (req, res) => {
 
       const historyBuffer = buildHistoryBuffer(chronological);
       projection = await getPrediction(historyBuffer);
+      if (projection) {
+        recordPrediction(projection);
+      }
     } catch (inferErr) {
       console.error('[POST /telemetry] Inference error:', inferErr.message);
     }
@@ -208,6 +215,7 @@ router.post('/', async (req, res) => {
     if (event)       broadcast({ type: 'EVENT',        data: event });
     if (projection)  broadcast({ type: 'PROJECTION',   data: projection });
     broadcast({      type: 'ALERT_STATUS', data: alertStatus });
+    broadcast({      type: 'AI_EVALUATION', data: getEvaluationMetrics() });
 
     // ── 11. Trigger Web Push Notifications on Level 2+ (Warning/Emergency) ─
     if (alertStatus.level >= 2) {
