@@ -42,12 +42,12 @@ export default function ProtectedRoute({ children }) {
         }}
       >
         {/* Animated wave header inside overlay */}
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '200vw', pointerEvents: 'none', opacity: receding ? 0 : 0.6 }}>
-          <div className="flood-wave-anim" style={{ animationDuration: '4s' }}>
-            <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden', pointerEvents: 'none', opacity: receding ? 0 : 0.6, height: 80 }}>
+          <div className="flood-wave-anim" style={{ animationDuration: '6s', width: '200%', display: 'flex' }}>
+            <svg viewBox="0 0 1440 80" style={{ width: '50%', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
               <path d="M0,40 C360,90 720,-10 1440,40 L1440,80 L0,80 Z" fill="rgba(127,196,224,0.3)" />
             </svg>
-            <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
+            <svg viewBox="0 0 1440 80" style={{ width: '50%', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
               <path d="M0,40 C360,90 720,-10 1440,40 L1440,80 L0,80 Z" fill="rgba(127,196,224,0.3)" />
             </svg>
           </div>

@@ -143,13 +143,13 @@ function WaterOverlay({ phase }) {
     >
       <div style={bodyStyle}>
         {/* ── Animated wave top-edge (overflows above water surface) ──── */}
-        <div style={{ position: 'absolute', top: -76, left: 0, width: '200vw', zIndex: 3, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', top: -76, left: 0, right: 0, overflow: 'hidden', pointerEvents: 'none' }}>
           {/* Wave 1 — teal, medium speed */}
-          <div className="flood-wave-anim" style={{ animationDuration: '3.2s' }}>
-            <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
+          <div className="flood-wave-anim" style={{ animationDuration: '4.8s', width: '200%', display: 'flex' }}>
+            <svg viewBox="0 0 1440 80" style={{ width: '50%', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
               <path d="M0,40 C360,90 720,-10 1440,40 L1440,80 L0,80 Z" fill="rgba(31,111,148,0.9)" />
             </svg>
-            <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
+            <svg viewBox="0 0 1440 80" style={{ width: '50%', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
               <path d="M0,40 C360,90 720,-10 1440,40 L1440,80 L0,80 Z" fill="rgba(31,111,148,0.9)" />
             </svg>
           </div>
@@ -163,24 +163,24 @@ function WaterOverlay({ phase }) {
           overflow:   'hidden',
         }}>
           {/* Inner wave 2 — darker, opposite direction */}
-          <div style={{ position: 'absolute', top: -68, left: 0, width: '200vw', zIndex: 1 }}>
-            <div className="flood-wave-anim" style={{ animationDuration: '5.1s', animationDirection: 'reverse' }}>
-              <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
+          <div style={{ position: 'absolute', top: -68, left: 0, right: 0, overflow: 'hidden' }}>
+            <div className="flood-wave-anim" style={{ animationDuration: '6.5s', animationDirection: 'reverse', width: '200%', display: 'flex' }}>
+              <svg viewBox="0 0 1440 80" style={{ width: '50%', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
                 <path d="M0,40 C360,0 720,80 1440,40 L1440,80 L0,80 Z" fill="rgba(13,43,66,0.7)" />
               </svg>
-              <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
+              <svg viewBox="0 0 1440 80" style={{ width: '50%', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
                 <path d="M0,40 C360,0 720,80 1440,40 L1440,80 L0,80 Z" fill="rgba(13,43,66,0.7)" />
               </svg>
             </div>
           </div>
 
           {/* Inner wave 3 — very dark, slowest */}
-          <div style={{ position: 'absolute', top: -55, left: 0, width: '200vw', zIndex: 0 }}>
-            <div className="flood-wave-anim" style={{ animationDuration: '7.4s' }}>
-              <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
+          <div style={{ position: 'absolute', top: -55, left: 0, right: 0, overflow: 'hidden' }}>
+            <div className="flood-wave-anim" style={{ animationDuration: '9s', width: '200%', display: 'flex' }}>
+              <svg viewBox="0 0 1440 80" style={{ width: '50%', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
                 <path d="M0,40 C480,85 960,-5 1440,40 L1440,80 L0,80 Z" fill="rgba(7,24,42,0.75)" />
               </svg>
-              <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
+              <svg viewBox="0 0 1440 80" style={{ width: '50%', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
                 <path d="M0,40 C480,85 960,-5 1440,40 L1440,80 L0,80 Z" fill="rgba(7,24,42,0.75)" />
               </svg>
             </div>
