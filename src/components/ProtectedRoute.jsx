@@ -43,15 +43,12 @@ export default function ProtectedRoute({ children }) {
       >
         {/* Animated wave header inside overlay */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden', pointerEvents: 'none', opacity: receding ? 0 : 0.6, height: 80 }}>
-          <div className="flood-wave-anim" style={{ animationDuration: '6s', width: '300%', display: 'flex' }}>
-            <svg viewBox="0 0 1440 80" style={{ width: '33.3333%', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
-              <path d="M0,40 C360,90 720,-10 1440,40 L1440,80 L0,80 Z" fill="rgba(127,196,224,0.3)" />
-            </svg>
-            <svg viewBox="0 0 1440 80" style={{ width: '33.3333%', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
-              <path d="M0,40 C360,90 720,-10 1440,40 L1440,80 L0,80 Z" fill="rgba(127,196,224,0.3)" />
-            </svg>
-            <svg viewBox="0 0 1440 80" style={{ width: '33.3333%', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
-              <path d="M0,40 C360,90 720,-10 1440,40 L1440,80 L0,80 Z" fill="rgba(127,196,224,0.3)" />
+          <div className="flood-wave-anim" style={{ animationDuration: '6s', width: '200%' }}>
+            <svg viewBox="0 0 2880 80" style={{ width: '100%', display: 'block', height: 80 }} preserveAspectRatio="none">
+              <path
+                d="M0,40 C100,75 260,75 360,40 C460,5 620,5 720,40 C820,75 980,75 1080,40 C1180,5 1340,5 1440,40 C1540,75 1700,75 1800,40 C1900,5 2060,5 2160,40 C2260,75 2420,75 2520,40 C2620,5 2780,5 2880,40 L2880,120 L0,120 Z"
+                fill="rgba(127,196,224,0.3)"
+              />
             </svg>
           </div>
         </div>
