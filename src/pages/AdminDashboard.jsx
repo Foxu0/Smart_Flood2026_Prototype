@@ -251,7 +251,7 @@ function AnimatedStatCard({ icon: Icon, label, value, numericValue, decimals = 1
     >
       {/* Background illustration */}
       {Illustration && (
-        <div className="absolute bottom-3 right-2 opacity-60 pointer-events-none select-none">
+        <div className="absolute right-3 opacity-40 pointer-events-none select-none" style={{ top: '50%', transform: 'translateY(-50%)' }}>
           <Illustration color={color} />
         </div>
       )}
