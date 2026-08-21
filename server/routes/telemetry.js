@@ -233,7 +233,7 @@ router.get('/projection', async (req, res) => {
     if (!latest) {
       // No projection yet — run one on demand
       const fresh = await runPredictionInference();
-      if (!fresh) return res.status(404).json({ success: false, error: 'No telemetry data available for projection.' });
+      if (!fresh) return res.json({ success: true, data: null, message: 'No telemetry data available for projection.' });
       return res.json({ success: true, data: fresh });
     }
 
@@ -251,7 +251,7 @@ router.get('/latest', async (req, res) => {
       orderBy: { timestamp: 'desc' },
     });
 
-    if (!latest) return res.status(404).json({ error: 'No telemetry data found' });
+    if (!latest) return res.json({ success: true, data: null, message: 'No telemetry data recorded yet.' });
 
     // 15-minute surge rate
     const fifteenMinsAgo = new Date(latest.timestamp.getTime() - 15 * 60 * 1000);
