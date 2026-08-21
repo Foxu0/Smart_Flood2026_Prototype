@@ -14,7 +14,7 @@ html {
   text-rendering: optimizeLegibility;
   background-image:
     linear-gradient(180deg, rgba(18, 58, 84, 0.40) 0%, rgba(31, 111, 148, 0.45) 100%),
-    url('/rain-bg.webp');
+    url('/rain-bg.png');
   background-size: cover;
   background-position: center center;
   background-attachment: fixed;
