@@ -61,6 +61,9 @@ self.addEventListener('fetch', (event) => {
           }
         });
       })
+  );
+});
+
 // ── Push Event: Background OS Notification Popup ─────────────────────────────
 self.addEventListener('push', (event) => {
   if (!event.data) return;

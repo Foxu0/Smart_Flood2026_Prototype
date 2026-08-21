@@ -224,10 +224,12 @@ export default function FloodMonitoringDashboard() {
       }).catch(() => {});
   }, []);
 
+  const getToken = () => sessionStorage.getItem('sf_token') || localStorage.getItem('sf_token') || '';
+
   const handleRunSimulation = async () => {
     setIsSimulating(true);
     try {
-      const token = localStorage.getItem('sf_admin_jwt');
+      const token = getToken();
       const res = await fetch(`${API_BASE_URL}/api/v1/test/simulate`, {
         method: 'POST',
         headers: {
@@ -237,12 +239,12 @@ export default function FloodMonitoringDashboard() {
       });
       const json = await res.json();
       if (json.success) {
-        addToast('info', '▶️ Storm Simulation Initiated', '20-step hydrological cycle streaming to ONNX LSTM engine...');
+        pushToast('info', '▶️ Storm Simulation Initiated', '20-step hydrological cycle streaming to ONNX LSTM engine...');
       } else {
-        addToast('warning', 'Simulation Notice', json.message || 'Could not start simulation');
+        pushToast('warning', 'Simulation Notice', json.error || json.message || 'Could not start simulation');
       }
     } catch (err) {
-      addToast('danger', 'Simulation Error', err.message);
+      pushToast('danger', 'Simulation Error', err.message);
     } finally {
       setTimeout(() => setIsSimulating(false), 5000);
     }
@@ -252,7 +254,7 @@ export default function FloodMonitoringDashboard() {
     if (!window.confirm('Are you sure you want to reset all test telemetry and event logs?')) return;
     setIsResetting(true);
     try {
-      const token = localStorage.getItem('sf_admin_jwt');
+      const token = getToken();
       const res = await fetch(`${API_BASE_URL}/api/v1/test/reset`, {
         method: 'POST',
         headers: {
@@ -262,7 +264,9 @@ export default function FloodMonitoringDashboard() {
       });
       const json = await res.json();
       if (json.success) {
-        addToast('success', '🔄 Baseline Reset', 'Database truncated & evaluation metrics reset.');
+        pushToast('success', '🔄 Baseline Reset', 'Database truncated & evaluation metrics reset.');
+        setDbHistory([]);
+        setLogs([]);
         setAiMetrics({
           totalEvaluated: 0,
           mae_m: 0.03,
@@ -271,9 +275,11 @@ export default function FloodMonitoringDashboard() {
           methodUsed: 'ONNX_LSTM (flood_lstm.onnx)',
           history: [],
         });
+      } else {
+        pushToast('danger', 'Reset Failed', json.error || 'Failed to reset test telemetry');
       }
     } catch (err) {
-      addToast('danger', 'Reset Error', err.message);
+      pushToast('danger', 'Reset Error', err.message);
     } finally {
       setIsResetting(false);
     }
