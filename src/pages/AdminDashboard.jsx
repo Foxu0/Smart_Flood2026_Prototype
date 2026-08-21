@@ -369,9 +369,14 @@ export default function FloodMonitoringDashboard() {
   useEffect(() => {
     const timer = setTimeout(async () => {
       try {
+        const token = getToken();
+        if (!token) return;
         await fetch(`${API_BASE_URL}/api/v1/settings`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
           body: JSON.stringify({
             level1_watch: thresholds.level1_watch,
             level2_alarm: thresholds.level2_alarm,
