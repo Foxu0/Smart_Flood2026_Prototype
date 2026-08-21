@@ -210,16 +210,17 @@ html {
 
 /* ── FloodTransition Overlay Animations ─────────────────────────────────── */
 @keyframes flood-wave-horizontal {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0%   { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-33.3333%, 0, 0); }
 }
 
 .flood-wave-anim {
   display: flex;
-  width: 200%;
+  width: 300%;
   animation-name: flood-wave-horizontal;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
+  will-change: transform;
 }
 
 @keyframes flood-rain-fall {
