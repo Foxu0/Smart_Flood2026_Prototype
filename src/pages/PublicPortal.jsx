@@ -115,14 +115,130 @@ function rainIntensityKey(mmHr) {
 }
 
 // ─── Stat Card component ──────────────────────────────────────────────────────
-function AnimatedStatCard({ icon: Icon, label, value, numericValue, decimals = 1, sub, bar, color, tooltip, delay = 0 }) {
+function FloodIllustration({ color }) {
+  return (
+    <svg width="64" height="40" viewBox="0 0 64 40" fill="none" style={{ overflow: 'visible' }}>
+      <rect x="0" y="20" width="64" height="20" rx="4" fill={`${color}22`} />
+      <path fill={`${color}55`}>
+        <animate attributeName="d"
+          values="M0,20 Q16,14 32,20 T64,20 L64,40 L0,40 Z;
+                  M0,20 Q16,26 32,20 T64,20 L64,40 L0,40 Z;
+                  M0,20 Q16,14 32,20 T64,20 L64,40 L0,40 Z"
+          dur="2.4s" repeatCount="indefinite" />
+      </path>
+      <path fill={`${color}33`}>
+        <animate attributeName="d"
+          values="M0,22 Q16,28 32,22 T64,22 L64,40 L0,40 Z;
+                  M0,22 Q16,16 32,22 T64,22 L64,40 L0,40 Z;
+                  M0,22 Q16,28 32,22 T64,22 L64,40 L0,40 Z"
+          dur="3.1s" repeatCount="indefinite" />
+      </path>
+      <circle cx="14" cy="32" r="2" fill={`${color}44`}>
+        <animate attributeName="cy" values="36;18;36" dur="2.8s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0;0.7;0" dur="2.8s" repeatCount="indefinite" />
+      </circle>
+      <circle cx="48" cy="32" r="1.5" fill={`${color}44`}>
+        <animate attributeName="cy" values="36;20;36" dur="2.1s" repeatCount="indefinite" begin="0.9s" />
+        <animate attributeName="opacity" values="0;0.7;0" dur="2.1s" repeatCount="indefinite" begin="0.9s" />
+      </circle>
+    </svg>
+  );
+}
+
+function RainIllustration({ color }) {
+  const drops = [
+    { x: 8,  delay: '0s',    dur: '1.2s' },
+    { x: 20, delay: '0.35s', dur: '1.0s' },
+    { x: 32, delay: '0.1s',  dur: '1.4s' },
+    { x: 44, delay: '0.6s',  dur: '1.1s' },
+    { x: 56, delay: '0.2s',  dur: '1.3s' },
+    { x: 14, delay: '0.8s',  dur: '1.0s' },
+    { x: 50, delay: '0.45s', dur: '1.2s' },
+  ];
+  return (
+    <svg width="64" height="44" viewBox="0 0 64 44" fill="none" style={{ overflow: 'visible' }}>
+      <ellipse cx="32" cy="14" rx="20" ry="10" fill={`${color}30`} />
+      <ellipse cx="20" cy="17" rx="13" ry="8" fill={`${color}28`} />
+      <ellipse cx="44" cy="17" rx="13" ry="8" fill={`${color}28`} />
+      <ellipse cx="32" cy="20" rx="22" ry="8" fill={`${color}38`} />
+      <ellipse cx="32" cy="16" rx="20" ry="10" fill="none" stroke={`${color}30`} strokeWidth="1">
+        <animate attributeName="rx" values="20;22;20" dur="3s" repeatCount="indefinite" />
+        <animate attributeName="ry" values="10;12;10" dur="3s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0.5;0.1;0.5" dur="3s" repeatCount="indefinite" />
+      </ellipse>
+      {drops.map((d, i) => (
+        <line key={i} x1={d.x} y1="26" x2={d.x - 2} y2="38" stroke={`${color}70`} strokeWidth="1.5" strokeLinecap="round">
+          <animate attributeName="y1" values="26;38;26" dur={d.dur} begin={d.delay} repeatCount="indefinite" />
+          <animate attributeName="y2" values="38;50;38" dur={d.dur} begin={d.delay} repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0;1;0" dur={d.dur} begin={d.delay} repeatCount="indefinite" />
+        </line>
+      ))}
+    </svg>
+  );
+}
+
+function NeuralIllustration({ color }) {
+  const nodes = [
+    { id: 'i0', cx: 8,  cy: 10 }, { id: 'i1', cx: 8,  cy: 22 }, { id: 'i2', cx: 8,  cy: 34 },
+    { id: 'h0', cx: 28, cy: 6  }, { id: 'h1', cx: 28, cy: 18 }, { id: 'h2', cx: 28, cy: 30 }, { id: 'h3', cx: 28, cy: 40 },
+    { id: 'o0', cx: 52, cy: 16 }, { id: 'o1', cx: 52, cy: 30 },
+  ];
+  const edges = [
+    ['i0','h0'],['i0','h1'],['i0','h2'],
+    ['i1','h0'],['i1','h1'],['i1','h2'],['i1','h3'],
+    ['i2','h1'],['i2','h2'],['i2','h3'],
+    ['h0','o0'],['h1','o0'],['h1','o1'],
+    ['h2','o0'],['h2','o1'],['h3','o1'],
+  ];
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+  const delays = ['0s','0.3s','0.6s','0.9s','1.2s','1.5s','1.8s','0.15s','0.45s','0.75s','1.05s','1.35s','1.65s','0.5s','0.8s','1.1s'];
+  return (
+    <svg width="64" height="48" viewBox="0 0 64 48" fill="none" style={{ overflow: 'visible' }}>
+      {edges.map(([a, b], i) => {
+        const na = byId[a]; const nb = byId[b];
+        return (
+          <line key={i} x1={na.cx} y1={na.cy} x2={nb.cx} y2={nb.cy} stroke={`${color}25`} strokeWidth="0.8">
+            <animate attributeName="stroke-opacity" values="0.15;0.6;0.15" dur="2s" begin={delays[i % delays.length]} repeatCount="indefinite" />
+          </line>
+        );
+      })}
+      {edges.filter((_, i) => i % 3 === 0).map(([a, b], i) => {
+        const na = byId[a]; const nb = byId[b];
+        return (
+          <circle key={`p${i}`} r="1.5" fill={color} opacity="0.7">
+            <animateMotion dur="1.6s" begin={`${i * 0.4}s`} repeatCount="indefinite"
+              path={`M${na.cx},${na.cy} L${nb.cx},${nb.cy}`} />
+            <animate attributeName="opacity" values="0;0.9;0" dur="1.6s" begin={`${i * 0.4}s`} repeatCount="indefinite" />
+          </circle>
+        );
+      })}
+      {nodes.map((n, i) => (
+        <circle key={n.id} cx={n.cx} cy={n.cy} r="4" fill={`${color}20`} stroke={color} strokeWidth="1">
+          <animate attributeName="r" values="4;5;4" dur="2.2s" begin={`${i * 0.18}s`} repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.6;1;0.6" dur="2.2s" begin={`${i * 0.18}s`} repeatCount="indefinite" />
+        </circle>
+      ))}
+    </svg>
+  );
+}
+
+function AnimatedStatCard({ icon: Icon, label, value, numericValue, decimals = 1, sub, bar, color, tooltip, delay = 0, variant }) {
   const displayed = useCountUp(numericValue ?? 0, 900, decimals);
+  const Illustration = variant === 'water' ? FloodIllustration
+    : variant === 'rain' ? RainIllustration
+    : variant === 'ai' ? NeuralIllustration
+    : null;
   return (
     <div
-      className={`bg-white rounded-2xl p-3.5 sm:p-4 border border-[#e4edf0] shadow-sm flex flex-col justify-between card-enter card-enter-d${delay} hover:shadow-md transition-shadow duration-300`}
+      className={`bg-white rounded-2xl p-3.5 sm:p-4 border border-[#e4edf0] shadow-sm flex flex-col justify-between card-enter card-enter-d${delay} hover:shadow-md transition-shadow duration-300 overflow-hidden relative`}
       title={tooltip}
     >
-      <div>
+      {Illustration && (
+        <div className="absolute bottom-3 right-2 opacity-60 pointer-events-none select-none">
+          <Illustration color={color} />
+        </div>
+      )}
+      <div className="relative z-[1]">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[10px] font-bold uppercase tracking-wide text-[#6d818d]">{label}</span>
           <div className="w-7 h-7 rounded-lg flex items-center justify-center transition-transform hover:scale-110" style={{ background: `${color}18`, color }}>
@@ -134,7 +250,7 @@ function AnimatedStatCard({ icon: Icon, label, value, numericValue, decimals = 1
         </p>
         <p className="text-[10px] text-[#6d818d] mb-2 leading-tight">{sub}</p>
       </div>
-      <div className="h-1.5 rounded-full bg-[#eef4f6] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-[#eef4f6] overflow-hidden relative z-[1]">
         <div className="h-full rounded-full" style={{ width: `${bar}%`, background: color, transition: 'width 1s ease-out' }} />
       </div>
     </div>
@@ -390,6 +506,7 @@ export default function PublicPortal() {
                 color={floodLevel.color}
                 tooltip="JSN-SR04T ultrasonic sensor water column height"
                 delay={2}
+                variant="water"
               />
               <AnimatedStatCard
                 icon={CloudRain}
@@ -402,6 +519,7 @@ export default function PublicPortal() {
                 color="#2b6e8f"
                 tooltip="Station rain gauge tip accumulation"
                 delay={3}
+                variant="rain"
               />
               <AnimatedStatCard
                 icon={Zap}
@@ -414,6 +532,7 @@ export default function PublicPortal() {
                 color="#e69138"
                 tooltip="LSTM deep learning projection 30 minutes ahead"
                 delay={4}
+                variant="ai"
               />
             </div>
 
