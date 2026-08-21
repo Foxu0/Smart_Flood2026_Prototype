@@ -147,10 +147,10 @@ function WaterOverlay({ phase }) {
           {/* Wave 1 — teal, medium speed */}
           <div className="flood-wave-anim" style={{ animationDuration: '3.2s' }}>
             <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
-              <path d="M0,40 Q360,80 720,40 T1440,40 L1440,80 L0,80 Z" fill="rgba(31,111,148,0.9)" />
+              <path d="M0,40 C360,90 720,-10 1440,40 L1440,80 L0,80 Z" fill="rgba(31,111,148,0.9)" />
             </svg>
             <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
-              <path d="M0,40 Q360,80 720,40 T1440,40 L1440,80 L0,80 Z" fill="rgba(31,111,148,0.9)" />
+              <path d="M0,40 C360,90 720,-10 1440,40 L1440,80 L0,80 Z" fill="rgba(31,111,148,0.9)" />
             </svg>
           </div>
         </div>
@@ -166,10 +166,10 @@ function WaterOverlay({ phase }) {
           <div style={{ position: 'absolute', top: -68, left: 0, width: '200vw', zIndex: 1 }}>
             <div className="flood-wave-anim" style={{ animationDuration: '5.1s', animationDirection: 'reverse' }}>
               <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
-                <path d="M0,30 Q360,70 720,30 T1440,30 L1440,80 L0,80 Z" fill="rgba(13,43,66,0.7)" />
+                <path d="M0,40 C360,0 720,80 1440,40 L1440,80 L0,80 Z" fill="rgba(13,43,66,0.7)" />
               </svg>
               <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
-                <path d="M0,30 Q360,70 720,30 T1440,30 L1440,80 L0,80 Z" fill="rgba(13,43,66,0.7)" />
+                <path d="M0,40 C360,0 720,80 1440,40 L1440,80 L0,80 Z" fill="rgba(13,43,66,0.7)" />
               </svg>
             </div>
           </div>
@@ -178,10 +178,10 @@ function WaterOverlay({ phase }) {
           <div style={{ position: 'absolute', top: -55, left: 0, width: '200vw', zIndex: 0 }}>
             <div className="flood-wave-anim" style={{ animationDuration: '7.4s' }}>
               <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
-                <path d="M0,50 Q360,75 720,50 T1440,50 L1440,80 L0,80 Z" fill="rgba(7,24,42,0.75)" />
+                <path d="M0,40 C480,85 960,-5 1440,40 L1440,80 L0,80 Z" fill="rgba(7,24,42,0.75)" />
               </svg>
               <svg viewBox="0 0 1440 80" style={{ width: '100vw', display: 'block', flexShrink: 0, height: 80 }} preserveAspectRatio="none">
-                <path d="M0,50 Q360,75 720,50 T1440,50 L1440,80 L0,80 Z" fill="rgba(7,24,42,0.75)" />
+                <path d="M0,40 C480,85 960,-5 1440,40 L1440,80 L0,80 Z" fill="rgba(7,24,42,0.75)" />
               </svg>
             </div>
           </div>
