@@ -1,0 +1,87 @@
+{
+  "scenarios": [
+    {
+      "id": "flash_flood",
+      "name": "Flash Flood Surge (Level 2 Warning)",
+      "description": "Realistic 25-step hydrological storm event (0.35m baseline -> 1.45m surge peak -> recession -> recovery)",
+      "totalSteps": 25,
+      "steps": [
+        { "step": 1,  "stage": 0.35, "rain": 0.0,  "comment": "Steps 1–5: Baseline Dry State" },
+        { "step": 2,  "stage": 0.35, "rain": 0.0,  "comment": "Baseline Dry State" },
+        { "step": 3,  "stage": 0.34, "rain": 0.0,  "comment": "Baseline Dry State" },
+        { "step": 4,  "stage": 0.35, "rain": 0.0,  "comment": "Baseline Dry State" },
+        { "step": 5,  "stage": 0.36, "rain": 0.0,  "comment": "Baseline Dry State" },
+
+        { "step": 6,  "stage": 0.40, "rain": 45.0, "comment": "Steps 6–10: Rain Onset (45 mm/h)" },
+        { "step": 7,  "stage": 0.45, "rain": 45.0, "comment": "Rain Onset — Level rising" },
+        { "step": 8,  "stage": 0.50, "rain": 45.0, "comment": "Rain Onset — Stage 0.50m" },
+        { "step": 9,  "stage": 0.58, "rain": 45.0, "comment": "Rain Onset — Stage 0.58m" },
+        { "step": 10, "stage": 0.65, "rain": 45.0, "comment": "Rain Onset — Stage 0.65m" },
+
+        { "step": 11, "stage": 0.78, "rain": 80.0, "comment": "Steps 11–16: Torrential Storm Surge (80 mm/h)" },
+        { "step": 12, "stage": 0.92, "rain": 80.0, "comment": "Storm Surge — Approaching Level 1" },
+        { "step": 13, "stage": 1.08, "rain": 80.0, "comment": "ALERT LEVEL 1: Advisory Watch (1.08m)" },
+        { "step": 14, "stage": 1.22, "rain": 80.0, "comment": "Storm Surge — Rapid Rise (1.22m)" },
+        { "step": 15, "stage": 1.35, "rain": 80.0, "comment": "Approaching Level 2 Siren Alarm" },
+        { "step": 16, "stage": 1.45, "rain": 80.0, "comment": "ALERT LEVEL 2: Siren Warning Alarm (1.45m)" },
+
+        { "step": 17, "stage": 1.40, "rain": 5.0,  "comment": "Steps 17–21: Rain Recession & Cresting" },
+        { "step": 18, "stage": 1.30, "rain": 5.0,  "comment": "Recession — Stage dropping (1.30m)" },
+        { "step": 19, "stage": 1.20, "rain": 5.0,  "comment": "Recession — Stage dropping (1.20m)" },
+        { "step": 20, "stage": 1.08, "rain": 5.0,  "comment": "Recession — Level 1 Watch (1.08m)" },
+        { "step": 21, "stage": 0.95, "rain": 5.0,  "comment": "Recession — Sub-Advisory (0.95m)" },
+
+        { "step": 22, "stage": 0.80, "rain": 0.0,  "comment": "Steps 22–25: Recovery & Drainage" },
+        { "step": 23, "stage": 0.65, "rain": 0.0,  "comment": "Recovery — Stage 0.65m" },
+        { "step": 24, "stage": 0.52, "rain": 0.0,  "comment": "Recovery — Stage 0.52m" },
+        { "step": 25, "stage": 0.45, "rain": 0.0,  "comment": "Recovery — Settled to Baseline (0.45m)" }
+      ]
+    },
+    {
+      "id": "moderate_rain",
+      "name": "Moderate Rainfall (Level 1 Advisory)",
+      "description": "15-step rainfall event (0.35m -> 0.85m peak, Level 1 Advisory Watch, no siren trigger)",
+      "totalSteps": 15,
+      "steps": [
+        { "step": 1,  "stage": 0.35, "rain": 0.0,  "comment": "Baseline Dry State" },
+        { "step": 2,  "stage": 0.36, "rain": 0.0,  "comment": "Baseline Dry State" },
+        { "step": 3,  "stage": 0.40, "rain": 25.0, "comment": "Moderate Rain Onset (25 mm/h)" },
+        { "step": 4,  "stage": 0.48, "rain": 25.0, "comment": "Rain Continues (25 mm/h)" },
+        { "step": 5,  "stage": 0.56, "rain": 25.0, "comment": "Stage Rising — 0.56m" },
+        { "step": 6,  "stage": 0.64, "rain": 25.0, "comment": "Stage Rising — 0.64m" },
+        { "step": 7,  "stage": 0.72, "rain": 25.0, "comment": "Stage Rising — 0.72m" },
+        { "step": 8,  "stage": 0.80, "rain": 25.0, "comment": "Stage Rising — 0.80m" },
+        { "step": 9,  "stage": 0.85, "rain": 25.0, "comment": "Peak Moderate Rain (0.85m)" },
+        { "step": 10, "stage": 0.82, "rain": 5.0,  "comment": "Rain Easing (0.82m)" },
+        { "step": 11, "stage": 0.76, "rain": 2.0,  "comment": "Receding (0.76m)" },
+        { "step": 12, "stage": 0.68, "rain": 0.0,  "comment": "Receding (0.68m)" },
+        { "step": 13, "stage": 0.58, "rain": 0.0,  "comment": "Receding (0.58m)" },
+        { "step": 14, "stage": 0.50, "rain": 0.0,  "comment": "Receding (0.50m)" },
+        { "step": 15, "stage": 0.42, "rain": 0.0,  "comment": "Restored to Normal (0.42m)" }
+      ]
+    },
+    {
+      "id": "dry_baseline",
+      "name": "Dry Baseline with Noise",
+      "description": "15-step dry riverbed baseline with realistic ±0.03m ultrasonic sensor noise",
+      "totalSteps": 15,
+      "steps": [
+        { "step": 1,  "stage": 0.31, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 2,  "stage": 0.29, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 3,  "stage": 0.32, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 4,  "stage": 0.30, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 5,  "stage": 0.28, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 6,  "stage": 0.31, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 7,  "stage": 0.30, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 8,  "stage": 0.33, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 9,  "stage": 0.29, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 10, "stage": 0.30, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 11, "stage": 0.32, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 12, "stage": 0.28, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 13, "stage": 0.31, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 14, "stage": 0.30, "rain": 0.0, "comment": "Dry Baseline + Jitter" },
+        { "step": 15, "stage": 0.30, "rain": 0.0, "comment": "Dry Baseline + Jitter" }
+      ]
+    }
+  ]
+}

@@ -63,9 +63,9 @@ async function getSession(ortModule) {
 export function buildHistoryBuffer(chronologicalLogs) {
   return chronologicalLogs.map((item, i) => {
     const prev = i > 0 ? chronologicalLogs[i - 1] : item;
-    // Approximate surge velocity in m/hour between consecutive readings
+    // Surge velocity in m/hour for 10-minute physical timesteps (dh / 0.1667 hr = dh * 6.0)
     const surge_velocity = parseFloat(
-      ((item.water_level_m - prev.water_level_m) * 4).toFixed(4)
+      ((item.water_level_m - prev.water_level_m) * 6.0).toFixed(4)
     );
     return {
       water_level_m: item.water_level_m,

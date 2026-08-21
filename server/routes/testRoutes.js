@@ -1,19 +1,19 @@
 import express from 'express';
 import { resetTestData, getAiEvaluation, runSimulationStream } from '../controllers/testController.js';
+import { getScenariosList, getScenarioStatus, runScenario, stopScenario } from '../controllers/scenarioController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// ── POST /api/v1/test/reset ──────────────────────────────────────────────────
-// Authenticated endpoint to purge legacy test records and reset evaluation metrics
+// ── Test & Reset Routes ───────────────────────────────────────────────────────
 router.post('/reset', authMiddleware, resetTestData);
-
-// ── GET /api/v1/test/ai-evaluation ───────────────────────────────────────────
-// Returns side-by-side comparison array and summary accuracy metrics (MAE, RMSE, Accuracy %)
 router.get('/ai-evaluation', getAiEvaluation);
-
-// ── POST /api/v1/test/simulate ───────────────────────────────────────────────
-// Authenticated endpoint to trigger 20-step synthetic hydrological storm simulation stream
 router.post('/simulate', authMiddleware, runSimulationStream);
+
+// ── Scenario Replay Engine Routes ─────────────────────────────────────────────
+router.get('/scenarios', getScenariosList);
+router.get('/scenario-status', getScenarioStatus);
+router.post('/run-scenario', authMiddleware, runScenario);
+router.post('/stop-scenario', authMiddleware, stopScenario);
 
 export default router;

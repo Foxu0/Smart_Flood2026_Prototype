@@ -2,59 +2,64 @@ import 'dotenv/config';
 
 const TARGET_URL = process.env.API_URL || 'http://localhost:3001/api/v1/telemetry';
 
-// 20-Timestep Realistic Hydrological Storm Cycle
+// 25-Step Physically Grounded Hydrological Storm Curve
 const STEPS = [
-  // Phase 1: Baseline Dry State (0–30 mins)
-  { min: 0,   rawDistance: 150.0, rainTips: 0,  voltage: 12.4, rssi: -65, uptime: 300,  relay: false, comment: 'Phase 1: Baseline Dry State (0.30m stage)' },
-  { min: 10,  rawDistance: 150.0, rainTips: 0,  voltage: 12.4, rssi: -65, uptime: 900,  relay: false, comment: 'Phase 1: Baseline Dry State' },
-  { min: 20,  rawDistance: 149.5, rainTips: 0,  voltage: 12.4, rssi: -66, uptime: 1500, relay: false, comment: 'Phase 1: Baseline Dry State' },
-  { min: 30,  rawDistance: 148.0, rainTips: 1,  voltage: 12.3, rssi: -65, uptime: 2100, relay: false, comment: 'Phase 1: Light Rain Start' },
+  // Steps 1–5: Baseline Dry State (0.35m)
+  { step: 1,  stage: 0.35, rainTips: 0,  voltage: 12.4, rssi: -65, uptime: 300,  comment: 'Steps 1–5: Baseline Dry State (0.35m stage)' },
+  { step: 2,  stage: 0.35, rainTips: 0,  voltage: 12.4, rssi: -65, uptime: 900,  comment: 'Baseline Dry State' },
+  { step: 3,  stage: 0.34, rainTips: 0,  voltage: 12.4, rssi: -66, uptime: 1500, comment: 'Baseline Dry State' },
+  { step: 4,  stage: 0.35, rainTips: 0,  voltage: 12.3, rssi: -65, uptime: 2100, comment: 'Baseline Dry State' },
+  { step: 5,  stage: 0.36, rainTips: 0,  voltage: 12.3, rssi: -65, uptime: 2700, comment: 'Baseline Dry State' },
 
-  // Phase 2: Heavy Rainfall Onset (30–70 mins)
-  { min: 40,  rawDistance: 142.0, rainTips: 12, voltage: 12.3, rssi: -67, uptime: 2700, relay: false, comment: 'Phase 2: Heavy Rain Onset (45 mm/h)' },
-  { min: 50,  rawDistance: 135.0, rainTips: 18, voltage: 12.2, rssi: -68, uptime: 3300, relay: false, comment: 'Phase 2: Rain Intensifies (68 mm/h)' },
-  { min: 60,  rawDistance: 125.0, rainTips: 22, voltage: 12.2, rssi: -68, uptime: 3900, relay: false, comment: 'Phase 2: Stage Rising (0.55m)' },
-  { min: 70,  rawDistance: 115.0, rainTips: 25, voltage: 12.1, rssi: -70, uptime: 4500, relay: false, comment: 'Phase 2: Approaching Advisory Watch' },
+  // Steps 6–10: Rain Onset (45 mm/h)
+  { step: 6,  stage: 0.40, rainTips: 12, voltage: 12.3, rssi: -67, uptime: 3300, comment: 'Steps 6–10: Rain Onset (45 mm/h)' },
+  { step: 7,  stage: 0.45, rainTips: 12, voltage: 12.2, rssi: -68, uptime: 3900, comment: 'Rain Onset — Level rising' },
+  { step: 8,  stage: 0.50, rainTips: 12, voltage: 12.2, rssi: -68, uptime: 4500, comment: 'Rain Onset — Stage 0.50m' },
+  { step: 9,  stage: 0.58, rainTips: 12, voltage: 12.1, rssi: -70, uptime: 5100, comment: 'Rain Onset — Stage 0.58m' },
+  { step: 10, stage: 0.65, rainTips: 12, voltage: 12.1, rssi: -70, uptime: 5700, comment: 'Rain Onset — Stage 0.65m' },
 
-  // Phase 3: Flash Flood Surge / Peak (70–130 mins)
-  { min: 80,  rawDistance: 95.0,  rainTips: 32, voltage: 12.1, rssi: -72, uptime: 5100, relay: false, comment: 'Phase 3: ALERT L1 Watch (0.85m stage)' },
-  { min: 90,  rawDistance: 75.0,  rainTips: 35, voltage: 12.0, rssi: -73, uptime: 5700, relay: false, comment: 'Phase 3: ALERT L1 Watch (1.05m stage)' },
-  { min: 100, rawDistance: 55.0,  rainTips: 40, voltage: 12.0, rssi: -75, uptime: 6300, relay: true,  comment: 'Phase 3: ALERT L2 Siren Alarm (1.25m)' },
-  { min: 110, rawDistance: 35.0,  rainTips: 38, voltage: 11.9, rssi: -76, uptime: 6900, relay: true,  comment: 'Phase 3: ALERT L2 Siren Alarm (1.45m)' },
-  { min: 120, rawDistance: 15.0,  rainTips: 30, voltage: 11.9, rssi: -78, uptime: 7500, relay: true,  comment: 'Phase 3: ALERT L3 Emergency Peak (1.65m)' },
+  // Steps 11–16: Torrential Storm Surge Peak (80 mm/h)
+  { step: 11, stage: 0.78, rainTips: 22, voltage: 12.1, rssi: -72, uptime: 6300, comment: 'Steps 11–16: Torrential Storm Surge (80 mm/h)' },
+  { step: 12, stage: 0.92, rainTips: 22, voltage: 12.0, rssi: -73, uptime: 6900, comment: 'Storm Surge — Approaching Level 1' },
+  { step: 13, stage: 1.08, rainTips: 22, voltage: 12.0, rssi: -75, uptime: 7500, comment: 'ALERT LEVEL 1: Advisory Watch (1.08m)' },
+  { step: 14, stage: 1.22, rainTips: 22, voltage: 11.9, rssi: -76, uptime: 8100, comment: 'Storm Surge — Rapid Rise (1.22m)' },
+  { step: 15, stage: 1.35, rainTips: 22, voltage: 11.9, rssi: -78, uptime: 8700, comment: 'Approaching Level 2 Siren Alarm' },
+  { step: 16, stage: 1.45, rainTips: 22, voltage: 11.9, rssi: -78, uptime: 9300, comment: 'ALERT LEVEL 2: Siren Warning Alarm (1.45m)' },
 
-  // Phase 4: Rain Recession & Crest (130–170 mins)
-  { min: 130, rawDistance: 20.0,  rainTips: 15, voltage: 11.9, rssi: -75, uptime: 8100, relay: true,  comment: 'Phase 4: Rain Easing, Water Cresting (1.60m)' },
-  { min: 140, rawDistance: 35.0,  rainTips: 6,  voltage: 12.0, rssi: -72, uptime: 8700, relay: true,  comment: 'Phase 4: Stage Receding (1.45m)' },
-  { min: 150, rawDistance: 55.0,  rainTips: 3,  voltage: 12.1, rssi: -70, uptime: 9300, relay: false, comment: 'Phase 4: Returning to Level 2 (1.25m)' },
-  { min: 160, rawDistance: 70.0,  rainTips: 1,  voltage: 12.2, rssi: -68, uptime: 9900, relay: false, comment: 'Phase 4: Returning to Level 1 (1.10m)' },
+  // Steps 17–21: Rain Recession & Cresting
+  { step: 17, stage: 1.40, rainTips: 2,  voltage: 12.0, rssi: -75, uptime: 9900, comment: 'Steps 17–21: Rain Recession & Cresting' },
+  { step: 18, stage: 1.30, rainTips: 2,  voltage: 12.1, rssi: -72, uptime: 10500, comment: 'Recession — Stage dropping (1.30m)' },
+  { step: 19, stage: 1.20, rainTips: 2,  voltage: 12.1, rssi: -70, uptime: 11100, comment: 'Recession — Stage dropping (1.20m)' },
+  { step: 20, stage: 1.08, rainTips: 2,  voltage: 12.2, rssi: -68, uptime: 11700, comment: 'Recession — Level 1 Watch (1.08m)' },
+  { step: 21, stage: 0.95, rainTips: 2,  voltage: 12.3, rssi: -66, uptime: 12300, comment: 'Recession — Sub-Advisory (0.95m)' },
 
-  // Phase 5: Drainage / Recovery (170–200 mins)
-  { min: 170, rawDistance: 95.0,  rainTips: 0,  voltage: 12.3, rssi: -66, uptime: 10500, relay: false, comment: 'Phase 5: Drainage / Recovery (0.85m)' },
-  { min: 180, rawDistance: 120.0, rainTips: 0,  voltage: 12.4, rssi: -65, uptime: 11100, relay: false, comment: 'Phase 5: Drainage / Recovery (0.60m)' },
-  { min: 190, rawDistance: 135.0, rainTips: 0,  voltage: 12.4, rssi: -65, uptime: 11700, relay: false, comment: 'Phase 5: Drainage / Recovery (0.45m)' },
-  { min: 200, rawDistance: 145.0, rainTips: 0,  voltage: 12.4, rssi: -65, uptime: 12300, relay: false, comment: 'Phase 5: Baseline Restored (0.35m)' },
+  // Steps 22–25: Recovery & Drainage
+  { step: 22, stage: 0.80, rainTips: 0,  voltage: 12.3, rssi: -66, uptime: 12900, comment: 'Steps 22–25: Recovery & Drainage' },
+  { step: 23, stage: 0.65, rainTips: 0,  voltage: 12.4, rssi: -65, uptime: 13500, comment: 'Recovery — Stage 0.65m' },
+  { step: 24, stage: 0.52, rainTips: 0,  voltage: 12.4, rssi: -65, uptime: 14100, comment: 'Recovery — Stage 0.52m' },
+  { step: 25, stage: 0.45, rainTips: 0,  voltage: 12.4, rssi: -65, uptime: 14700, comment: 'Recovery — Settled to Baseline (0.45m)' },
 ];
 
 async function runSimulation() {
   console.log(`\n🌊 ========================================================`);
   console.log(`   SmartFlood 2026 — Hydrological Storm Simulator`);
   console.log(`   Target API: ${TARGET_URL}`);
-  console.log(`   Total Timesteps: ${STEPS.length} (200 minutes simulated storm)`);
+  console.log(`   Total Timesteps: ${STEPS.length} (250 minutes simulated storm)`);
+  console.log(`   Pacing: 2.5s per step | Surge scaling: dh / 0.1667 hr`);
   console.log(`========================================================\n`);
 
   for (let i = 0; i < STEPS.length; i++) {
     const step = STEPS[i];
+    const rawDistance = Math.max(15, Math.round(180 - step.stage * 100));
+
     const payload = {
-      rawDistance:    step.rawDistance,
+      rawDistance,
       rainTips:       step.rainTips,
       batteryVoltage: step.voltage,
       wifiRssi:       step.rssi,
       uptime:         step.uptime,
-      relayState:     step.relay,
+      relayState:     step.stage >= 1.4,
     };
-
-    const calculatedStage = ((180 - step.rawDistance) / 100).toFixed(2);
 
     try {
       const res = await fetch(TARGET_URL, {
@@ -68,13 +73,13 @@ async function runSimulation() {
       const pred = data.projection ? `+30m:${data.projection.horizon_30m_m}m (+60m:${data.projection.horizon_60m_m}m) [${data.projection.methodUsed}]` : 'N/A';
 
       console.log(`[Step ${String(i + 1).padStart(2, '0')}/${STEPS.length}] [${status}] ${step.comment}`);
-      console.log(`         Stage: ${calculatedStage}m | Distance: ${step.rawDistance}cm | Tips: ${step.rainTips} | ONNX: ${pred}\n`);
+      console.log(`         Stage: ${step.stage.toFixed(2)}m | Distance: ${rawDistance}cm | Tips: ${step.rainTips} | ONNX: ${pred}\n`);
     } catch (err) {
       console.error(`[Step ${i + 1}] Request failed:`, err.message);
     }
 
-    // Delay 1.5s between steps for realistic streaming
-    await new Promise((r) => setTimeout(r, 1500));
+    // Pacing delay: 2.5s between steps
+    await new Promise((r) => setTimeout(r, 2500));
   }
 
   console.log(`\n✅ Storm Simulation Complete! Check your Dashboard for live updates.\n`);

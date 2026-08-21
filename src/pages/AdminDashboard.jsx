@@ -5,7 +5,7 @@ import {
   Droplets, Info, MapPin, RefreshCw,
   Sliders, Volume2, VolumeX, Wifi, Zap, Activity,
   Radio, Globe, Send, Download, FileSpreadsheet, Timer, LogOut,
-  Play, RotateCcw, Target, TrendingUp, BarChart3
+  Play, RotateCcw, Target, TrendingUp, BarChart3, Square
 } from 'lucide-react';
 import RainOverlay from '../RainOverlay.jsx';
 import WeatherMapCard from '../WeatherMapCard.jsx';
@@ -224,7 +224,65 @@ export default function FloodMonitoringDashboard() {
       }).catch(() => {});
   }, []);
 
+  const [selectedScenario, setSelectedScenario] = useState('flash_flood');
+  const [scenarioState, setScenarioState] = useState({
+    isRunning: false,
+    scenarioId: 'flash_flood',
+    currentStep: 0,
+    totalSteps: 25,
+    comment: '',
+  });
+
   const getToken = () => sessionStorage.getItem('sf_token') || localStorage.getItem('sf_token') || '';
+
+  const handleStartScenario = async () => {
+    try {
+      const token = getToken();
+      const res = await fetch(`${API_BASE_URL}/api/v1/test/run-scenario`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ scenarioId: selectedScenario, stepIntervalMs: 2500 }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        pushToast('info', '▶️ Scenario Started', `Playing '${selectedScenario}' (${json.totalSteps} steps at 2.5s pacing)...`);
+        setScenarioState({
+          isRunning: true,
+          scenarioId: selectedScenario,
+          currentStep: 0,
+          totalSteps: json.totalSteps,
+          comment: 'Initiating scenario playback...',
+        });
+      } else {
+        pushToast('danger', 'Scenario Error', json.error || 'Failed to start scenario');
+      }
+    } catch (err) {
+      pushToast('danger', 'Scenario Error', err.message);
+    }
+  };
+
+  const handleStopScenario = async () => {
+    try {
+      const token = getToken();
+      const res = await fetch(`${API_BASE_URL}/api/v1/test/stop-scenario`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const json = await res.json();
+      if (json.success) {
+        pushToast('warning', '⏹️ Scenario Stopped', 'Scenario playback halted.');
+        setScenarioState(prev => ({ ...prev, isRunning: false }));
+      }
+    } catch (err) {
+      pushToast('danger', 'Stop Error', err.message);
+    }
+  };
 
   const handleRunSimulation = async () => {
     setIsSimulating(true);
@@ -516,6 +574,17 @@ export default function FloodMonitoringDashboard() {
             if (sirenState === 'OFF' || sirenState === 'MUTED') setSirenActive(false);
           } else if (message.type === 'AI_EVALUATION' && message.data) {
             setAiMetrics(message.data);
+          } else if (message.type === 'SCENARIO_PROGRESS' && message.data) {
+            const d = message.data;
+            setScenarioState({
+              isRunning: true,
+              scenarioId: d.scenarioId,
+              currentStep: d.currentStep,
+              totalSteps: d.totalSteps,
+              comment: d.comment || '',
+            });
+          } else if (message.type === 'SCENARIO_COMPLETE' || message.type === 'SCENARIO_STOPPED') {
+            setScenarioState(prev => ({ ...prev, isRunning: false }));
           }
         } catch (e) {
           console.error('[WS Error]', e);
@@ -1124,6 +1193,90 @@ export default function FloodMonitoringDashboard() {
                     <kbd className="text-[8px] bg-black/10 rounded px-1 ml-0.5">M</kbd>
                   </button>
                 </div>
+              </div>
+            </div>
+
+            {/* ── DEMONSTRATION & SCENARIO SIMULATOR CARD ─────────────────── */}
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-[#f1f5f6] pb-3">
+                <div className="flex items-center gap-2">
+                  <Play size={16} className="text-emerald-600" />
+                  <h2 className="text-sm font-semibold text-[#123a54]">Demonstration &amp; Scenario Simulator</h2>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  scenarioState.isRunning
+                    ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30 animate-pulse'
+                    : 'bg-gray-100 text-gray-500 border-gray-200'
+                }`}>
+                  {scenarioState.isRunning ? `PLAYING STEP ${scenarioState.currentStep}/${scenarioState.totalSteps}` : 'READY'}
+                </span>
+              </div>
+
+              {/* Scenario Selector Dropdown */}
+              <div>
+                <label className="block text-xs font-bold text-[#123a54] mb-1">Select Hydrological Test Scenario</label>
+                <select
+                  value={selectedScenario}
+                  onChange={e => setSelectedScenario(e.target.value)}
+                  disabled={scenarioState.isRunning}
+                  className="w-full text-xs bg-[#f4f7f8] border border-[#d1dee3] rounded-xl p-2.5 font-medium text-[#123a54] focus:outline-none focus:ring-2 focus:ring-[#2b6e8f] disabled:opacity-50"
+                >
+                  <option value="flash_flood">⚡ Scenario 1: Flash Flood Surge (Level 2 Warning - 25 Steps)</option>
+                  <option value="moderate_rain">🌧️ Scenario 2: Moderate Rainfall (Level 1 Advisory - 15 Steps)</option>
+                  <option value="dry_baseline">☀️ Scenario 3: Dry Baseline with Turbulence Noise (15 Steps)</option>
+                </select>
+              </div>
+
+              {/* Live Step Progress Bar */}
+              {scenarioState.isRunning && (
+                <div className="bg-[#f0f9ff] border border-[#bfe6cf] rounded-xl p-3 space-y-1.5">
+                  <div className="flex justify-between text-[11px] font-bold">
+                    <span className="text-[#2b6e8f]">Playback Progress</span>
+                    <span className="font-mono text-[#2f9463]">Step {scenarioState.currentStep} / {scenarioState.totalSteps}</span>
+                  </div>
+                  <div className="h-2 w-full bg-[#eef4f6] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#2f9463] rounded-full transition-all duration-500"
+                      style={{ width: `${(scenarioState.currentStep / Math.max(1, scenarioState.totalSteps)) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-[#6d818d] font-mono italic truncate">
+                    {scenarioState.comment || 'Streaming timestep telemetry payload...'}
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[#f1f5f6]">
+                <button
+                  onClick={handleStartScenario}
+                  disabled={scenarioState.isRunning}
+                  className="py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                  title="Start step-by-step playback of selected scenario at 2.5s interval"
+                >
+                  <Play size={13} />
+                  <span>START</span>
+                </button>
+
+                <button
+                  onClick={handleStopScenario}
+                  disabled={!scenarioState.isRunning}
+                  className="py-2 px-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                  title="Halt active scenario immediately"
+                >
+                  <Square size={13} />
+                  <span>STOP</span>
+                </button>
+
+                <button
+                  onClick={handleResetTestTelemetry}
+                  disabled={isResetting}
+                  className="py-2 px-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#3f5361] font-bold text-xs border border-gray-300 flex items-center justify-center gap-1 shadow-sm transition hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                  title="Purge database logs and reset baseline"
+                >
+                  <RotateCcw size={13} className={isResetting ? 'animate-spin' : ''} />
+                  <span>RESET</span>
+                </button>
               </div>
             </div>
 
