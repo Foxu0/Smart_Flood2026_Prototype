@@ -3,45 +3,59 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { prisma } from '../db.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const MODEL_PATH = path.join(__dirname, '..', 'models', 'flood_lstm.onnx');
+const __filename  = fileURLToPath(import.meta.url);
+const __dirname   = path.dirname(__filename);
+const MODEL_PATH  = path.join(__dirname, '..', 'models', 'flood_lstm.onnx');
+const SCALER_PATH = path.join(__dirname, '..', 'models', 'scaler_params.json');
 
-// ── ONNX Runtime lazy-load ───────────────────────────────────────────────────
+// ── Scaler Parameters Loader ─────────────────────────────────────────────────
+let scalerParams = null;
+function getScalerParams() {
+  if (scalerParams) return scalerParams;
+  if (fs.existsSync(SCALER_PATH)) {
+    try {
+      const raw = fs.readFileSync(SCALER_PATH, 'utf-8');
+      scalerParams = JSON.parse(raw);
+      console.log('[dlService] Loaded MinMax scaler parameters from scaler_params.json');
+    } catch (err) {
+      console.error('[dlService] Failed to load scaler_params.json:', err.message);
+    }
+  }
+  return scalerParams;
+}
+
+// ── ONNX Runtime Lazy Loader ─────────────────────────────────────────────────
 let ort = null;
 async function getOrt() {
   if (!ort) {
     try {
       ort = await import('onnxruntime-node');
     } catch (e) {
-      console.warn('[dlService] onnxruntime-node not available:', e.message);
+      console.warn('[dlService] onnxruntime-node dynamic import failed:', e.message);
     }
   }
   return ort;
 }
 
-// ── ONNX Session cache (load once, reuse across every POST /telemetry) ───────
+// ── ONNX Session Cache ───────────────────────────────────────────────────────
 let cachedSession = null;
 async function getSession(ortModule) {
   if (cachedSession) return cachedSession;
   if (!fs.existsSync(MODEL_PATH)) return null;
   try {
     cachedSession = await ortModule.InferenceSession.create(MODEL_PATH);
-    console.log('[dlService] ONNX session loaded and cached from flood_lstm.onnx');
+    console.log('[dlService] ONNX session loaded successfully from flood_lstm.onnx');
   } catch (err) {
-    console.error('[dlService] Failed to load ONNX session:', err.message);
+    console.error('[dlService] Failed to load ONNX session from flood_lstm.onnx:', err.message);
     cachedSession = null;
   }
   return cachedSession;
 }
 
-// ── History buffer builder ───────────────────────────────────────────────────
+// ── History Buffer Builder ───────────────────────────────────────────────────
 /**
  * Converts an array of TelemetryLog records (chronological, oldest-first)
- * into the 3-feature sliding-window format required by the LSTM input tensor.
- *
- * Feature vector per timestep: [water_level_m, rainfall_rate, surge_velocity]
- *   surge_velocity = change in water level per hour between consecutive readings.
+ * into feature vectors: [water_level_m, rainfall_rate, surge_velocity]
  *
  * @param {Array<{water_level_m: number, rainfall_rate: number}>} chronologicalLogs
  * @returns {Array<{water_level_m: number, rainfall_rate: number, surge_velocity: number}>}
@@ -49,7 +63,7 @@ async function getSession(ortModule) {
 export function buildHistoryBuffer(chronologicalLogs) {
   return chronologicalLogs.map((item, i) => {
     const prev = i > 0 ? chronologicalLogs[i - 1] : item;
-    // Approximate surge velocity in m/hour (assuming ~15 min between readings)
+    // Approximate surge velocity in m/hour between consecutive readings
     const surge_velocity = parseFloat(
       ((item.water_level_m - prev.water_level_m) * 4).toFixed(4)
     );
@@ -61,10 +75,10 @@ export function buildHistoryBuffer(chronologicalLogs) {
   });
 }
 
-// ── Core inference function (used by POST /telemetry pipeline) ───────────────
+// ── Core Inference Function ───────────────────────────────────────────────────
 /**
- * Run ONNX LSTM (or surge-rate fallback) inference from a pre-built history buffer.
- * Does NOT query the database — caller provides the buffer. Saves result to MLProjection.
+ * Run ONNX LSTM inference (with MinMax normalization/denormalization via scaler_params.json)
+ * or fallback surge-rate calculation from a sliding-window history buffer.
  *
  * @param {Array<{water_level_m: number, rainfall_rate: number, surge_velocity: number}>} historyBuffer
  *   1–6 entries, chronological (oldest first). Automatically padded to 6 if shorter.
@@ -76,14 +90,14 @@ export async function getPrediction(historyBuffer) {
     return null;
   }
 
-  // Pad to exactly 6 timesteps (repeat first entry for early readings)
+  // Pad to exactly 6 timesteps (repeat earliest entry if sequence is shorter)
   const SEQ_LEN = 6;
   const padded = Array(SEQ_LEN).fill(historyBuffer[0]).map((base, i) => {
     const offset = i - (SEQ_LEN - historyBuffer.length);
     return offset >= 0 ? historyBuffer[offset] : base;
   });
 
-  const current = padded[SEQ_LEN - 1];
+  const current      = padded[SEQ_LEN - 1];
   const currentLevel = current.water_level_m;
 
   let predicted30m    = currentLevel;
@@ -91,55 +105,84 @@ export async function getPrediction(historyBuffer) {
   let confidenceScore = 94.0;
   let methodUsed      = 'SurgeRate_Fallback';
 
-  // ── Attempt ONNX inference ─────────────────────────────────────────────────
+  // ── Attempt Live ONNX Inference ───────────────────────────────────────────
   const ortModule = await getOrt();
   if (ortModule) {
     const session = await getSession(ortModule);
     if (session) {
       try {
-        // Build Float32Array [1, 6, 3] — batch=1, seq=6, features=3
+        const scaler = getScalerParams();
         const sequenceData = new Float32Array(SEQ_LEN * 3);
+
+        // Populate tensor [1, 6, 3] with normalized inputs
         for (let i = 0; i < SEQ_LEN; i++) {
-          sequenceData[i * 3 + 0] = padded[i].water_level_m;
-          sequenceData[i * 3 + 1] = padded[i].rainfall_rate;
-          sequenceData[i * 3 + 2] = padded[i].surge_velocity;
+          const rawWL    = padded[i].water_level_m;
+          const rawRain  = padded[i].rainfall_rate;
+          const rawSurge = padded[i].surge_velocity;
+
+          let normWL    = rawWL;
+          let normRain  = rawRain;
+          let normSurge = rawSurge;
+
+          // Apply MinMax scaling if scaler_params.json is loaded
+          if (scaler && scaler.min && scaler.range) {
+            normWL    = (rawWL    - scaler.min[0]) / scaler.range[0];
+            normRain  = (rawRain  - scaler.min[1]) / scaler.range[1];
+            normSurge = (rawSurge - scaler.min[2]) / scaler.range[2];
+          }
+
+          sequenceData[i * 3 + 0] = normWL;
+          sequenceData[i * 3 + 1] = normRain;
+          sequenceData[i * 3 + 2] = normSurge;
         }
 
         const inputName = session.inputNames[0] ?? 'input';
         const tensor    = new ortModule.Tensor('float32', sequenceData, [1, SEQ_LEN, 3]);
         const results   = await session.run({ [inputName]: tensor });
-        const out       = results[session.outputNames[0] ?? 'output'].data;
+        const output    = results[session.outputNames[0] ?? 'output'].data;
 
-        predicted30m    = parseFloat(Math.min(1.8, Math.max(0, out[0])).toFixed(2));
-        predicted60m    = parseFloat(Math.min(1.8, Math.max(0, out[1] ?? out[0] + 0.05)).toFixed(2));
+        const raw30m = output[0];
+        const raw60m = output[1] ?? (output[0] + 0.02);
+
+        // Denormalize output targets back to real-world meters
+        if (scaler && scaler.min && scaler.range) {
+          predicted30m = raw30m * scaler.range[0] + scaler.min[0];
+          predicted60m = raw60m * scaler.range[0] + scaler.min[0];
+        } else {
+          predicted30m = raw30m;
+          predicted60m = raw60m;
+        }
+
+        // Clamp to physically realistic bounds [0.0m, 3.5m]
+        predicted30m    = parseFloat(Math.min(3.5, Math.max(0, predicted30m)).toFixed(2));
+        predicted60m    = parseFloat(Math.min(3.5, Math.max(0, predicted60m)).toFixed(2));
         confidenceScore = 96.5;
         methodUsed      = 'ONNX_LSTM';
 
-        console.log(`[dlService] ONNX -> +30m: ${predicted30m}m  +60m: ${predicted60m}m`);
+        console.log(`[dlService] ONNX_LSTM Inference → +30m: ${predicted30m}m  +60m: ${predicted60m}m (Confidence: ${confidenceScore}%)`);
       } catch (onnxErr) {
-        console.error('[dlService] ONNX inference error (falling back):', onnxErr.message);
-        // Invalidate cached session so next call retries load
-        cachedSession = null;
+        console.error('[dlService] ONNX inference failed (reverting to fallback):', onnxErr.message);
+        cachedSession = null; // reset session cache to retry on next call
       }
     }
   }
 
-  // ── Surge-rate fallback ────────────────────────────────────────────────────
+  // ── Fallback Surge-Rate Math (if ONNX fails or is missing) ─────────────────
   if (methodUsed === 'SurgeRate_Fallback') {
-    const avgSurge  = current.surge_velocity;                    // m/h
-    const rainBoost = current.rainfall_rate > 10 ? 0.08 : 0.03; // non-linear rain correction
+    const avgSurge  = current.surge_velocity;
+    const rainBoost = current.rainfall_rate > 10 ? 0.08 : 0.03;
 
     predicted30m = parseFloat(
-      Math.min(1.8, Math.max(0, currentLevel + avgSurge * 0.5 + rainBoost)).toFixed(2)
+      Math.min(3.5, Math.max(0, currentLevel + avgSurge * 0.5 + rainBoost)).toFixed(2)
     );
     predicted60m = parseFloat(
-      Math.min(1.8, Math.max(0, currentLevel + avgSurge * 1.0 + rainBoost * 2)).toFixed(2)
+      Math.min(3.5, Math.max(0, currentLevel + avgSurge * 1.0 + rainBoost * 2)).toFixed(2)
     );
     confidenceScore = 94.0;
-    console.log(`[dlService] Fallback surge-rate -> +30m: ${predicted30m}m  +60m: ${predicted60m}m`);
+    console.log(`[dlService] SurgeRate_Fallback → +30m: ${predicted30m}m  +60m: ${predicted60m}m`);
   }
 
-  // ── Persist to MLProjection ────────────────────────────────────────────────
+  // ── Save Projection to Database ───────────────────────────────────────────
   try {
     const projection = await prisma.mLProjection.create({
       data: {
@@ -148,22 +191,15 @@ export async function getPrediction(historyBuffer) {
         confidence_score: confidenceScore,
       },
     });
-    console.log(`[dlService] MLProjection saved (id:${projection.id}) [${methodUsed}]`);
+    console.log(`[dlService] Saved MLProjection (id: ${projection.id}) [${methodUsed}]`);
     return { ...projection, predicted30m, predicted60m, confidenceScore, methodUsed };
   } catch (dbErr) {
-    console.error('[dlService] Failed to persist MLProjection:', dbErr.message);
-    // Still return the prediction even if DB write failed
+    console.error('[dlService] Failed to save MLProjection:', dbErr.message);
     return { predicted30m, predicted60m, confidenceScore, methodUsed };
   }
 }
 
-// ── DB-backed inference (used by GET /api/v1/telemetry/projection) ───────────
-/**
- * Queries the last 6 TelemetryLog records from the database and runs inference.
- * Use this only for the projection REST endpoint — not the hot POST path.
- *
- * @returns {Promise<object|null>}
- */
+// ── DB-backed Inference Helper ───────────────────────────────────────────────
 export async function runPredictionInference() {
   try {
     const logs = await prisma.telemetryLog.findMany({
@@ -172,12 +208,12 @@ export async function runPredictionInference() {
     });
 
     if (logs.length === 0) {
-      console.log('[dlService] No telemetry records available for DB-backed inference.');
+      console.log('[dlService] No telemetry logs available for inference.');
       return null;
     }
 
-    const chronological  = [...logs].reverse();
-    const historyBuffer  = buildHistoryBuffer(chronological);
+    const chronological = [...logs].reverse();
+    const historyBuffer = buildHistoryBuffer(chronological);
     return await getPrediction(historyBuffer);
   } catch (err) {
     console.error('[dlService] runPredictionInference error:', err.message);
