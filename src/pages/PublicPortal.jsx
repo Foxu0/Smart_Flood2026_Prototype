@@ -451,8 +451,8 @@ export default function PublicPortal() {
                 <div className="flex items-center gap-2.5">
                   <Phone size={16} className="text-[#e0522f]" />
                   <div>
-                    <h3 className="text-sm font-semibold leading-tight">Emergency Hotlines &amp; Evacuation Shelters</h3>
-                    <p className="text-[10px] text-[#6d818d] mt-0.5">Antipolo CDRRMO hotlines, barangay rescue &amp; high-ground centers</p>
+                    <h3 className="text-sm font-semibold leading-tight">Verified Emergency Hotlines</h3>
+                    <p className="text-[10px] text-[#6d818d] mt-0.5">Antipolo CDRRMO, City Hall, PAGASA, NDRRMC, Police &amp; Fire Rescue</p>
                   </div>
                 </div>
                 {showContacts ? <ChevronUp size={16} className="text-[#6d818d]" /> : <ChevronDown size={16} className="text-[#6d818d]" />}
@@ -464,7 +464,7 @@ export default function PublicPortal() {
                   {/* Hotlines */}
                   <div>
                     <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#e0522f] mb-2 flex items-center gap-1">
-                      <LifeBuoy size={12} /> Emergency Hotlines
+                      <LifeBuoy size={12} /> Verified Emergency Hotlines
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {EMERGENCY.hotlines.map((h) => (
@@ -479,26 +479,6 @@ export default function PublicPortal() {
                           >
                             {h.number}
                           </a>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Evacuation Shelters */}
-                  <div>
-                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#e69138] mb-2 flex items-center gap-1">
-                      <Compass size={12} /> Designated High-Ground Shelters
-                    </h4>
-                    <div className="space-y-2">
-                      {EMERGENCY.shelters.map((s) => (
-                        <div key={s.name} className="bg-[#fbfdfe] rounded-xl p-2.5 border border-[#eef2f3] flex items-center justify-between gap-2">
-                          <div>
-                            <p className="text-xs font-semibold text-[#123a54]">{s.name}</p>
-                            <p className="text-[10px] text-[#6d818d]">Brgy. {s.brgy} · {s.elevation}</p>
-                          </div>
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-[#2f9463]/15 text-[#2f9463] flex-shrink-0">
-                            {s.capacity}
-                          </span>
                         </div>
                       ))}
                     </div>
