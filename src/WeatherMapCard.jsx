@@ -355,7 +355,7 @@ export default function WeatherMapCard({ severity = 0 }) {
       </div>
 
       {/* ── Map Container ───────────────────────────────────────────── */}
-      <div className="relative h-[340px] sm:h-[420px] w-full overflow-hidden z-0">
+      <div className="relative h-[340px] sm:h-[500px] w-full overflow-hidden z-0">
 
         {/* Active Warnings Badge — top left */}
         <div className="absolute top-3 left-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl shadow-lg border border-white/20 flex items-center gap-2 text-xs float-badge">

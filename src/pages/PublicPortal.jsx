@@ -511,13 +511,13 @@ export default function PublicPortal() {
           </div>
 
           {/* RIGHT COLUMN: Interactive Weather Map Card (5/12 width) */}
-          <div className="lg:col-span-5 flex flex-col justify-between">
+          <div className="lg:col-span-5 flex flex-col gap-4">
 
             {/* Weather Map Component */}
             <WeatherMapCard severity={floodLevel.id} />
 
             {/* Quick Public Alert Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 mt-4 space-y-3">
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-3">
               <div className="flex items-center gap-2 border-b border-[#f1f5f6] pb-2">
                 <Radio size={15} className="text-[#2b6e8f]" />
                 <h3 className="text-xs font-bold text-[#123a54]">Live Telemetry Feed Notice</h3>
