@@ -247,64 +247,66 @@ export default function WeatherMapCard({ severity = 0 }) {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] overflow-hidden">
-      <div className="bg-[#123a54] text-white px-4 py-2.5 flex items-center justify-between gap-2 border-b border-white/10">
+    <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 flex flex-col justify-between">
+      {/* Header Row */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
         <div className="flex items-center gap-2">
-          <Layers size={15} className="text-sky-200" />
-          <h2 className="text-sm font-semibold">Weather Map</h2>
+          <Layers size={16} className="text-[#2b6e8f]" />
+          <h2 className="text-sm font-semibold text-[#123a54]">Weather Map</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setShowDisclaimer(true)}
-            className="flex items-center gap-1 bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/30 px-2.5 py-1 rounded-full text-[9px] font-bold transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1 bg-[#123a54]/10 hover:bg-[#123a54]/20 text-[#123a54] rounded-full text-xs font-bold transition border border-[#123a54]/15 cursor-pointer"
             title="View Data Sources & Disclaimers"
           >
-            <Info size={11} />
+            <Info size={13} />
             <span>Sources &amp; Disclaimers</span>
           </button>
-          <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-full text-[9px] font-bold text-sky-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-            {radarTimeStr}
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-[#2f9463]/10 text-[#2f9463] rounded-full text-xs font-bold border border-[#2f9463]/20 font-mono">
+            <span className="w-2 h-2 rounded-full bg-[#2f9463] animate-ping" />
+            <span>{radarTimeStr}</span>
           </div>
         </div>
       </div>
 
-      <div className="bg-[#0b2434] px-3 py-1.5 flex items-center justify-between gap-2 border-b border-white/10 text-xs">
-        <div className="flex items-center gap-1.5">
+      {/* Segmented Control & Meta Caption Row */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+        <div className="bg-[#f1f5f7] p-1 rounded-xl flex items-center gap-1 border border-[#e4edf0]">
           <button
             onClick={() => setMapViewMode('doppler')}
-            className={`px-2.5 py-1 rounded-lg font-bold text-[10px] sm:text-xs flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all ${
               mapViewMode === 'doppler'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-white/10 text-sky-200 hover:bg-white/20'
+                ? 'bg-[#2b6e8f] text-white shadow-sm'
+                : 'text-[#6d818d] hover:text-[#123a54] hover:bg-white/60 font-semibold'
             }`}
           >
-            <Radio size={12} className={mapViewMode === 'doppler' ? 'animate-pulse' : ''} />
+            <Radio size={13} className={mapViewMode === 'doppler' ? 'animate-pulse' : ''} />
             <span>Rain Radar</span>
           </button>
           <button
             onClick={() => setMapViewMode('pagasa')}
-            className={`px-2.5 py-1 rounded-lg font-bold text-[10px] sm:text-xs flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all ${
               mapViewMode === 'pagasa'
-                ? 'bg-sky-600 text-white shadow-sm'
-                : 'bg-white/10 text-sky-200 hover:bg-white/20'
+                ? 'bg-[#2b6e8f] text-white shadow-sm'
+                : 'text-[#6d818d] hover:text-[#123a54] hover:bg-white/60 font-semibold'
             }`}
           >
-            <Layers size={12} className={mapViewMode === 'pagasa' ? 'animate-pulse' : ''} />
+            <Layers size={13} className={mapViewMode === 'pagasa' ? 'animate-pulse' : ''} />
             <span>PAGASA Satellite</span>
           </button>
         </div>
-        <div className="hidden sm:flex items-center gap-1 text-[9px] text-sky-200/80 font-mono">
+        <div className="text-[11px] sm:text-xs text-[#6d818d] font-mono font-medium">
           {mapViewMode === 'doppler' ? 'Ground Rain Intensity (dBZ)' : 'PAGASA 24h Himawari IR Loop'}
         </div>
       </div>
 
-      <div className="relative h-[340px] sm:h-[500px] w-full overflow-hidden z-0 bg-[#05131e]">
-        {/* Top Right Severity Status Badge */}
-
+      {/* Inset Satellite / Radar Viewport Frame */}
+      <div className="relative h-[340px] sm:h-[460px] w-full overflow-hidden rounded-xl bg-[#05131e] border border-[#e4edf0]">
+        {/* Severity Status Badge */}
         <div
-          className="absolute top-3 right-3 z-[1000] px-2.5 py-1 rounded-full text-[10px] font-bold shadow-lg border"
-          style={{ background: `${b.color}22`, borderColor: `${b.color}55`, color: b.color, backdropFilter: 'blur(8px)' }}
+          className="absolute top-3 right-3 z-[1000] px-3 py-1 rounded-full text-xs font-bold shadow-md border backdrop-blur-md flex items-center gap-1.5"
+          style={{ background: `${b.color}22`, borderColor: `${b.color}55`, color: b.color }}
         >
           ● {b.label.toUpperCase()}
         </div>
