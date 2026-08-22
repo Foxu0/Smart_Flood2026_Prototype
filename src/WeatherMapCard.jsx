@@ -135,8 +135,8 @@ function RadarLayer({ path, opacity = 0.65 }) {
 
 /* ── Philippine Area Boundary & Map Limits ──────────────────────────────── */
 const PAGASA_SAT_BOUNDS = [
-  [4.0, 114.5],  // Southwest corner of PAR image box
-  [21.5, 131.5], // Northeast corner of PAR image box
+  [3.5, 110.0],  // Southwest corner (expanded to fill container width)
+  [22.5, 135.0], // Northeast corner (expanded to fill container width)
 ];
 
 const PH_RADAR_BOUNDS = [
@@ -150,11 +150,11 @@ function MapViewController({ mapViewMode }) {
 
   useEffect(() => {
     if (mapViewMode === 'pagasa') {
-      // Hard-lock camera inside exact PAGASA Satellite Box (cannot zoom out beyond border box)
-      const minZ = map.getBoundsZoom(PAGASA_SAT_BOUNDS, true);
+      // Fit bounds to cover 100% of container width without side gaps
+      map.fitBounds(PAGASA_SAT_BOUNDS, { animate: true, padding: [0, 0] });
+      const minZ = Math.max(5, map.getBoundsZoom(PAGASA_SAT_BOUNDS, false));
       map.setMinZoom(minZ);
       map.setMaxBounds(PAGASA_SAT_BOUNDS);
-      map.fitBounds(PAGASA_SAT_BOUNDS, { animate: true, padding: [0, 0] });
     } else {
       // Return to local flood radar view centered on Antipolo
       map.setMinZoom(6);
@@ -438,8 +438,8 @@ export default function WeatherMapCard({ severity = 0 }) {
               <LayersControl.Overlay checked name="DOST-PAGASA Himawari Satellite IR">
                 <ImageOverlay
                   url={currentSatUrl}
-                  bounds={[[4.0, 115.0], [25.0, 135.0]]}
-                  opacity={0.85}
+                  bounds={PAGASA_SAT_BOUNDS}
+                  opacity={0.92}
                 />
               </LayersControl.Overlay>
             )}
