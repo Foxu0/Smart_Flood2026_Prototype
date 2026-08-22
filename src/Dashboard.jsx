@@ -919,8 +919,12 @@ export default function FloodMonitoringDashboard() {
 
                   {/* Measured Telemetry Nodes */}
                   {histLevels.map((v, i, a) => {
+                    const total = a.length;
+                    const isLast = i === total - 1;
+                    const shouldDrawNode = total <= 12 || i === 0 || isLast || i % Math.ceil(total / 8) === 0;
+                    if (!shouldDrawNode && !isLast) return null;
+
                     const { x, y } = toChartPt(v, i, a);
-                    const isLast = i === histLevels.length - 1;
                     return (
                       <g key={i}>
                         <circle cx={x} cy={y} r="4" fill="#2b6e8f" stroke="white" strokeWidth="2"
@@ -936,6 +940,11 @@ export default function FloodMonitoringDashboard() {
                     );
                   })}
                   {activeHistory.map((h, i, a) => {
+                    const total = a.length;
+                    const isLast = i === total - 1;
+                    const shouldDrawLabel = total <= 6 || i === 0 || isLast || i % Math.ceil(total / 5) === 0;
+                    if (!shouldDrawLabel) return null;
+
                     const { x } = toChartPt(h.waterLevel, i, a);
                     return <text key={i} x={x} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#6d818d" fontWeight="600">{h.time}</text>;
                   })}
