@@ -15,6 +15,7 @@ import useCountUp from '../hooks/useCountUp.js';
 export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
   const pct    = Math.min(100, Math.max(0, (levelM / maxM) * 100));
   const fillH  = 160; // inner drawable height in SVG units
+  const tankW  = 120; // wider tank width in SVG units
   const fillY  = fillH * (1 - pct / 100);
 
   // Animated wave path via rAF
@@ -24,20 +25,20 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
     let startT = null;
     const step = (t) => {
       if (!startT) startT = t;
-      setWaveOffset(((t - startT) / 1200) * Math.PI * 2); // one full cycle ~1.2s
+      setWaveOffset(((t - startT) / 1200) * Math.PI * 2);
       rafRef.current = requestAnimationFrame(step);
     };
     rafRef.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
-  // Build a simple sine-wave SVG path along the water surface (width 80)
+  // Build sine-wave SVG path along the water surface (width 120)
   const wavePoints = [];
-  for (let x = 0; x <= 80; x += 4) {
-    const y = fillY + Math.sin((x / 80) * Math.PI * 2 + waveOffset) * 3;
+  for (let x = 0; x <= tankW; x += 5) {
+    const y = fillY + Math.sin((x / tankW) * Math.PI * 2 + waveOffset) * 3.5;
     wavePoints.push(`${x},${y}`);
   }
-  const wavePath = `M 0,${fillY} L ${wavePoints.join(' L ')} L 80,${fillH} L 0,${fillH} Z`;
+  const wavePath = `M 0,${fillY} L ${wavePoints.join(' L ')} L ${tankW},${fillH} L 0,${fillH} Z`;
 
   // Danger line in SVG units (1.6 / 1.8 * 160 from bottom)
   const dangerY = fillH * (1 - 1.6 / maxM);
@@ -46,7 +47,7 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
   const displayVal = useCountUp(levelM, 900, 2);
 
   // Circular progress ring
-  const radius = 60;
+  const radius = 75;
   const circ   = 2 * Math.PI * radius;
   const dash   = circ * (pct / 100);
 
@@ -55,9 +56,9 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
       {/* Circular progress arc behind tank */}
       <div className="relative flex items-center justify-center">
         <svg
-          width="148"
-          height="148"
-          viewBox="-74 -74 148 148"
+          width="178"
+          height="178"
+          viewBox="-89 -89 178 178"
           className="absolute top-0 left-0"
           style={{ filter: `drop-shadow(0 0 6px ${color}55)` }}
         >
@@ -79,14 +80,14 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
 
         {/* Tank SVG */}
         <svg
-          width="90"
+          width="130"
           height="180"
-          viewBox="-5 -10 90 186"
+          viewBox="-5 -10 130 186"
           className="relative z-10"
         >
           <defs>
             <clipPath id="tankClip">
-              <rect x="0" y="0" width="80" height={fillH} rx="16" />
+              <rect x="0" y="0" width={tankW} height={fillH} rx="18" />
             </clipPath>
             <linearGradient id="waterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor={color} stopOpacity="0.65" />
@@ -98,7 +99,7 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
           </defs>
 
           {/* Tank body (outer border) */}
-          <rect x="0" y="0" width="80" height={fillH} rx="16"
+          <rect x="0" y="0" width={tankW} height={fillH} rx="18"
             fill="#f4fbfd" stroke="#123a54" strokeWidth="3.5"
             filter="url(#tankInnerShadow)" />
 
@@ -109,11 +110,11 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
 
             {/* Bubbles */}
             {[
-              { cx: 18, cy: fillH - 12, r: 3.5, dur: '2.4s', delay: '0s' },
-              { cx: 40, cy: fillH - 20, r: 2.5, dur: '3.1s', delay: '0.8s' },
-              { cx: 60, cy: fillH - 8,  r: 2,   dur: '2.7s', delay: '1.5s' },
+              { cx: 25, cy: fillH - 12, r: 3.5, dur: '2.4s', delay: '0s' },
+              { cx: 60, cy: fillH - 20, r: 2.5, dur: '3.1s', delay: '0.8s' },
+              { cx: 95, cy: fillH - 8,  r: 3.0, dur: '2.7s', delay: '1.5s' },
             ].map((b, i) => (
-              pct > 15 && (
+              pct > 5 && (
                 <circle key={i}
                   cx={b.cx} cy={b.cy} r={b.r}
                   fill="rgba(255,255,255,0.55)"
@@ -125,9 +126,9 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
           </g>
 
           {/* Danger dashed line */}
-          <line x1="0" y1={dangerY} x2="80" y2={dangerY}
+          <line x1="0" y1={dangerY} x2={tankW} y2={dangerY}
             stroke="#e0522f" strokeWidth="1.5" strokeDasharray="5,3" opacity="0.7" />
-          <text x="4" y={dangerY - 4} fontSize="7" fill="#e0522f" fontWeight="bold">
+          <text x="6" y={dangerY - 4} fontSize="7.5" fill="#e0522f" fontWeight="bold">
             DANGER 1.6m
           </text>
 
@@ -136,9 +137,9 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
             const ty = fillH * (1 - v / maxM);
             return (
               <g key={v}>
-                <line x1="72" y1={ty} x2="80" y2={ty}
+                <line x1="110" y1={ty} x2="120" y2={ty}
                   stroke="#123a5466" strokeWidth="1" />
-                <text x="70" y={ty + 3} textAnchor="end" fontSize="6.5"
+                <text x="108" y={ty + 3} textAnchor="end" fontSize="6.5"
                   fill="#123a54aa" fontWeight="600">
                   {v.toFixed(1)}
                 </text>
@@ -160,7 +161,7 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
           Water Level · Danger at 1.60 m
         </div>
         {/* Pct bar */}
-        <div className="mt-2 w-28 h-1.5 bg-[#eef4f6] rounded-full overflow-hidden mx-auto">
+        <div className="mt-2 w-32 h-1.5 bg-[#eef4f6] rounded-full overflow-hidden mx-auto">
           <div
             className="h-full rounded-full"
             style={{
