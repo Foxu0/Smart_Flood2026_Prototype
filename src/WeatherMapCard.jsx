@@ -68,8 +68,8 @@ function RadarLayer({ path, opacity = 0.65 }) {
 
 /* ── Philippine Area Boundary & Map Limits ──────────────────────────────── */
 const PAGASA_SAT_BOUNDS = [
-  [4.0, 114.0],  // Southwest corner (Exact PAR Himawari scan bounds)
-  [21.5, 132.0], // Northeast corner (Exact PAR Himawari scan bounds)
+  [-1.0, 102.0],  // Southwest corner (expanded full-bleed to cover container width)
+  [25.5, 144.0], // Northeast corner (expanded full-bleed to cover container width)
 ];
 
 const PH_RADAR_BOUNDS = [
@@ -90,8 +90,7 @@ function MapViewController({ mapViewMode }) {
     if (mapViewMode === 'pagasa') {
       // Fit bounds to cover 100% of container width without side gaps
       map.fitBounds(PAGASA_SAT_BOUNDS, { animate: true, padding: [0, 0] });
-      const minZ = Math.max(5, map.getBoundsZoom(PAGASA_SAT_BOUNDS, false));
-      map.setMinZoom(minZ);
+      map.setMinZoom(4);
       map.setMaxBounds(PAGASA_SAT_BOUNDS);
     } else {
       // Return to local flood radar view centered on Antipolo
@@ -344,18 +343,11 @@ export default function WeatherMapCard({ severity = 0 }) {
         >
           <MapViewController mapViewMode={mapViewMode} />
 
-          {/* Base Map Tiles: Dark Matter for Rain Radar, Esri Satellite for PAGASA Himawari IR */}
-          {mapViewMode === 'doppler' ? (
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              maxZoom={19}
-            />
-          ) : (
-            <TileLayer
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              maxZoom={19}
-            />
-          )}
+          {/* Base Map Tiles: CartoDB Dark Matter for sleek high-contrast dark theme */}
+          <TileLayer
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            maxZoom={19}
+          />
 
           {/* Overlays */}
           {mapViewMode === 'doppler' && (
