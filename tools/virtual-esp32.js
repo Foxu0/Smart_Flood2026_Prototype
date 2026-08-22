@@ -136,24 +136,55 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // ── SCENARIOS DATASETS ────────────────────────────────────────────────────────
 const SCENARIO_FLASH_FLOOD = [
-  { level: 0.00, rain: 0,   comment: 'Dry Baseline' },
-  { level: 0.05, rain: 0,   comment: 'Calm Baseline' },
-  { level: 0.20, rain: 15,  comment: 'Light Rain Onset' },
-  { level: 0.45, rain: 35,  comment: 'Heavy Rain Onset' },
-  { level: 0.75, rain: 55,  comment: 'Runoff Accumulation' },
-  { level: 1.05, rain: 70,  comment: 'Level 1 Advisory Watch' },
-  { level: 1.25, rain: 80,  comment: 'Rising Rapidly' },
-  { level: 1.45, rain: 95,  comment: 'Level 2 Warning Alarm (Siren ON)' },
-  { level: 1.65, rain: 110, comment: 'Level 3 Emergency Danger Level' },
-  { level: 1.70, rain: 90,  comment: 'Peak Storm Crest' },
-  { level: 1.55, rain: 40,  comment: 'Rain Receding' },
-  { level: 1.35, rain: 15,  comment: 'Water Draining' },
-  { level: 1.10, rain: 5,   comment: 'Receding Below Alarm' },
-  { level: 0.80, rain: 0,   comment: 'Subsided to Watch' },
-  { level: 0.50, rain: 0,   comment: 'Draining to River' },
-  { level: 0.25, rain: 0,   comment: 'Nearly Cleared' },
-  { level: 0.10, rain: 0,   comment: 'Restoring Baseline' },
-  { level: 0.00, rain: 0,   comment: 'Fully subsides to 0.00m' },
+  // Phase 1: Pre-Storm Baseline (Steps 1-6)
+  { level: 0.00, rain: 0,   comment: 'Phase 1: Pre-Storm Dry Baseline' },
+  { level: 0.00, rain: 0,   comment: 'Phase 1: Pre-Storm Dry Baseline' },
+  { level: 0.05, rain: 0,   comment: 'Phase 1: Subtle River Ripple' },
+  { level: 0.05, rain: 2,   comment: 'Phase 1: Drizzle Onset (2mm/h)' },
+  { level: 0.10, rain: 5,   comment: 'Phase 1: Light Rain (5mm/h)' },
+  { level: 0.15, rain: 10,  comment: 'Phase 1: Light Rain (10mm/h)' },
+
+  // Phase 2: Rain Intensification & Soil Saturation (Steps 7-12)
+  { level: 0.25, rain: 25,  comment: 'Phase 2: Rain Intensifies (25mm/h)' },
+  { level: 0.35, rain: 35,  comment: 'Phase 2: Heavy Rain (35mm/h)' },
+  { level: 0.50, rain: 50,  comment: 'Phase 2: Heavy Torrential Rain (50mm/h)' },
+  { level: 0.65, rain: 65,  comment: 'Phase 2: Downpour (65mm/h)' },
+  { level: 0.80, rain: 75,  comment: 'Phase 2: Sierra Madre Runoff Accumulating' },
+  { level: 0.95, rain: 85,  comment: 'Phase 2: Approaching Level 1 Watch' },
+
+  // Phase 3: Level 1 Advisory Watch & Rapid Surge (Steps 13-16)
+  { level: 1.05, rain: 90,  comment: 'Phase 3: Level 1 Watch Advisory Crossed (1.05m)' },
+  { level: 1.15, rain: 95,  comment: 'Phase 3: Stream Rising Steadily' },
+  { level: 1.25, rain: 100, comment: 'Phase 3: Upstream Runoff Inflow' },
+  { level: 1.35, rain: 105, comment: 'Phase 3: Approaching Siren Threshold' },
+
+  // Phase 4: Level 2 Warning Alarm & Siren Activation (Steps 17-19)
+  { level: 1.42, rain: 110, comment: 'Phase 4: Level 2 Siren Alarm Activated! (Siren ON 🚨)' },
+  { level: 1.48, rain: 115, comment: 'Phase 4: Warning Level - Push Alerts Dispatched' },
+  { level: 1.55, rain: 120, comment: 'Phase 4: Approaching Emergency Danger Mark' },
+
+  // Phase 5: Flash Flood Crest & Peak Emergency (Steps 20-23)
+  { level: 1.62, rain: 120, comment: 'Phase 5: Level 3 Emergency Danger Level (1.62m)' },
+  { level: 1.68, rain: 115, comment: 'Phase 5: Critical Stage Height (1.68m)' },
+  { level: 1.72, rain: 100, comment: 'Phase 5: Peak Storm Crest Reached (1.72m)' },
+  { level: 1.70, rain: 80,  comment: 'Phase 5: Rain Begins Slowing' },
+
+  // Phase 6: Rain Receding & Catchment Plateau (Steps 24-27)
+  { level: 1.65, rain: 45,  comment: 'Phase 6: Rain Lightening, High Runoff Retention' },
+  { level: 1.58, rain: 25,  comment: 'Phase 6: Water Receding Slowly (L2 Alarm)' },
+  { level: 1.48, rain: 15,  comment: 'Phase 6: Water Receding Slowly' },
+  { level: 1.38, rain: 5,   comment: 'Phase 6: Dropping Below Siren Threshold (Siren OFF)' },
+
+  // Phase 7: Watershed Drainage & Recovery (Steps 28-36)
+  { level: 1.25, rain: 0,   comment: 'Phase 7: Rain Stopped - River Draining' },
+  { level: 1.10, rain: 0,   comment: 'Phase 7: Level 1 Advisory Range' },
+  { level: 0.95, rain: 0,   comment: 'Phase 7: Subsided Below Level 1' },
+  { level: 0.75, rain: 0,   comment: 'Phase 7: Stream Receding Fast' },
+  { level: 0.50, rain: 0,   comment: 'Phase 7: Returning to Normal Channel' },
+  { level: 0.30, rain: 0,   comment: 'Phase 7: Normal Channel Height' },
+  { level: 0.15, rain: 0,   comment: 'Phase 7: Nearly Cleared' },
+  { level: 0.05, rain: 0,   comment: 'Phase 7: Restoring Dry Baseline' },
+  { level: 0.00, rain: 0,   comment: 'Phase 7: Fully Subsides to 0.00m' },
 ];
 
 const SCENARIO_MODERATE_RAIN = [
