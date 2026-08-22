@@ -16,121 +16,121 @@ export default function DataSourcesDisclaimerModal({ isOpen, onClose }) {
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md transition-all animate-fadeIn"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all animate-fadeIn"
       onClick={onClose}
     >
       <div 
-        className="bg-[#0b2434] text-white rounded-2xl shadow-2xl border border-sky-500/30 overflow-hidden flex flex-col max-h-[85vh]"
+        className="bg-white text-[#123a54] rounded-2xl shadow-2xl border border-[#e4edf0] overflow-hidden flex flex-col max-h-[85vh]"
         style={{ width: '90%', maxWidth: '520px', margin: '0 auto' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
-        <div className="bg-[#123a54] px-5 py-3.5 flex items-center justify-between border-b border-white/10">
+        {/* Modal Header (Dark Navy to match app header theme) */}
+        <div className="bg-[#123a54] text-white px-4 py-3 flex items-center justify-between border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-xl bg-[#2b6e8f]/30 text-sky-300 border border-sky-400/30">
+            <div className="p-1.5 rounded-lg bg-[#2b6e8f]/40 text-sky-200 border border-sky-400/20">
               <Info size={16} />
             </div>
             <div>
               <h2 className="text-sm font-bold text-white leading-tight">Data Sources &amp; Official Disclaimers</h2>
-              <p className="text-[11px] text-sky-200/70">Attribution for Satellite, Radar &amp; Emergency Helplines</p>
+              <p className="text-[10px] text-sky-200/80">Attribution for Satellite, Radar &amp; Emergency Helplines</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-sky-200 hover:text-white transition cursor-pointer"
+            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-sky-200 hover:text-white transition cursor-pointer"
             aria-label="Close modal"
           >
             <X size={16} />
           </button>
         </div>
 
-        {/* Modal Content Body */}
-        <div className="p-5 overflow-y-auto space-y-5 text-xs text-sky-100/90 leading-relaxed font-sans">
+        {/* Modal Content Body (Clean Web Light Theme) */}
+        <div className="bg-[#f8fafc] p-4 overflow-y-auto space-y-4 text-xs font-sans">
           
           {/* Section 1: Weather Radar & Satellite Sources */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-2">
-              <Layers size={14} className="text-sky-300" />
+          <div className="space-y-2">
+            <h3 className="text-[11px] font-bold text-[#123a54] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#e2e8f0] pb-1.5">
+              <Layers size={13} className="text-[#2b6e8f]" />
               Satellite Imagery &amp; Weather Radar Sources
             </h3>
             
-            <div className="grid grid-cols-1 gap-2.5">
+            <div className="grid grid-cols-1 gap-2">
               {/* DOST-PAGASA */}
-              <div className="bg-[#0e2a3e] p-4 rounded-xl border border-sky-500/20 hover:border-sky-500/40 transition-all h-full flex flex-col justify-between space-y-2.5">
-                <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2">
-                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                    <Globe size={14} className="text-sky-300" /> DOST-PAGASA
+              <div className="bg-white p-2.5 rounded-xl border border-[#e2e8f0] shadow-xs space-y-1">
+                <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-1">
+                  <span className="font-bold text-[#123a54] text-[11px] flex items-center gap-1.5">
+                    <Globe size={13} className="text-[#2b6e8f]" /> DOST-PAGASA
                   </span>
                   <a 
                     href="https://meteopilipinas.gov.ph" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="text-[11px] font-bold text-sky-300 hover:text-white hover:underline flex items-center gap-1"
+                    className="text-[10px] font-bold text-[#2b6e8f] hover:underline flex items-center gap-0.5"
                   >
-                    Website <ExternalLink size={11} />
+                    Website <ExternalLink size={10} />
                   </a>
                 </div>
-                <p className="text-[11px] text-sky-200/70 leading-relaxed flex-grow">
+                <p className="text-[10px] text-[#506370] leading-snug">
                   Official Himawari-9 Infrared 24-hour geostationary satellite cloud sequence covering the Philippine Area of Responsibility (PAR).
                 </p>
               </div>
 
               {/* RainViewer Radar */}
-              <div className="bg-[#0e2a3e] p-4 rounded-xl border border-sky-500/20 hover:border-sky-500/40 transition-all h-full flex flex-col justify-between space-y-2.5">
-                <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2">
-                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                    <Radio size={14} className="text-sky-300" /> RainViewer API
+              <div className="bg-white p-2.5 rounded-xl border border-[#e2e8f0] shadow-xs space-y-1">
+                <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-1">
+                  <span className="font-bold text-[#123a54] text-[11px] flex items-center gap-1.5">
+                    <Radio size={13} className="text-[#2b6e8f]" /> RainViewer API
                   </span>
                   <a 
                     href="https://www.rainviewer.com" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="text-[11px] font-bold text-sky-300 hover:text-white hover:underline flex items-center gap-1"
+                    className="text-[10px] font-bold text-[#2b6e8f] hover:underline flex items-center gap-0.5"
                   >
-                    Website <ExternalLink size={11} />
+                    Website <ExternalLink size={10} />
                   </a>
                 </div>
-                <p className="text-[11px] text-sky-200/70 leading-relaxed flex-grow">
+                <p className="text-[10px] text-[#506370] leading-snug">
                   Real-time ground Doppler weather radar precipitation mosaics and short-term nowcast reflectivity maps for Rizal Province.
                 </p>
               </div>
 
               {/* OpenWeatherMap */}
-              <div className="bg-[#0e2a3e] p-4 rounded-xl border border-sky-500/20 hover:border-sky-500/40 transition-all h-full flex flex-col justify-between space-y-2.5">
-                <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2">
-                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                    <CloudRain size={14} className="text-sky-300" /> OpenWeather API
+              <div className="bg-white p-2.5 rounded-xl border border-[#e2e8f0] shadow-xs space-y-1">
+                <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-1">
+                  <span className="font-bold text-[#123a54] text-[11px] flex items-center gap-1.5">
+                    <CloudRain size={13} className="text-[#2b6e8f]" /> OpenWeather API
                   </span>
                   <a 
                     href="https://openweathermap.org" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="text-[11px] font-bold text-sky-300 hover:text-white hover:underline flex items-center gap-1"
+                    className="text-[10px] font-bold text-[#2b6e8f] hover:underline flex items-center gap-0.5"
                   >
-                    Website <ExternalLink size={11} />
+                    Website <ExternalLink size={10} />
                   </a>
                 </div>
-                <p className="text-[11px] text-sky-200/70 leading-relaxed flex-grow">
+                <p className="text-[10px] text-[#506370] leading-snug">
                   Atmospheric weather metrics including temperature, relative humidity, barometric pressure, and regional rain forecasts.
                 </p>
               </div>
 
               {/* CartoDB & OpenStreetMap */}
-              <div className="bg-[#0e2a3e] p-4 rounded-xl border border-sky-500/20 hover:border-sky-500/40 transition-all h-full flex flex-col justify-between space-y-2.5">
-                <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2">
-                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                    <MapPin size={14} className="text-sky-300" /> CartoDB &amp; OSM
+              <div className="bg-white p-2.5 rounded-xl border border-[#e2e8f0] shadow-xs space-y-1">
+                <div className="flex items-center justify-between gap-2 border-b border-gray-100 pb-1">
+                  <span className="font-bold text-[#123a54] text-[11px] flex items-center gap-1.5">
+                    <MapPin size={13} className="text-[#2b6e8f]" /> CartoDB &amp; OSM
                   </span>
                   <a 
                     href="https://carto.com" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="text-[11px] font-bold text-sky-300 hover:text-white hover:underline flex items-center gap-1"
+                    className="text-[10px] font-bold text-[#2b6e8f] hover:underline flex items-center gap-0.5"
                   >
-                    Website <ExternalLink size={11} />
+                    Website <ExternalLink size={10} />
                   </a>
                 </div>
-                <p className="text-[11px] text-sky-200/70 leading-relaxed flex-grow">
+                <p className="text-[10px] text-[#506370] leading-snug">
                   Dark Matter base map tile layers provided by CartoDB and OpenStreetMap open-source mapping contributors.
                 </p>
               </div>
@@ -138,52 +138,52 @@ export default function DataSourcesDisclaimerModal({ isOpen, onClose }) {
           </div>
 
           {/* Section 2: Emergency Contact Directory Attribution */}
-          <div className="space-y-3.5">
-            <h3 className="text-xs font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-2.5">
-              <Phone size={15} className="text-sky-300" />
+          <div className="space-y-2">
+            <h3 className="text-[11px] font-bold text-[#123a54] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#e2e8f0] pb-1.5">
+              <Phone size={13} className="text-[#2b6e8f]" />
               Emergency Contact Hotline Sources
             </h3>
-            <div className="bg-[#0e2a3e] p-4 rounded-xl border border-sky-500/20 space-y-2">
-              <p className="text-[11px] text-sky-200/80 leading-relaxed">
+            <div className="bg-white p-2.5 rounded-xl border border-[#e2e8f0] shadow-xs space-y-1 text-[10px] text-[#506370]">
+              <p className="leading-relaxed">
                 Emergency telephone numbers and helpline contacts listed across the platform are compiled directly from public emergency directories issued by:
               </p>
-              <ul className="list-disc list-inside text-[11px] text-sky-300/90 space-y-1 font-mono">
-                <li><strong className="text-white">Antipolo City CDRRMO</strong> (City Disaster Risk Reduction and Management Office)</li>
-                <li><strong className="text-white">Rizal Provincial DRRMO</strong> &amp; Regional Disaster Risk Reduction Council</li>
-                <li><strong className="text-white">Bureau of Fire Protection (BFP)</strong> &amp; Philippine National Police (PNP) Antipolo Station</li>
-                <li><strong className="text-white">Philippine Red Cross (PRC)</strong> Rizal Chapter</li>
+              <ul className="list-disc list-inside space-y-0.5 font-mono text-[#123a54]">
+                <li><strong>Antipolo City CDRRMO</strong> (City Disaster Risk Reduction and Management Office)</li>
+                <li><strong>Rizal Provincial DRRMO</strong> &amp; Regional Disaster Risk Reduction Council</li>
+                <li><strong>Bureau of Fire Protection (BFP)</strong> &amp; PNP Antipolo Station</li>
+                <li><strong>Philippine Red Cross (PRC)</strong> Rizal Chapter</li>
               </ul>
             </div>
           </div>
 
           {/* Section 3: Academic & Research Safety Disclaimer */}
-          <div className="space-y-3.5">
-            <h3 className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-2.5">
-              <AlertTriangle size={15} className="text-amber-400" />
+          <div className="space-y-2">
+            <h3 className="text-[11px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1.5 border-b border-amber-200 pb-1.5">
+              <AlertTriangle size={13} className="text-amber-600" />
               System Usage &amp; Academic Research Disclaimer
             </h3>
-            <div className="bg-amber-500/10 border-2 border-amber-500/40 p-4 rounded-xl space-y-2 text-amber-100/90 shadow-sm">
-              <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
-                <AlertTriangle size={16} className="text-amber-400 shrink-0" />
+            <div className="bg-amber-50 border border-amber-200/80 p-2.5 rounded-xl space-y-1 text-amber-950 text-[10px] shadow-xs">
+              <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                <AlertTriangle size={14} className="text-amber-600 shrink-0" />
                 <span>Academic Prototype Notice</span>
               </div>
-              <p className="text-[11px] leading-relaxed">
+              <p className="leading-relaxed">
                 SmartFlood is an IoT micro-hydrological research prototype developed for capstone research and public disaster risk reduction demonstration.
               </p>
-              <p className="text-[11px] leading-relaxed">
-                While hardware telemetry, ONNX LSTM machine learning models, and satellite integrations are updated in real time, official evacuation directives during emergency flood events should always follow announcements issued by DOST-PAGASA, NDRRMC, and Antipolo City CDRRMO.
+              <p className="leading-relaxed text-amber-900/90">
+                While hardware telemetry, ONNX LSTM machine learning models, and satellite integrations update in real time, official evacuation directives follow announcements issued by DOST-PAGASA, NDRRMC, and Antipolo City CDRRMO.
               </p>
             </div>
           </div>
 
         </div>
 
-        {/* Modal Footer */}
-        <div className="bg-[#123a54] px-6 py-3.5 border-t border-white/10 flex items-center justify-between text-xs text-sky-200/60 font-mono">
+        {/* Modal Footer (Web Light Theme Accent) */}
+        <div className="bg-[#f1f5f7] px-4 py-2.5 border-t border-[#e2e8f0] flex items-center justify-between text-[10px] text-[#64748b] font-mono">
           <span>SmartFlood · Capstone Project 2026</span>
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-[#2b6e8f] hover:bg-[#1f6f94] text-white font-bold rounded-xl text-xs transition shadow-md cursor-pointer flex items-center gap-1.5 active:scale-95"
+            className="px-4 py-1.5 bg-[#2b6e8f] hover:bg-[#1f6f94] text-white font-bold rounded-lg text-xs transition shadow-sm cursor-pointer flex items-center gap-1 active:scale-95"
           >
             Got It
           </button>
