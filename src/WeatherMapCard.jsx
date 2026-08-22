@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MapContainer, TileLayer, Marker, Popup,
-  LayersControl, CircleMarker, useMap, ImageOverlay,
+  CircleMarker, useMap, ImageOverlay,
 } from 'react-leaflet';
 import L from 'leaflet';
 import { ShieldAlert, Layers, Radio, Play, Pause, SkipForward } from 'lucide-react';
@@ -82,6 +82,11 @@ function MapViewController({ mapViewMode }) {
   const map = useMap();
 
   useEffect(() => {
+    // Invalidate size to ensure container dimensions are computed cleanly (prevents grey screen)
+    map.invalidateSize();
+    const t1 = setTimeout(() => map.invalidateSize(), 150);
+    const t2 = setTimeout(() => map.invalidateSize(), 400);
+
     if (mapViewMode === 'pagasa') {
       // Fit bounds to cover 100% of container width without side gaps
       map.fitBounds(PAGASA_SAT_BOUNDS, { animate: true, padding: [0, 0] });
@@ -94,6 +99,11 @@ function MapViewController({ mapViewMode }) {
       map.setMaxBounds(PH_RADAR_BOUNDS);
       map.flyTo([14.5869, 121.1754], 10, { animate: true, duration: 0.8 });
     }
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [mapViewMode, map]);
 
   return null;
@@ -103,8 +113,8 @@ function MapViewController({ mapViewMode }) {
 export default function WeatherMapCard({ severity = 0 }) {
   const antipoloPos = [14.5869, 121.1754];
 
-  /* ── Map View Mode: 'doppler' (RainViewer Rain Radar) vs 'pagasa' (DOST-PAGASA Himawari Satellite) ── */
-  const [mapViewMode, setMapViewMode] = useState('doppler');
+  /* ── Map View Mode: default 'pagasa' (DOST-PAGASA Himawari Satellite IR) ── */
+  const [mapViewMode, setMapViewMode] = useState('pagasa');
 
   /* ── Radar frames state ─────────────────────────────────────────────── */
   const [frames, setFrames]             = useState([]);     // all past + nowcast frames
@@ -333,40 +343,32 @@ export default function WeatherMapCard({ severity = 0 }) {
           attributionControl={false}
         >
           <MapViewController mapViewMode={mapViewMode} />
-          <LayersControl position="topright">
-            <LayersControl.BaseLayer checked name="CartoDB Dark Matter">
-              <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" maxZoom={19} />
-            </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="Esri Satellite">
-              <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} />
-            </LayersControl.BaseLayer>
-            {mapViewMode === 'doppler' && (
-              <LayersControl.Overlay checked name="RainViewer Doppler Radar">
-                <RadarLayer path={activePath} opacity={0.65} />
-              </LayersControl.Overlay>
-            )}
-            {mapViewMode === 'pagasa' && (
-              <LayersControl.Overlay checked name="DOST-PAGASA Himawari Satellite IR">
-                <ImageOverlay
-                  url={currentSatUrl}
-                  bounds={PAGASA_SAT_BOUNDS}
-                  opacity={0.92}
-                />
-              </LayersControl.Overlay>
-            )}
-            <LayersControl.Overlay name="OpenWeather Precipitation">
-              <TileLayer
-                url={`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`}
-                opacity={0.65}
-              />
-            </LayersControl.Overlay>
-            <LayersControl.Overlay name="Cloud Cover">
-              <TileLayer
-                url={`https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${API_KEY}`}
-                opacity={0.5}
-              />
-            </LayersControl.Overlay>
-          </LayersControl>
+
+          {/* Base Map Tiles: Dark Matter for Rain Radar, Esri Satellite for PAGASA Himawari IR */}
+          {mapViewMode === 'doppler' ? (
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              maxZoom={19}
+            />
+          ) : (
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+            />
+          )}
+
+          {/* Overlays */}
+          {mapViewMode === 'doppler' && (
+            <RadarLayer path={activePath} opacity={0.70} />
+          )}
+
+          {mapViewMode === 'pagasa' && (
+            <ImageOverlay
+              url={currentSatUrl}
+              bounds={PAGASA_SAT_BOUNDS}
+              opacity={0.92}
+            />
+          )}
         </MapContainer>
       </div>
     </div>
