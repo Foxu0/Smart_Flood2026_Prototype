@@ -54,18 +54,33 @@ const askQuestion = (query) => new Promise(resolve => rl.question(query, resolve
  * ESP32 Telemetry Packet Synthesizer
  * Converts water level (m) and rain rate (mm/h) into raw hardware readings.
  */
+/**
+ * ESP32 Telemetry Packet Synthesizer
+ * Converts stage height (m) and rain rate (mm/h) into raw hardware readings
+ * with Gaussian surface acoustic jitter and discrete tip pulse quantization.
+ */
 function synthesizeTelemetryPacket(waterLevelM, rainRateMmHr) {
-  // Convert stage height (m) to raw ultrasonic distance (cm)
-  let rawDistance = SENSOR_MOUNT_HEIGHT_CM - Math.round(waterLevelM * 100);
-  rawDistance = Math.max(20, Math.min(180, rawDistance)); // clamp 20cm - 180cm
+  // Base raw distance in cm (mount height 180cm)
+  const baseDistance = SENSOR_MOUNT_HEIGHT_CM - (waterLevelM * 100);
 
-  // Convert rain rate (mm/h) into 10-minute tip count
-  // 1 tip = 0.2mm. In 10 min (600s), tips = (rainRate / 6)
-  const rainTips = Math.max(0, Math.round(rainRateMmHr / 6));
+  // Gaussian surface acoustic chop jitter (±0.8 to 1.5 cm)
+  const acousticJitter = (Math.random() - 0.5) * 2.2;
+  let rawDistance = Math.round(baseDistance + acousticJitter);
+  rawDistance = Math.max(20, Math.min(180, rawDistance));
 
-  // Synthesize realistic ESP32 hardware diagnostics
-  const batteryVoltage = parseFloat((12.2 + Math.random() * 0.4).toFixed(2)); // 12.2V - 12.6V
-  const wifiRssi = -55 + Math.floor(Math.random() * 7 - 3);                   // -55 ± 3 dBm
+  // Tipping-bucket pulse quantization: rainTips = Math.round((R * 0.1667) / 0.2)
+  let rainTips = Math.round((rainRateMmHr * 0.1667) / TIP_VOLUME_MM);
+  if (rainRateMmHr > 0) {
+    const tipJitter = Math.floor(Math.random() * 3) - 1; // -1, 0, or +1 tip
+    rainTips = Math.max(0, rainTips + tipJitter);
+  }
+
+  // Relay & Battery voltage dynamics (drops 0.3V when siren is energized)
+  const relayActive = waterLevelM >= 1.4;
+  const baseVoltage = 12.4 + (Math.random() * 0.3 - 0.15); // 12.4V ± 0.15V
+  const batteryVoltage = parseFloat((relayActive ? baseVoltage - 0.3 : baseVoltage).toFixed(2));
+  const wifiRssi = -58 + Math.floor(Math.random() * 9 - 4); // -58 ± 4 dBm
+
   systemUptimeSec += 10;
 
   return {
@@ -74,14 +89,14 @@ function synthesizeTelemetryPacket(waterLevelM, rainRateMmHr) {
     batteryVoltage,
     wifiRssi,
     uptime: systemUptimeSec,
-    relayState: waterLevelM >= 1.4, // Siren relay active above 1.4m
+    relayState: relayActive,
   };
 }
 
 /**
  * Send POST /api/v1/telemetry packet to target server and parse response
  */
-async function sendTelemetry(packet, stepStr = '01/01', comment = '') {
+async function sendTelemetry(packet, stepStr = '01/01', comment = '', delaySec = 3.0) {
   try {
     const res = await fetch(TARGET_URL, {
       method: 'POST',
@@ -113,7 +128,7 @@ async function sendTelemetry(packet, stepStr = '01/01', comment = '') {
     if (alertStatus.includes('L2') || alertStatus.includes('L3')) statusColor = C.red;
 
     console.log(
-      `[Step ${stepStr}] POST -> ${isOk ? `${C.green}${statusText}${C.reset}` : `${C.red}${res.status} ${res.statusText}${C.reset}`} | ` +
+      `[Step ${stepStr}] (${delaySec.toFixed(1)}s tick) POST -> ${isOk ? `${C.green}${statusText}${C.reset}` : `${C.red}${res.status} ${res.statusText}${C.reset}`} | ` +
       `Stage: ${C.bold}${stageM}m${C.reset} (Raw: ${rawCm}cm) | ` +
       `Rain: ${rainMm}mm/h | ` +
       `Status: ${statusColor}${alertStatus}${C.reset} | ` +
@@ -134,57 +149,67 @@ async function sendTelemetry(packet, stepStr = '01/01', comment = '') {
  */
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// ── SCENARIOS DATASETS ────────────────────────────────────────────────────────
-const SCENARIO_FLASH_FLOOD = [
-  // Phase 1: Pre-Storm Baseline (Steps 1-6)
-  { level: 0.00, rain: 0,   comment: 'Phase 1: Pre-Storm Dry Baseline' },
-  { level: 0.00, rain: 0,   comment: 'Phase 1: Pre-Storm Dry Baseline' },
-  { level: 0.05, rain: 0,   comment: 'Phase 1: Subtle River Ripple' },
-  { level: 0.05, rain: 2,   comment: 'Phase 1: Drizzle Onset (2mm/h)' },
-  { level: 0.10, rain: 5,   comment: 'Phase 1: Light Rain (5mm/h)' },
-  { level: 0.15, rain: 10,  comment: 'Phase 1: Light Rain (10mm/h)' },
+// ── 48-STEP TYPHOON HYDROLOGICAL SCENARIO DATASET ─────────────────────────────
+const TYPHOON_48_STEPS = [
+  // --- Phase 1: Dry Baseline (Steps 1-8, 5.0s interval) ---
+  { step: 1,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Dry Baseline (Calm)" },
+  { step: 2,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Dry Baseline (Buffer Warmup)" },
+  { step: 3,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Dry Baseline (Buffer Warmup)" },
+  { step: 4,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Dry Baseline (Buffer Warmup)" },
+  { step: 5,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Dry Baseline (Buffer Warmup)" },
+  { step: 6,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Dry Baseline (Buffer Ready)" },
+  { step: 7,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Dry Baseline (Stable Buffer)" },
+  { step: 8,  stage: 0.36, rain: 5.0,  delay: 5000, desc: "Pre-storm Drizzle" },
 
-  // Phase 2: Rain Intensification & Soil Saturation (Steps 7-12)
-  { level: 0.25, rain: 25,  comment: 'Phase 2: Rain Intensifies (25mm/h)' },
-  { level: 0.35, rain: 35,  comment: 'Phase 2: Heavy Rain (35mm/h)' },
-  { level: 0.50, rain: 50,  comment: 'Phase 2: Heavy Torrential Rain (50mm/h)' },
-  { level: 0.65, rain: 65,  comment: 'Phase 2: Downpour (65mm/h)' },
-  { level: 0.80, rain: 75,  comment: 'Phase 2: Sierra Madre Runoff Accumulating' },
-  { level: 0.95, rain: 85,  comment: 'Phase 2: Approaching Level 1 Watch' },
+  // --- Phase 2: Soil Saturation & Infiltration (Steps 9-16, 4.5s interval) ---
+  { step: 9,  stage: 0.37, rain: 15.0, delay: 4500, desc: "Light Rain Onset" },
+  { step: 10, stage: 0.39, rain: 22.0, delay: 4500, desc: "Soil Saturation Progressing" },
+  { step: 11, stage: 0.42, rain: 28.0, delay: 4500, desc: "Moderate Rain" },
+  { step: 12, stage: 0.46, rain: 35.0, delay: 4500, desc: "Steady Downpour" },
+  { step: 13, stage: 0.50, rain: 40.0, delay: 4500, desc: "Watershed Infiltration Limit" },
+  { step: 14, stage: 0.55, rain: 45.0, delay: 4500, desc: "Surface Runoff Beginning" },
+  { step: 15, stage: 0.60, rain: 50.0, delay: 4500, desc: "Runoff Feeding Tributaries" },
+  { step: 16, stage: 0.66, rain: 55.0, delay: 4500, desc: "Stream Velocity Rising" },
 
-  // Phase 3: Level 1 Advisory Watch & Rapid Surge (Steps 13-16)
-  { level: 1.05, rain: 90,  comment: 'Phase 3: Level 1 Watch Advisory Crossed (1.05m)' },
-  { level: 1.15, rain: 95,  comment: 'Phase 3: Stream Rising Steadily' },
-  { level: 1.25, rain: 100, comment: 'Phase 3: Upstream Runoff Inflow' },
-  { level: 1.35, rain: 105, comment: 'Phase 3: Approaching Siren Threshold' },
+  // --- Phase 3: Storm Surge & Threshold Breaches (Steps 17-24, 4.0s interval) ---
+  { step: 17, stage: 0.74, rain: 65.0, delay: 4000, desc: "Heavy Torrential Rain" },
+  { step: 18, stage: 0.85, rain: 72.0, delay: 4000, desc: "Rapid Inflow Surge" },
+  { step: 19, stage: 0.98, rain: 78.0, delay: 4000, desc: "Approaching Level 1" },
+  { step: 20, stage: 1.08, rain: 82.0, delay: 4000, desc: "BREACH: ALERT LEVEL 1 (Advisory)" },
+  { step: 21, stage: 1.18, rain: 85.0, delay: 4000, desc: "Intense Cloudburst" },
+  { step: 22, stage: 1.28, rain: 80.0, delay: 4000, desc: "Surge Accelerating" },
+  { step: 23, stage: 1.38, rain: 75.0, delay: 4000, desc: "Approaching Level 2 Alarm" },
+  { step: 24, stage: 1.48, rain: 70.0, delay: 4000, desc: "BREACH: ALERT LEVEL 2 (Siren Active 🚨)" },
 
-  // Phase 4: Level 2 Warning Alarm & Siren Activation (Steps 17-19)
-  { level: 1.42, rain: 110, comment: 'Phase 4: Level 2 Siren Alarm Activated! (Siren ON 🚨)' },
-  { level: 1.48, rain: 115, comment: 'Phase 4: Warning Level - Push Alerts Dispatched' },
-  { level: 1.55, rain: 120, comment: 'Phase 4: Approaching Emergency Danger Mark' },
+  // --- Phase 4: Peak Flash Flood Crest (Steps 25-28, 3.0s interval - Urgent) ---
+  { step: 25, stage: 1.56, rain: 55.0, delay: 3000, desc: "Severe Flooding Surge" },
+  { step: 26, stage: 1.62, rain: 40.0, delay: 3000, desc: "BREACH: ALERT LEVEL 3 (Peak Crest 🚨)" },
+  { step: 27, stage: 1.60, rain: 25.0, delay: 3000, desc: "Hydrograph Peak Plateau" },
+  { step: 28, stage: 1.55, rain: 15.0, delay: 3000, desc: "Rain Subsiding Rapidly" },
 
-  // Phase 5: Flash Flood Crest & Peak Emergency (Steps 20-23)
-  { level: 1.62, rain: 120, comment: 'Phase 5: Level 3 Emergency Danger Level (1.62m)' },
-  { level: 1.68, rain: 115, comment: 'Phase 5: Critical Stage Height (1.68m)' },
-  { level: 1.72, rain: 100, comment: 'Phase 5: Peak Storm Crest Reached (1.72m)' },
-  { level: 1.70, rain: 80,  comment: 'Phase 5: Rain Begins Slowing' },
+  // --- Phase 5: Catchment Retention Lag (Steps 29-38, 5.0s interval) ---
+  { step: 29, stage: 1.48, rain: 8.0,  delay: 5000, desc: "Upstream Runoff Sustaining Stage" },
+  { step: 30, stage: 1.42, rain: 4.0,  delay: 5000, desc: "Rain Ceasing, Channel Full" },
+  { step: 31, stage: 1.35, rain: 0.0,  delay: 5000, desc: "Water Level Dropping Below L2" },
+  { step: 32, stage: 1.28, rain: 0.0,  delay: 5000, desc: "Slow Soil Retention Drainage" },
+  { step: 33, stage: 1.20, rain: 0.0,  delay: 5000, desc: "Watershed Outflow Drain" },
+  { step: 34, stage: 1.12, rain: 0.0,  delay: 5000, desc: "Gradual Channel Drawdown" },
+  { step: 35, stage: 1.05, rain: 0.0,  delay: 5000, desc: "Approaching Level 1 Return" },
+  { step: 36, stage: 0.98, rain: 0.0,  delay: 5000, desc: "Water Level Below L1" },
+  { step: 37, stage: 0.90, rain: 0.0,  delay: 5000, desc: "Persistent Drainage Tail" },
+  { step: 38, stage: 0.82, rain: 0.0,  delay: 5000, desc: "Steady Baseflow Drainage" },
 
-  // Phase 6: Rain Receding & Catchment Plateau (Steps 24-27)
-  { level: 1.65, rain: 45,  comment: 'Phase 6: Rain Lightening, High Runoff Retention' },
-  { level: 1.58, rain: 25,  comment: 'Phase 6: Water Receding Slowly (L2 Alarm)' },
-  { level: 1.48, rain: 15,  comment: 'Phase 6: Water Receding Slowly' },
-  { level: 1.38, rain: 5,   comment: 'Phase 6: Dropping Below Siren Threshold (Siren OFF)' },
-
-  // Phase 7: Watershed Drainage & Recovery (Steps 28-36)
-  { level: 1.25, rain: 0,   comment: 'Phase 7: Rain Stopped - River Draining' },
-  { level: 1.10, rain: 0,   comment: 'Phase 7: Level 1 Advisory Range' },
-  { level: 0.95, rain: 0,   comment: 'Phase 7: Subsided Below Level 1' },
-  { level: 0.75, rain: 0,   comment: 'Phase 7: Stream Receding Fast' },
-  { level: 0.50, rain: 0,   comment: 'Phase 7: Returning to Normal Channel' },
-  { level: 0.30, rain: 0,   comment: 'Phase 7: Normal Channel Height' },
-  { level: 0.15, rain: 0,   comment: 'Phase 7: Nearly Cleared' },
-  { level: 0.05, rain: 0,   comment: 'Phase 7: Restoring Dry Baseline' },
-  { level: 0.00, rain: 0,   comment: 'Phase 7: Fully Subsides to 0.00m' },
+  // --- Phase 6: Drainage & Baseline Recovery (Steps 39-48, 6.0s interval) ---
+  { step: 39, stage: 0.74, rain: 0.0,  delay: 6000, desc: "Recession Limb Continuing" },
+  { step: 40, stage: 0.66, rain: 0.0,  delay: 6000, desc: "Low Flow Drainage" },
+  { step: 41, stage: 0.58, rain: 0.0,  delay: 6000, desc: "Recession Limb" },
+  { step: 42, stage: 0.52, rain: 0.0,  delay: 6000, desc: "Return to Near-Normal" },
+  { step: 43, stage: 0.46, rain: 0.0,  delay: 6000, desc: "Stream Settling" },
+  { step: 44, stage: 0.42, rain: 0.0,  delay: 6000, desc: "Channel Cleared" },
+  { step: 45, stage: 0.38, rain: 0.0,  delay: 6000, desc: "Approaching Baseflow" },
+  { step: 46, stage: 0.36, rain: 0.0,  delay: 6000, desc: "Residual Baseflow" },
+  { step: 47, stage: 0.35, rain: 0.0,  delay: 6000, desc: "Dry Channel Restored" },
+  { step: 48, stage: 0.35, rain: 0.0,  delay: 6000, desc: "Normal Baseline Complete" }
 ];
 
 const SCENARIO_MODERATE_RAIN = [
@@ -244,18 +269,22 @@ async function main() {
   }
 
   if (choice === '1' || choice === '2' || choice === '3') {
-    const dataset = choice === '1' ? SCENARIO_FLASH_FLOOD : choice === '2' ? SCENARIO_MODERATE_RAIN : SCENARIO_CALM_BASELINE;
-    const title = choice === '1' ? 'Rapid Flash Flood Surge' : choice === '2' ? 'Moderate Continuous Rain' : 'Calm Dry Baseline';
+    const dataset = choice === '1' ? TYPHOON_48_STEPS : choice === '2' ? SCENARIO_MODERATE_RAIN : SCENARIO_CALM_BASELINE;
+    const title = choice === '1' ? '48-Step Authentic Typhoon Hydrological Cycle' : choice === '2' ? 'Moderate Continuous Rain' : 'Calm Dry Baseline';
 
-    console.log(`\n🚀 Starting Scenario: ${C.bold}${title}${C.reset} (${dataset.length} steps, pace: 3.0s/step)\n`);
+    console.log(`\n🚀 Starting Scenario: ${C.bold}${title}${C.reset} (${dataset.length} steps)\n`);
 
     for (let i = 0; i < dataset.length; i++) {
       const step = dataset[i];
-      const packet = synthesizeTelemetryPacket(step.level, step.rain);
+      const stageVal = step.stage != null ? step.stage : step.level;
+      const descVal = step.desc != null ? step.desc : step.comment;
+      const delayMs = step.delay != null ? step.delay : 3000;
+
+      const packet = synthesizeTelemetryPacket(stageVal, step.rain);
       const stepStr = `${String(i + 1).padStart(2, '0')}/${String(dataset.length).padStart(2, '0')}`;
 
-      await sendTelemetry(packet, stepStr, step.comment);
-      if (i < dataset.length - 1) await sleep(3000);
+      await sendTelemetry(packet, stepStr, descVal, delayMs / 1000);
+      if (i < dataset.length - 1) await sleep(delayMs);
     }
 
     console.log(`\n✅ Scenario execution complete!\n`);
