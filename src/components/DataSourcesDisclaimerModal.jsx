@@ -20,7 +20,8 @@ export default function DataSourcesDisclaimerModal({ isOpen, onClose }) {
       onClick={onClose}
     >
       <div 
-        className="bg-[#0b2434] text-white w-full max-w-md rounded-2xl shadow-2xl border border-sky-500/30 overflow-hidden flex flex-col max-h-[85vh]"
+        className="bg-[#0b2434] text-white rounded-2xl shadow-2xl border border-sky-500/30 overflow-hidden flex flex-col max-h-[85vh]"
+        style={{ width: '90%', maxWidth: '520px', margin: '0 auto' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
