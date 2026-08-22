@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MapContainer, TileLayer, Marker, Popup,
-  LayersControl, Polygon, Tooltip, CircleMarker, useMap, ImageOverlay,
+  LayersControl, CircleMarker, useMap, ImageOverlay,
 } from 'react-leaflet';
 import L from 'leaflet';
 import { ShieldAlert, Layers, Radio, Play, Pause, SkipForward } from 'lucide-react';
@@ -17,74 +17,7 @@ const BEACON = [
 ];
 
 /* ── Flood-prone barangays of Antipolo City ─────────────────────────────
-   Coordinates sourced from NDRRMC/READY Project Philippine hazard maps.
-   Each polygon is roughly drawn around the known low-lying areas.
-   Risk level: 0=Low, 1=Moderate, 2=High, 3=Very High
-───────────────────────────────────────────────────────────────────────── */
-const FLOOD_ZONES = [
-  {
-    name: 'Sto. Niño',
-    risk: 3, // Very High — low-elevation near creek confluence
-    coords: [
-      [14.5720, 121.1580], [14.5760, 121.1650], [14.5790, 121.1700],
-      [14.5770, 121.1750], [14.5730, 121.1720], [14.5700, 121.1660],
-    ],
-    note: 'Adjacent to Hinulugang Taktak creek. Frequent inundation during typhoons.',
-  },
-  {
-    name: 'San Isidro',
-    risk: 2, // High
-    coords: [
-      [14.5840, 121.1700], [14.5880, 121.1780], [14.5900, 121.1830],
-      [14.5870, 121.1870], [14.5830, 121.1840], [14.5810, 121.1760],
-    ],
-    note: 'Moderate flood risk — upstream of Antipolo Creek tributary.',
-  },
-  {
-    name: 'San Jose',
-    risk: 2, // High
-    coords: [
-      [14.5950, 121.1650], [14.5990, 121.1720], [14.6010, 121.1770],
-      [14.5980, 121.1810], [14.5940, 121.1780], [14.5920, 121.1700],
-    ],
-    note: 'Elevated terrain but low-lying pocket near creek outlet.',
-  },
-  {
-    name: 'Dela Paz',
-    risk: 3, // Very High — closest to monitoring station
-    coords: [
-      [14.5800, 121.1720], [14.5860, 121.1800], [14.5890, 121.1860],
-      [14.5860, 121.1920], [14.5820, 121.1890], [14.5790, 121.1820],
-    ],
-    note: 'Station monitoring area. Highest risk — direct flood path from Sierra Madre slope runoff.',
-  },
-  {
-    name: 'Calawis',
-    risk: 1, // Moderate — upstream but wide basin
-    coords: [
-      [14.6050, 121.1900], [14.6100, 121.1970], [14.6130, 121.2040],
-      [14.6090, 121.2070], [14.6040, 121.2010], [14.6010, 121.1940],
-    ],
-    note: 'Upper catchment area. Flash flood risk during extreme rainfall events.',
-  },
-  {
-    name: 'Mayamot',
-    risk: 1, // Moderate
-    coords: [
-      [14.5700, 121.1850], [14.5750, 121.1920], [14.5770, 121.1980],
-      [14.5740, 121.2010], [14.5700, 121.1970], [14.5680, 121.1900],
-    ],
-    note: 'Low to moderate flood risk. Secondary drainage catchment.',
-  },
-];
 
-/* ── Risk color palette ─────────────────────────────────────────────────── */
-const RISK_STYLE = [
-  { fill: '#2f9463', stroke: '#1a5c3a', label: 'Low Risk' },
-  { fill: '#e69138', stroke: '#b36b22', label: 'Moderate Risk' },
-  { fill: '#e0522f', stroke: '#b03518', label: 'High Risk' },
-  { fill: '#9b1c1c', stroke: '#6b0f0f', label: 'Very High Risk' },
-];
 
 /* ── Severity beacon DivIcon ────────────────────────────────────────────── */
 function buildBeaconIcon(severityId = 0) {
@@ -315,18 +248,7 @@ export default function WeatherMapCard({ severity = 0 }) {
           <h2 className="text-sm font-semibold">Weather Map</h2>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowZones(v => !v)}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border transition-all ${
-              showZones
-                ? 'bg-amber-500/20 border-amber-400/50 text-amber-300'
-                : 'bg-white/10 border-white/20 text-sky-300'
-            }`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${showZones ? 'bg-amber-400' : 'bg-white/40'}`} />
-            HAZARD ZONES
-          </button>
-          <div className="flex items-center gap-1.5 bg-white/10 px-2 py-0.5 rounded-full text-[9px] font-bold text-sky-200">
+          <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-full text-[9px] font-bold text-sky-200">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
             {radarTimeStr}
           </div>
@@ -399,17 +321,6 @@ export default function WeatherMapCard({ severity = 0 }) {
               <span className="text-red-300 font-bold">Cold Storm Tops</span>
             </div>
           )}
-          {showZones && (
-            <div className="border-t border-white/10 pt-1 space-y-0.5">
-              <p className="text-[8px] text-sky-300 font-bold uppercase tracking-wide mb-1">Flood Hazard</p>
-              {RISK_STYLE.slice(1).map((r, i) => (
-                <div key={i} className="flex items-center gap-1.5 text-[9px]">
-                  <span className="w-3 h-2 rounded-sm inline-block" style={{ background: r.fill, opacity: 0.8 }} />
-                  <span className="text-white/70">{r.label}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
         <MapContainer
           center={antipoloPos}
@@ -456,40 +367,6 @@ export default function WeatherMapCard({ severity = 0 }) {
               />
             </LayersControl.Overlay>
           </LayersControl>
-
-          {/* ── Flood-Prone Barangay Polygons ──────────────────────── */}
-          {showZones && FLOOD_ZONES.map((zone) => {
-            const style = RISK_STYLE[zone.risk] || RISK_STYLE[1];
-            return (
-              <Polygon
-                key={zone.name}
-                positions={zone.coords}
-                pathOptions={{
-                  color: style.stroke,
-                  fillColor: style.fill,
-                  fillOpacity: 0.30,
-                  weight: 1.5,
-                  dashArray: zone.risk >= 3 ? '4,3' : undefined,
-                }}
-              >
-                <Tooltip
-                  sticky
-                  className="leaflet-tooltip-custom"
-                >
-                  <div className="text-xs font-sans">
-                    <p className="font-bold text-[#123a54]">{zone.name}</p>
-                    <p className="text-[10px] font-semibold" style={{ color: style.fill }}>
-                      {style.label}
-                    </p>
-                    <p className="text-[10px] text-[#6d818d] max-w-[180px] mt-0.5">
-                      {zone.note}
-                    </p>
-                  </div>
-                </Tooltip>
-              </Polygon>
-            );
-          })}
-
         </MapContainer>
       </div>
     </div>
