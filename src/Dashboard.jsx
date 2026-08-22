@@ -154,8 +154,8 @@ export default function FloodMonitoringDashboard() {
   const [smsConfirmed, setSmsConfirmed] = useState(false);
 
   const [telemetry, setTelemetry] = useState({
-    waterLevelM: 0.35,
-    waterDistanceCm: 145,
+    waterLevelM: 0.00,
+    waterDistanceCm: 180,
     rainRateMmHr: 0.0,
     rainTips: 0,
     wifiRssi: -65,
@@ -165,8 +165,8 @@ export default function FloodMonitoringDashboard() {
 
   const [aiPrediction, setAiPrediction] = useState({
     riskScore: 0,
-    predicted30m: 0.35,
-    predicted60m: 0.35,
+    predicted30m: 0.00,
+    predicted60m: 0.00,
     timeToCriticalMins: null,
     modelConfidence: 96.5,
   });
@@ -340,7 +340,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         const json = await res.json();
         if (json.success && json.data) {
           const d = json.data;
-          const level = parseFloat(d.water_level_m ?? 0.35);
+          const level = parseFloat(d.water_level_m ?? 0.00);
           const dist = parseFloat(d.raw_distance_cm ?? Math.round((1.8 - level) * 100));
           const rain = parseFloat(d.rainfall_rate ?? 0.0);
           setTelemetry(prev => ({
@@ -352,10 +352,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
             gridVoltage: parseFloat(d.supply_voltage ?? 12.2),
           }));
         } else if (json.success && json.data === null) {
-          // Empty database — reset to baseline 0.35m / 0 mm/h
+          // Empty database — reset to 0.00m / 0 mm/h
           setTelemetry({
-            waterLevelM: 0.35,
-            waterDistanceCm: 145,
+            waterLevelM: 0.00,
+            waterDistanceCm: 180,
             rainRateMmHr: 0.0,
             rainTips: 0,
             wifiRssi: -65,
@@ -365,8 +365,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
           setAiPrediction(prev => ({
             ...prev,
             riskScore: 0,
-            predicted30m: 0.35,
-            predicted60m: 0.35,
+            predicted30m: 0.00,
+            predicted60m: 0.00,
           }));
         }
       } catch (err) {
