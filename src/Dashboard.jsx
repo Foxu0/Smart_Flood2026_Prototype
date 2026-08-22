@@ -302,6 +302,7 @@ export default function FloodMonitoringDashboard() {
   const [logs, setLogs] = useState([]);
 
   // Fetch real initial events from database
+  // Fetch real initial events from database
   useEffect(() => {
     async function loadEvents() {
       try {
@@ -328,8 +329,6 @@ export default function FloodMonitoringDashboard() {
     const timeStr = new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
     setLogs(prev => [{ id: `log-${Date.now()}-${Math.random()}`, time: timeStr, type, msg }, ...prev.slice(0, 9)]);
   };
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   // Poll latest telemetry from GET /api/v1/telemetry/latest every 3s
   useEffect(() => {
@@ -398,8 +397,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
           setAiPrediction(prev => ({
             ...prev,
             riskScore: 0,
-            predicted30m: 0.35,
-            predicted60m: 0.35,
+            predicted30m: 0.00,
+            predicted60m: 0.00,
           }));
         }
       } catch (err) {
@@ -409,7 +408,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     loadProjection();
   }, []);
 
-  // ── Real-Time WebSocket Connection (ws://localhost:3001) ─────────────────
+  // ── Real-Time WebSocket Connection ─────────────────────────────────────────
   const [wsConnected, setWsConnected] = useState(false);
 
   useEffect(() => {
@@ -417,7 +416,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     let reconnectTimer;
 
     const connectWS = () => {
-      ws = new WebSocket('ws://localhost:3001');
+      ws = new WebSocket(WS_BASE_URL);
 
       ws.onopen = () => {
         setWsConnected(true);
@@ -428,7 +427,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
           const message = JSON.parse(event.data);
           if (message.type === 'TELEMETRY' && message.data) {
             const d = message.data;
-            const level = d.water_level_m ?? d.waterLevel ?? 1.05;
+            const level = d.water_level_m ?? d.waterLevel ?? 0.00;
             const dist = d.raw_distance_cm ?? d.rawDistanceCm ?? Math.round((1.8 - level) * 100);
             const rain = d.rainfall_rate ?? d.rainfallRate ?? 0;
             const rssi = d.rssi_dbm ?? d.rssiDbm ?? -65;
@@ -449,6 +448,25 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
               const risk = Math.round((p60 / 1.8) * 100);
               return { ...prev, riskScore: risk, predicted30m: +p30.toFixed(2), predicted60m: +p60.toFixed(2) };
             });
+          } else if (message.type === 'TEST_RESET' || message.type === 'TELEMETRY_RESET') {
+            setTelemetry({
+              waterLevelM: 0.00,
+              waterDistanceCm: 180,
+              rainRateMmHr: 0.0,
+              rainTips: 0,
+              wifiRssi: -65,
+              gridVoltage: 12.2,
+              espUptime: '00:00:00',
+            });
+            setAiPrediction({
+              riskScore: 0,
+              predicted30m: 0.00,
+              predicted60m: 0.00,
+              timeToCriticalMins: null,
+              modelConfidence: 96.5,
+            });
+            setDbHistory([]);
+            setLogs([]);
           } else if (message.type === 'PROJECTION' && message.data) {
             const p = message.data;
             setAiPrediction(prev => ({
