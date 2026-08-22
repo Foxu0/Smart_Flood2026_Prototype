@@ -68,8 +68,8 @@ function RadarLayer({ path, opacity = 0.65 }) {
 
 /* ── Philippine Area Boundary & Map Limits ──────────────────────────────── */
 const PAGASA_SAT_BOUNDS = [
-  [0.5, 106.0],  // Southwest corner (expanded to fill 100% container width)
-  [24.5, 140.0], // Northeast corner (expanded to fill 100% container width)
+  [4.0, 114.0],  // Southwest corner (Exact PAR Himawari scan bounds)
+  [21.5, 132.0], // Northeast corner (Exact PAR Himawari scan bounds)
 ];
 
 const PH_RADAR_BOUNDS = [
@@ -90,7 +90,8 @@ function MapViewController({ mapViewMode }) {
     if (mapViewMode === 'pagasa') {
       // Fit bounds to cover 100% of container width without side gaps
       map.fitBounds(PAGASA_SAT_BOUNDS, { animate: true, padding: [0, 0] });
-      map.setMinZoom(4);
+      const minZ = Math.max(5, map.getBoundsZoom(PAGASA_SAT_BOUNDS, false));
+      map.setMinZoom(minZ);
       map.setMaxBounds(PAGASA_SAT_BOUNDS);
     } else {
       // Return to local flood radar view centered on Antipolo
