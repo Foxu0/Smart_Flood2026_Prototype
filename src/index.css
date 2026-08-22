@@ -26,6 +26,47 @@ html {
 .font-display { font-family: 'Outfit', sans-serif; }
 .font-mono    { font-family: 'JetBrains Mono', monospace; }
 
+/* ── Universal Clean Range Slider Inputs ──────────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  border: 1px solid #e4edf0;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  border: 1px solid #e4edf0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  margin-top: -5px;
+  background: var(--thumb-color, #2b6e8f);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: var(--thumb-color, #2b6e8f);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    KEYFRAMES — all animation definitions
    ══════════════════════════════════════════════════════════════════════════ */

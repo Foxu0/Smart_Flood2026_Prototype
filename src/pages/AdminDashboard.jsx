@@ -1250,7 +1250,7 @@ export default function FloodMonitoringDashboard() {
                           onChange={e => setThresholds({ ...thresholds, [key]: parseFloat(e.target.value) })}
                           style={{
                             background: `linear-gradient(to right, ${color} 0%, ${color} ${pct}%, #eef4f6 ${pct}%, #eef4f6 100%)`,
-                            accentColor: color,
+                            '--thumb-color': color,
                           }}
                           className="w-full h-2 rounded-lg cursor-pointer transition-all"
                         />
