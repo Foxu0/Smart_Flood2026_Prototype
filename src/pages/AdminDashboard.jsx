@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, Bell, CheckCircle2, CloudRain, Cpu,
@@ -379,6 +379,7 @@ export default function FloodMonitoringDashboard() {
             wifiRssi: parseInt(d.rssi_dbm ?? -65),
             gridVoltage: parseFloat(d.supply_voltage ?? 12.2),
           }));
+          fetchHistory();
         } else if (json.success && json.data === null) {
           // Empty database — reset to 0.00m / 0 mm/h
           setTelemetry({
@@ -481,49 +482,49 @@ export default function FloodMonitoringDashboard() {
   const [historyLoading, setHistoryLoading] = useState(false);
 
   // Fetch real PostgreSQL telemetry logs from GET /api/v1/telemetry/history
-  useEffect(() => {
-    async function fetchHistory() {
-      setHistoryLoading(true);
-      try {
-        let rangeParam = timeFrame;
-        if (timeFrame === 'custom') {
-          const unitShort = customUnit === 'minutes' ? 'm' : customUnit === 'days' ? 'd' : 'h';
-          rangeParam = `${customValue}${unitShort}`;
-        }
-
-        const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/history?range=${rangeParam}`);
-        if (!res.ok) throw new Error('History fetch failed');
-        const json = await res.json();
-
-        if (json.success && json.data && json.data.length > 0) {
-          const formatted = json.data.map((item, i, arr) => {
-            const isLatest = i === arr.length - 1;
-            const t = new Date(item.timestamp);
-            const timeLabel = isLatest
-              ? 'Now'
-              : t.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-            return {
-              time: timeLabel,
-              waterLevel: parseFloat(item.water_level_m),
-              rawDistanceCm: parseFloat(item.raw_distance_cm),
-              rainfallRate: parseFloat(item.rainfall_rate),
-              timestamp: item.timestamp,
-            };
-          });
-          setDbHistory(formatted);
-        } else {
-          setDbHistory([]);
-        }
-      } catch (err) {
-        console.error('[History Fetch Error]', err);
-      } finally {
-        setHistoryLoading(false);
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      let rangeParam = timeFrame;
+      if (timeFrame === 'custom') {
+        const unitShort = customUnit === 'minutes' ? 'm' : customUnit === 'days' ? 'd' : 'h';
+        rangeParam = `${customValue}${unitShort}`;
       }
-    }
 
-    fetchHistory();
+      const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/history?range=${rangeParam}`);
+      if (!res.ok) throw new Error('History fetch failed');
+      const json = await res.json();
+
+      if (json.success && json.data && json.data.length > 0) {
+        const formatted = json.data.map((item, i, arr) => {
+          const isLatest = i === arr.length - 1;
+          const t = new Date(item.timestamp);
+          const timeLabel = isLatest
+            ? 'Now'
+            : t.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+          return {
+            time: timeLabel,
+            waterLevel: parseFloat(item.water_level_m),
+            rawDistanceCm: parseFloat(item.raw_distance_cm),
+            rainfallRate: parseFloat(item.rainfall_rate),
+            timestamp: item.timestamp,
+          };
+        });
+        setDbHistory(formatted);
+      } else {
+        setDbHistory([]);
+      }
+    } catch (err) {
+      console.error('[History Fetch Error]', err);
+    } finally {
+      setHistoryLoading(false);
+    }
   }, [timeFrame, customValue, customUnit]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
 
   const getFallbackHistory = (range, level) => {
     return [
@@ -626,6 +627,7 @@ export default function FloodMonitoringDashboard() {
               const risk = Math.round((p60 / 1.8) * 100);
               return { ...prev, riskScore: risk, predicted30m: +p30.toFixed(2), predicted60m: +p60.toFixed(2) };
             });
+            fetchHistory();
           } else if (message.type === 'PROJECTION' && message.data) {
             const p = message.data;
             setAiPrediction(prev => ({
