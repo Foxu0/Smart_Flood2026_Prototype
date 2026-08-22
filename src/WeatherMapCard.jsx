@@ -134,21 +134,31 @@ function RadarLayer({ path, opacity = 0.65 }) {
 }
 
 /* ── Philippine Area Boundary & Map Limits ──────────────────────────────── */
-const PH_BOUNDS = [
-  [4.0, 115.0],  // Southwest (Celebes Sea / Sulu Sea)
-  [22.0, 132.0], // Northeast (Bashi Channel / Philippine Sea)
+const PAGASA_SAT_BOUNDS = [
+  [4.0, 114.5],  // Southwest corner of PAR image box
+  [21.5, 131.5], // Northeast corner of PAR image box
 ];
 
-/* ── Dynamic Camera Controller Component ────────────────────────────────── */
+const PH_RADAR_BOUNDS = [
+  [4.0, 115.0],
+  [22.0, 132.0],
+];
+
+/* ── Dynamic Camera & Boundary Lock Controller ──────────────────────────── */
 function MapViewController({ mapViewMode }) {
   const map = useMap();
 
   useEffect(() => {
     if (mapViewMode === 'pagasa') {
-      // Smoothly fly to Philippine Area of Responsibility (PAR) for Satellite view
-      map.flyTo([13.2, 122.5], 5, { animate: true, duration: 0.8 });
+      // Hard-lock camera inside exact PAGASA Satellite Box (cannot zoom out beyond border box)
+      const minZ = map.getBoundsZoom(PAGASA_SAT_BOUNDS, true);
+      map.setMinZoom(minZ);
+      map.setMaxBounds(PAGASA_SAT_BOUNDS);
+      map.fitBounds(PAGASA_SAT_BOUNDS, { animate: true, padding: [0, 0] });
     } else {
-      // Smoothly fly to Antipolo & Greater Manila for Flood Radar view
+      // Return to local flood radar view centered on Antipolo
+      map.setMinZoom(6);
+      map.setMaxBounds(PH_RADAR_BOUNDS);
       map.flyTo([14.5869, 121.1754], 10, { animate: true, duration: 0.8 });
     }
   }, [mapViewMode, map]);
@@ -478,7 +488,7 @@ export default function WeatherMapCard({ severity = 0 }) {
           zoom={10}
           minZoom={5}
           maxZoom={18}
-          maxBounds={PH_BOUNDS}
+          maxBounds={PAGASA_SAT_BOUNDS}
           maxBoundsViscosity={1.0}
           style={{ height: '100%', width: '100%' }}
           attributionControl={false}
