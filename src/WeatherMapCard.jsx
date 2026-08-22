@@ -4,7 +4,7 @@ import {
   CircleMarker, useMap, ImageOverlay,
 } from 'react-leaflet';
 import L from 'leaflet';
-import { ShieldAlert, Layers, Radio, Play, Pause, SkipForward } from 'lucide-react';
+import { Layers, Radio, Play, Pause, SkipForward } from 'lucide-react';
 
 const API_KEY = '9c04674c3ef012dce3e3d789ea5ba263';
 
@@ -295,14 +295,7 @@ export default function WeatherMapCard({ severity = 0 }) {
       </div>
 
       <div className="relative h-[340px] sm:h-[500px] w-full overflow-hidden z-0 bg-[#05131e]">
-        {/* Top Floating Badges */}
-        <div className="absolute top-3 left-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl shadow-lg border border-white/20 flex items-center gap-2 text-xs">
-          <ShieldAlert size={14} className="text-amber-400 animate-pulse" />
-          <div>
-            <p className="font-bold text-[11px] leading-tight">Active Warning Zone</p>
-            <p className="text-[9px] text-sky-200">Antipolo &amp; Rizal Province</p>
-          </div>
-        </div>
+        {/* Top Right Severity Status Badge */}
 
         <div
           className="absolute top-3 right-3 z-[1000] px-2.5 py-1 rounded-full text-[10px] font-bold shadow-lg border"
