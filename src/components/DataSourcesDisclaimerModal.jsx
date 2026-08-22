@@ -20,40 +20,40 @@ export default function DataSourcesDisclaimerModal({ isOpen, onClose }) {
       onClick={onClose}
     >
       <div 
-        className="bg-[#0b2434] text-white w-full max-w-lg rounded-2xl shadow-2xl border border-sky-500/30 overflow-hidden flex flex-col max-h-[88vh]"
+        className="bg-[#0b2434] text-white w-full max-w-md rounded-2xl shadow-2xl border border-sky-500/30 overflow-hidden flex flex-col max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="bg-[#123a54] px-6 py-4 flex items-center justify-between border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[#2b6e8f]/30 text-sky-300 border border-sky-400/30">
-              <Info size={18} />
+        <div className="bg-[#123a54] px-5 py-3.5 flex items-center justify-between border-b border-white/10">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-xl bg-[#2b6e8f]/30 text-sky-300 border border-sky-400/30">
+              <Info size={16} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white leading-tight">Data Sources &amp; Official Disclaimers</h2>
-              <p className="text-xs text-sky-200/70">Attribution for Satellite, Radar, Weather APIs &amp; Emergency Helplines</p>
+              <h2 className="text-sm font-bold text-white leading-tight">Data Sources &amp; Official Disclaimers</h2>
+              <p className="text-[11px] text-sky-200/70">Attribution for Satellite, Radar &amp; Emergency Helplines</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-sky-200 hover:text-white transition cursor-pointer"
+            className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-sky-200 hover:text-white transition cursor-pointer"
             aria-label="Close modal"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Modal Content Body */}
-        <div className="p-6 overflow-y-auto space-y-6 text-xs text-sky-100/90 leading-relaxed font-sans">
+        <div className="p-5 overflow-y-auto space-y-5 text-xs text-sky-100/90 leading-relaxed font-sans">
           
           {/* Section 1: Weather Radar & Satellite Sources */}
-          <div className="space-y-3.5">
-            <h3 className="text-xs font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-2.5">
-              <Layers size={15} className="text-sky-300" />
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-2">
+              <Layers size={14} className="text-sky-300" />
               Satellite Imagery &amp; Weather Radar Sources
             </h3>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 gap-2.5">
               {/* DOST-PAGASA */}
               <div className="bg-[#0e2a3e] p-4 rounded-xl border border-sky-500/20 hover:border-sky-500/40 transition-all h-full flex flex-col justify-between space-y-2.5">
                 <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2">
