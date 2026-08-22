@@ -156,25 +156,25 @@
             <button onclick="runScenario('surge')" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-amber-500/30 hover:border-amber-400 rounded-xl text-left transition space-y-1">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-amber-300">🌊 Rapid Flash Flood Surge</span>
-                <span class="text-[10px] font-mono text-amber-400/80">18 Steps</span>
+                <span class="text-[10px] font-mono text-amber-400/80">48 Steps</span>
               </div>
-              <p class="text-[11px] text-sky-200/70 leading-snug">Simulates rapid storm runoff rising to 1.65m peak (L3 Danger &amp; Siren) then draining.</p>
+              <p class="text-[11px] text-sky-200/70 leading-snug">Simulates authentic 48-step typhoon hydrograph rising to 1.62m peak (L3 Danger &amp; Siren) then draining.</p>
             </button>
 
             <button onclick="runScenario('moderate')" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-sky-500/30 hover:border-sky-400 rounded-xl text-left transition space-y-1">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-sky-300">🌧️ Moderate Continuous Rain</span>
-                <span class="text-[10px] font-mono text-sky-400/80">11 Steps</span>
+                <span class="text-[10px] font-mono text-sky-400/80">24 Steps</span>
               </div>
-              <p class="text-[11px] text-sky-200/70 leading-snug">Steady rain building up to 1.15m Level 1 Advisory Watch before receding.</p>
+              <p class="text-[11px] text-sky-200/70 leading-snug">Steady rain building up to 1.15m Level 1 Advisory Watch before smoothly receding.</p>
             </button>
 
             <button onclick="runScenario('calm')" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-emerald-500/30 hover:border-emerald-400 rounded-xl text-left transition space-y-1">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-emerald-300">🍃 Calm Dry Baseline</span>
-                <span class="text-[10px] font-mono text-emerald-400/80">10 Steps</span>
+                <span class="text-[10px] font-mono text-emerald-400/80">12 Steps</span>
               </div>
-              <p class="text-[11px] text-sky-200/70 leading-snug">Transmits dry 0.00m stage height with minor ultrasonic surface ripples.</p>
+              <p class="text-[11px] text-sky-200/70 leading-snug">Transmits steady 0.35m normal baseflow with realistic ultrasonic surface acoustic ripples.</p>
             </button>
 
             <button id="autoStreamBtn" onclick="toggleAutoStream()" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-purple-500/30 hover:border-purple-400 rounded-xl text-left transition space-y-1">
@@ -444,18 +444,52 @@
         { step: 48, stage: 0.35, rain: 0.0,  delay: 6000, desc: "Normal Baseline Complete" }
       ],
       moderate: [
-        { level: 0.00, rain: 0, comment: 'Dry' },
-        { level: 0.35, rain: 25, comment: 'Moderate Rain' },
-        { level: 0.75, rain: 35, comment: 'Stream Accumulation' },
-        { level: 1.15, rain: 45, comment: 'Level 1 Watch Advisory' },
-        { level: 0.85, rain: 15, comment: 'Rain Receding' },
-        { level: 0.00, rain: 0, comment: 'Normal' },
+        // Phase 1: Buffer Warmup (Steps 1-6)
+        { step: 1,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
+        { step: 2,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
+        { step: 3,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
+        { step: 4,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
+        { step: 5,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow (Buffer Ready)" },
+        { step: 6,  stage: 0.36, rain: 5.0,  delay: 5000, desc: "Pre-storm Drizzle Onset" },
+
+        // Phase 2: Steady Rain Onset (Steps 7-12)
+        { step: 7,  stage: 0.38, rain: 15.0, delay: 4500, desc: "Light Steady Rain" },
+        { step: 8,  stage: 0.45, rain: 25.0, delay: 4500, desc: "Moderate Rain Building" },
+        { step: 9,  stage: 0.55, rain: 30.0, delay: 4500, desc: "Soil Saturation & Runoff" },
+        { step: 10, stage: 0.68, rain: 35.0, delay: 4500, desc: "Stream Velocity Rising" },
+        { step: 11, stage: 0.82, rain: 40.0, delay: 4500, desc: "Continuous Torrential Rain" },
+        { step: 12, stage: 0.95, rain: 42.0, delay: 4500, desc: "Approaching Level 1 Watch" },
+
+        // Phase 3: Level 1 Advisory Peak (Steps 13-16)
+        { step: 13, stage: 1.05, rain: 45.0, delay: 4000, desc: "BREACH: ALERT LEVEL 1 (Advisory)" },
+        { step: 14, stage: 1.15, rain: 45.0, delay: 4000, desc: "Peak Moderate Hydrograph (1.15m)" },
+        { step: 15, stage: 1.12, rain: 30.0, delay: 4000, desc: "Rain Slowing - Water Plateau" },
+        { step: 16, stage: 1.08, rain: 20.0, delay: 4000, desc: "Upstream Inflow Sustaining Stage" },
+
+        // Phase 4: Drainage & Recovery (Steps 17-24)
+        { step: 17, stage: 0.98, rain: 10.0, delay: 5000, desc: "Receding Below Level 1 Threshold" },
+        { step: 18, stage: 0.88, rain: 5.0,  delay: 5000, desc: "Drizzle Ceasing, Channel Outflow" },
+        { step: 19, stage: 0.75, rain: 0.0,  delay: 5000, desc: "Steady Baseflow Drawdown" },
+        { step: 20, stage: 0.62, rain: 0.0,  delay: 5000, desc: "Recession Limb Progressing" },
+        { step: 21, stage: 0.50, rain: 0.0,  delay: 5000, desc: "Stream Channel Settling" },
+        { step: 22, stage: 0.42, rain: 0.0,  delay: 5000, desc: "Approaching Normal Baseflow" },
+        { step: 23, stage: 0.36, rain: 0.0,  delay: 5000, desc: "Residual Channel Flow" },
+        { step: 24, stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow Restored (0.35m)" },
       ],
-      calm: Array.from({ length: 8 }).map((_, i) => ({
-        level: Math.max(0, parseFloat((Math.sin(i) * 0.005).toFixed(3))),
-        rain: 0,
-        comment: 'Calm Baseline Ripple',
-      })),
+      calm: [
+        { step: 1,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Normal 0.35m)" },
+        { step: 2,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+        { step: 3,  stage: 0.36, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+        { step: 4,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+        { step: 5,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Buffer Stable)" },
+        { step: 6,  stage: 0.34, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+        { step: 7,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+        { step: 8,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+        { step: 9,  stage: 0.36, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+        { step: 10, stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Buffer Stable)" },
+        { step: 11, stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+        { step: 12, stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow Baseline Complete" },
+      ],
     };
 
     async function runScenario(key) {

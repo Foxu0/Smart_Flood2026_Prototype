@@ -215,24 +215,53 @@ const TYPHOON_48_STEPS = [
 ];
 
 const SCENARIO_MODERATE_RAIN = [
-  { level: 0.00, rain: 0,  comment: 'Dry Baseline' },
-  { level: 0.15, rain: 10, comment: 'Light Drizzle' },
-  { level: 0.35, rain: 25, comment: 'Moderate Steady Rain' },
-  { level: 0.65, rain: 35, comment: 'Steady Stream Accumulation' },
-  { level: 0.95, rain: 40, comment: 'Approaching Level 1' },
-  { level: 1.15, rain: 45, comment: 'Level 1 Watch Advisory' },
-  { level: 1.10, rain: 30, comment: 'Rain Lightens' },
-  { level: 0.85, rain: 15, comment: 'Steady Recession' },
-  { level: 0.55, rain: 5,  comment: 'Draining' },
-  { level: 0.25, rain: 0,  comment: 'Receded' },
-  { level: 0.00, rain: 0,  comment: 'Normal' },
+  // Phase 1: Buffer Warmup (Steps 1-6)
+  { step: 1,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
+  { step: 2,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
+  { step: 3,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
+  { step: 4,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
+  { step: 5,  stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow (Buffer Ready)" },
+  { step: 6,  stage: 0.36, rain: 5.0,  delay: 5000, desc: "Pre-storm Drizzle Onset" },
+
+  // Phase 2: Steady Rain Onset (Steps 7-12)
+  { step: 7,  stage: 0.38, rain: 15.0, delay: 4500, desc: "Light Steady Rain" },
+  { step: 8,  stage: 0.45, rain: 25.0, delay: 4500, desc: "Moderate Rain Building" },
+  { step: 9,  stage: 0.55, rain: 30.0, delay: 4500, desc: "Soil Saturation & Runoff" },
+  { step: 10, stage: 0.68, rain: 35.0, delay: 4500, desc: "Stream Velocity Rising" },
+  { step: 11, stage: 0.82, rain: 40.0, delay: 4500, desc: "Continuous Torrential Rain" },
+  { step: 12, stage: 0.95, rain: 42.0, delay: 4500, desc: "Approaching Level 1 Watch" },
+
+  // Phase 3: Level 1 Advisory Peak (Steps 13-16)
+  { step: 13, stage: 1.05, rain: 45.0, delay: 4000, desc: "BREACH: ALERT LEVEL 1 (Advisory)" },
+  { step: 14, stage: 1.15, rain: 45.0, delay: 4000, desc: "Peak Moderate Hydrograph (1.15m)" },
+  { step: 15, stage: 1.12, rain: 30.0, delay: 4000, desc: "Rain Slowing - Water Plateau" },
+  { step: 16, stage: 1.08, rain: 20.0, delay: 4000, desc: "Upstream Inflow Sustaining Stage" },
+
+  // Phase 4: Drainage & Recovery (Steps 17-24)
+  { step: 17, stage: 0.98, rain: 10.0, delay: 5000, desc: "Receding Below Level 1 Threshold" },
+  { step: 18, stage: 0.88, rain: 5.0,  delay: 5000, desc: "Drizzle Ceasing, Channel Outflow" },
+  { step: 19, stage: 0.75, rain: 0.0,  delay: 5000, desc: "Steady Baseflow Drawdown" },
+  { step: 20, stage: 0.62, rain: 0.0,  delay: 5000, desc: "Recession Limb Progressing" },
+  { step: 21, stage: 0.50, rain: 0.0,  delay: 5000, desc: "Stream Channel Settling" },
+  { step: 22, stage: 0.42, rain: 0.0,  delay: 5000, desc: "Approaching Normal Baseflow" },
+  { step: 23, stage: 0.36, rain: 0.0,  delay: 5000, desc: "Residual Channel Flow" },
+  { step: 24, stage: 0.35, rain: 0.0,  delay: 5000, desc: "Normal Baseflow Restored (0.35m)" },
 ];
 
-const SCENARIO_CALM_BASELINE = Array.from({ length: 10 }).map((_, i) => ({
-  level: Math.max(0, parseFloat((Math.sin(i) * 0.005).toFixed(3))), // subtle 0.00m ripple
-  rain: 0,
-  comment: 'Calm Dry Baseline (Ultrasonic Ripples)',
-}));
+const SCENARIO_CALM_BASELINE = [
+  { step: 1,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Normal 0.35m)" },
+  { step: 2,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+  { step: 3,  stage: 0.36, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+  { step: 4,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+  { step: 5,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Buffer Stable)" },
+  { step: 6,  stage: 0.34, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+  { step: 7,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+  { step: 8,  stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+  { step: 9,  stage: 0.36, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+  { step: 10, stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Buffer Stable)" },
+  { step: 11, stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
+  { step: 12, stage: 0.35, rain: 0.0, delay: 4000, desc: "Calm Baseflow Baseline Complete" },
+];
 
 // ── MAIN CLI ROUTINE ──────────────────────────────────────────────────────────
 async function main() {
