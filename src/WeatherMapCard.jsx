@@ -149,7 +149,6 @@ export default function WeatherMapCard({ severity = 0 }) {
   }, [isSatPlaying]);
 
   const currentSatUrl = `https://src.meteopilipinas.gov.ph/repo/himawari/24hour/irsml/${satFrameIdx + 1}irsml.gif`;
-  const satHourLabel  = satFrameIdx === 0 ? 'Live (Latest)' : `-${satFrameIdx}h Ago`;
 
   /* ── Flood zone toggle ──────────────────────────────────────────────── */
   const [showZones, setShowZones] = useState(true);
@@ -333,10 +332,6 @@ export default function WeatherMapCard({ severity = 0 }) {
               alt="DOST-PAGASA Himawari Satellite IR Scan"
               className="max-h-full max-w-full object-contain rounded-xl shadow-2xl transition-all duration-300"
             />
-            <div className="absolute bottom-3 left-3 bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl shadow-lg border border-white/20 text-[10px] font-mono flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>DOST-PAGASA Himawari-9 IR Scan ({satHourLabel})</span>
-            </div>
           </div>
         ) : (
           /* 🌧️ MODE 2: Rain Doppler Radar Map (Interactive Leaflet Dark Mode Map) */
