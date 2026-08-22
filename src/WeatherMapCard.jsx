@@ -153,7 +153,15 @@ export default function WeatherMapCard({ severity = 0 }) {
   const [isSatPlaying, setIsSatPlaying] = useState(false);
   const satTimerRef = useRef(null);
 
-  /* Playback effect for PAGASA Satellite */
+  /* Preload all 24 PAGASA Himawari Satellite GIF images into browser cache for zero-flicker 60fps animation */
+  useEffect(() => {
+    for (let i = 1; i <= 24; i++) {
+      const img = new Image();
+      img.src = `https://src.meteopilipinas.gov.ph/repo/himawari/24hour/irsml/${i}irsml.gif`;
+    }
+  }, []);
+
+  /* Smooth continuous looping playback effect for PAGASA Satellite (300ms interval) */
   useEffect(() => {
     if (satTimerRef.current) clearInterval(satTimerRef.current);
     if (!isSatPlaying) return;
@@ -161,10 +169,10 @@ export default function WeatherMapCard({ severity = 0 }) {
     satTimerRef.current = setInterval(() => {
       setSatFrameIdx(prev => {
         const next = prev + 1;
-        if (next >= 24) return 0;
+        if (next >= 24) return 0; // Infinite continuous loop back to start!
         return next;
       });
-    }, 450); // 450ms per satellite frame for smooth cloud motion
+    }, 300); // 300ms per satellite frame = smooth PAGASA cloud motion
 
     return () => clearInterval(satTimerRef.current);
   }, [isSatPlaying]);
@@ -231,7 +239,7 @@ export default function WeatherMapCard({ severity = 0 }) {
     };
   }, [fetchFrames]);
 
-  /* ── Radar Playback logic ─────────────────────────────────────────────── */
+  /* ── Radar Playback logic (continuous infinite loop at 550ms interval) ── */
   useEffect(() => {
     if (playTimerRef.current) clearInterval(playTimerRef.current);
     if (!isPlaying || frames.length === 0) return;
@@ -239,13 +247,10 @@ export default function WeatherMapCard({ severity = 0 }) {
     playTimerRef.current = setInterval(() => {
       setFrameIdx(prev => {
         const next = prev + 1;
-        if (next >= frames.length) {
-          setIsPlaying(false);
-          return -1;
-        }
+        if (next >= frames.length) return 0; // Infinite continuous loop back to start!
         return next;
       });
-    }, 700);
+    }, 550);
 
     return () => clearInterval(playTimerRef.current);
   }, [isPlaying, frames]);
@@ -466,10 +471,9 @@ export default function WeatherMapCard({ severity = 0 }) {
             {mapViewMode === 'pagasa' && (
               <LayersControl.Overlay checked name="DOST-PAGASA Himawari Satellite IR">
                 <ImageOverlay
-                  key={currentSatUrl}
                   url={currentSatUrl}
                   bounds={[[4.0, 115.0], [25.0, 135.0]]}
-                  opacity={0.80}
+                  opacity={0.85}
                 />
               </LayersControl.Overlay>
             )}
