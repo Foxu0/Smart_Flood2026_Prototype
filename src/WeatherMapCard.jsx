@@ -68,8 +68,8 @@ function RadarLayer({ path, opacity = 0.65 }) {
 
 /* ── Philippine Area Boundary & Map Limits ──────────────────────────────── */
 const PAGASA_SAT_BOUNDS = [
-  [3.5, 110.0],  // Southwest corner (expanded to fill container width)
-  [22.5, 135.0], // Northeast corner (expanded to fill container width)
+  [4.0, 114.0],  // Southwest corner (Exact PAR Himawari scan bounds)
+  [21.5, 132.0], // Northeast corner (Exact PAR Himawari scan bounds)
 ];
 
 const PH_RADAR_BOUNDS = [
