@@ -344,7 +344,7 @@ export default function WeatherMapCard({ severity = 0 }) {
             }`}
           >
             <Radio size={12} className={mapViewMode === 'doppler' ? 'animate-pulse' : ''} />
-            <span>📡 Rain Radar</span>
+            <span>Rain Radar</span>
           </button>
           <button
             onClick={() => setMapViewMode('pagasa')}
@@ -355,11 +355,11 @@ export default function WeatherMapCard({ severity = 0 }) {
             }`}
           >
             <Layers size={12} className={mapViewMode === 'pagasa' ? 'animate-pulse' : ''} />
-            <span>🛰️ PAGASA Satellite</span>
+            <span>PAGASA Satellite</span>
           </button>
         </div>
         <div className="hidden sm:flex items-center gap-1 text-[9px] text-sky-200/80 font-mono">
-          {mapViewMode === 'doppler' ? '🎯 Ground Rain Intensity (dBZ)' : '🌡️ PAGASA 24h Himawari IR Loop'}
+          {mapViewMode === 'doppler' ? 'Ground Rain Intensity (dBZ)' : 'PAGASA 24h Himawari IR Loop'}
         </div>
       </div>
 
