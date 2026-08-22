@@ -316,13 +316,13 @@ export default function WeatherMapCard({ severity = 0 }) {
           </div>
         )}
 
-        {/* 🛰️ MODE 1: PAGASA Satellite Viewport (Zero distortion, zero border zoom-out bugs) */}
+        {/* 🛰️ MODE 1: PAGASA Satellite Viewport (Full-bleed edge-to-edge coverage, zero spaces) */}
         {mapViewMode === 'pagasa' ? (
-          <div className="w-full h-full flex items-center justify-center bg-[#05131e] relative p-1">
+          <div className="w-full h-full bg-[#05131e] relative overflow-hidden">
             <img
               src={currentSatUrl}
               alt="DOST-PAGASA Himawari Satellite IR Scan"
-              className="max-h-full max-w-full object-contain rounded-xl shadow-2xl transition-all duration-300"
+              className="w-full h-full object-cover transition-all duration-300"
             />
           </div>
         ) : (
