@@ -294,7 +294,8 @@ export default function WeatherMapCard({ severity = 0 }) {
         </div>
       </div>
 
-      <div className="relative h-[340px] sm:h-[500px] w-full overflow-hidden z-0">
+      <div className="relative h-[340px] sm:h-[500px] w-full overflow-hidden z-0 bg-[#05131e]">
+        {/* Top Floating Badges */}
         <div className="absolute top-3 left-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl shadow-lg border border-white/20 flex items-center gap-2 text-xs">
           <ShieldAlert size={14} className="text-amber-400 animate-pulse" />
           <div>
@@ -302,12 +303,15 @@ export default function WeatherMapCard({ severity = 0 }) {
             <p className="text-[9px] text-sky-200">Antipolo &amp; Rizal Province</p>
           </div>
         </div>
+
         <div
           className="absolute top-3 right-3 z-[1000] px-2.5 py-1 rounded-full text-[10px] font-bold shadow-lg border"
           style={{ background: `${b.color}22`, borderColor: `${b.color}55`, color: b.color, backdropFilter: 'blur(8px)' }}
         >
           ● {b.label.toUpperCase()}
         </div>
+
+        {/* Bottom Floating Legend Badge */}
         <div className="absolute bottom-3 right-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-2 rounded-xl shadow-lg border border-white/20 text-[10px] space-y-1.5">
           <div className="flex items-center gap-1.5 font-bold text-[11px] text-sky-200 border-b border-white/10 pb-1">
             {mapViewMode === 'doppler' ? <Radio size={12} className="text-emerald-400" /> : <Layers size={12} className="text-sky-400" />}
@@ -331,37 +335,40 @@ export default function WeatherMapCard({ severity = 0 }) {
             </div>
           )}
         </div>
-        <MapContainer
-          center={antipoloPos}
-          zoom={10}
-          minZoom={5}
-          maxZoom={18}
-          maxBounds={PAGASA_SAT_BOUNDS}
-          maxBoundsViscosity={1.0}
-          style={{ height: '100%', width: '100%' }}
-          attributionControl={false}
-        >
-          <MapViewController mapViewMode={mapViewMode} />
 
-          {/* Base Map Tiles: CartoDB Dark Matter for sleek high-contrast dark theme */}
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            maxZoom={19}
-          />
-
-          {/* Overlays */}
-          {mapViewMode === 'doppler' && (
-            <RadarLayer path={activePath} opacity={0.70} />
-          )}
-
-          {mapViewMode === 'pagasa' && (
-            <ImageOverlay
-              url={currentSatUrl}
-              bounds={PAGASA_SAT_BOUNDS}
-              opacity={0.92}
+        {/* 🛰️ MODE 1: PAGASA Satellite Viewport (Zero distortion, zero border zoom-out bugs) */}
+        {mapViewMode === 'pagasa' ? (
+          <div className="w-full h-full flex items-center justify-center bg-[#05131e] relative p-1">
+            <img
+              src={currentSatUrl}
+              alt="DOST-PAGASA Himawari Satellite IR Scan"
+              className="max-h-full max-w-full object-contain rounded-xl shadow-2xl transition-all duration-300"
             />
-          )}
-        </MapContainer>
+            <div className="absolute bottom-3 left-3 bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl shadow-lg border border-white/20 text-[10px] font-mono flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>DOST-PAGASA Himawari-9 IR Scan ({satHourLabel})</span>
+            </div>
+          </div>
+        ) : (
+          /* 🌧️ MODE 2: Rain Doppler Radar Map (Interactive Leaflet Dark Mode Map) */
+          <MapContainer
+            center={antipoloPos}
+            zoom={10}
+            minZoom={6}
+            maxZoom={18}
+            maxBounds={PH_RADAR_BOUNDS}
+            maxBoundsViscosity={1.0}
+            style={{ height: '100%', width: '100%' }}
+            attributionControl={false}
+          >
+            <MapViewController mapViewMode={mapViewMode} />
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              maxZoom={19}
+            />
+            <RadarLayer path={activePath} opacity={0.70} />
+          </MapContainer>
+        )}
       </div>
     </div>
   );
