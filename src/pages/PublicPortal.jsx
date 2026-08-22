@@ -180,17 +180,17 @@ export default function PublicPortal() {
   const [pushStatus, setPushStatus] = useState('default'); // 'default' | 'subscribing' | 'active' | 'denied' | 'unsupported'
 
   const [telemetry, setTelemetry] = useState({
-    waterLevelM: 1.05,
-    waterDistanceCm: 75,
-    rainRateMmHr: 14.5,
+    waterLevelM: 0.00,
+    waterDistanceCm: 180,
+    rainRateMmHr: 0.0,
   });
 
   const [aiPrediction, setAiPrediction] = useState({
-    riskScore: 58,
-    predicted30m: 1.18,
-    predicted60m: 1.30,
-    timeToCriticalMins: 42,
-    modelConfidence: 94,
+    riskScore: 0,
+    predicted30m: 0.00,
+    predicted60m: 0.00,
+    timeToCriticalMins: null,
+    modelConfidence: 96.5,
   });
 
   const [secondsAgo, setSecondsAgo] = useState(0);
@@ -281,6 +281,50 @@ export default function PublicPortal() {
     return () => { if (secRef.current) clearInterval(secRef.current); };
   }, []);
 
+  // Poll latest telemetry from GET /api/v1/telemetry/latest every 3s
+  useEffect(() => {
+    async function fetchLatest() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/latest`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.success && json.data) {
+          const d = json.data;
+          const level = parseFloat(d.water_level_m ?? 0.00);
+          const dist = parseFloat(d.raw_distance_cm ?? Math.round((1.8 - level) * 100));
+          const rain = parseFloat(d.rainfall_rate ?? 0.0);
+          setTelemetry(prev => ({
+            ...prev,
+            waterLevelM: level,
+            waterDistanceCm: dist,
+            rainRateMmHr: rain,
+          }));
+        } else if (json.success && json.data === null) {
+          // Empty database — reset to 0.00m / 0 mm/h
+          setTelemetry({
+            waterLevelM: 0.00,
+            waterDistanceCm: 180,
+            rainRateMmHr: 0.0,
+          });
+          setAiPrediction(prev => ({
+            ...prev,
+            riskScore: 0,
+            predicted30m: 0.00,
+            predicted60m: 0.00,
+          }));
+        }
+      } catch (err) {
+        console.error('[Public Portal Fetch Latest Error]', err);
+      } finally {
+        setInitialLoading(false);
+      }
+    }
+
+    fetchLatest();
+    const interval = setInterval(fetchLatest, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   // ── Real-Time WebSocket Telemetry Stream ───────────────────────────────────
   useEffect(() => {
     let ws = null;
@@ -307,6 +351,20 @@ export default function PublicPortal() {
               waterDistanceCm: parseInt(d.water_distance_cm ?? d.waterDistanceCm ?? prev.waterDistanceCm),
               rainRateMmHr: parseFloat(d.rainfall_rate ?? d.rainRateMmHr ?? prev.rainRateMmHr),
             }));
+            resetSecondsAgo();
+          } else if (msg.type === 'TEST_RESET' || msg.type === 'TELEMETRY_RESET') {
+            setTelemetry({
+              waterLevelM: 0.00,
+              waterDistanceCm: 180,
+              rainRateMmHr: 0.0,
+            });
+            setAiPrediction({
+              riskScore: 0,
+              predicted30m: 0.00,
+              predicted60m: 0.00,
+              timeToCriticalMins: null,
+              modelConfidence: 96.5,
+            });
             resetSecondsAgo();
           }
           if (msg.type === 'PROJECTION' && msg.data) {
