@@ -176,14 +176,14 @@ export default function WeatherMapCard({ severity = 0 }) {
   /* ── Radar frames state ─────────────────────────────────────────────── */
   const [frames, setFrames]             = useState([]);     // all past + nowcast frames
   const [frameIdx, setFrameIdx]         = useState(-1);     // -1 = live (latest)
-  const [isPlaying, setIsPlaying]       = useState(false);
+  const [isPlaying]                     = useState(true);   // Permanent active loop
   const [radarTimeStr, setRadarTimeStr] = useState('Fetching radar...');
   const [nextRefreshSec, setNextRefreshSec] = useState(120);
   const playTimerRef = useRef(null);
 
   /* ── PAGASA Satellite Animation State (24-hour sequence) ─────────────── */
   const [satFrameIdx, setSatFrameIdx]   = useState(23); // 23 = latest (1-24 sequence, 24th is latest)
-  const [isSatPlaying, setIsSatPlaying] = useState(false);
+  const [isSatPlaying]                  = useState(true);   // Permanent active loop
   const satTimerRef = useRef(null);
 
   /* Preload all 24 PAGASA Himawari Satellite GIF images into browser cache for zero-flicker 60fps animation */
@@ -362,78 +362,6 @@ export default function WeatherMapCard({ severity = 0 }) {
           {mapViewMode === 'doppler' ? '🎯 Ground Rain Intensity (dBZ)' : '🌡️ PAGASA 24h Himawari IR Loop'}
         </div>
       </div>
-
-      {mapViewMode === 'doppler' && (
-        <div className="bg-[#0e2e42] px-3 py-2 flex items-center gap-2 border-b border-white/10">
-          <button
-            onClick={() => {
-              if (!isPlaying && frameIdx === -1) setFrameIdx(0);
-              setIsPlaying(v => !v);
-            }}
-            className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition text-white flex-shrink-0"
-            title={isPlaying ? 'Pause radar animation' : 'Play radar animation'}
-          >
-            {isPlaying ? <Pause size={13} /> : <Play size={13} />}
-          </button>
-          <button
-            onClick={() => { setIsPlaying(false); setFrameIdx(-1); }}
-            className={`text-[9px] font-bold px-2 py-0.5 rounded-full border transition flex-shrink-0 ${
-              frameIdx === -1 ? 'bg-emerald-500/30 border-emerald-400/60 text-emerald-300' : 'bg-white/10 border-white/20 text-white/60'
-            }`}
-          >
-            ● LIVE
-          </button>
-          <div className="flex-1 flex items-center gap-0.5 min-w-0">
-            {pastFrames.map((f, i) => (
-              <button key={f.time} onClick={() => { setIsPlaying(false); setFrameIdx(i); }} className={`h-4 flex-1 rounded-sm ${frameIdx === i || (frameIdx === -1 && i === pastFrames.length - 1) ? 'bg-sky-400' : 'bg-white/20'}`} />
-            ))}
-            {forecastFrames.length > 0 && <div className="w-px h-4 bg-amber-400/60 mx-0.5 flex-shrink-0" />}
-            {forecastFrames.map((f, i) => (
-              <button key={f.time} onClick={() => { setIsPlaying(false); setFrameIdx(pastFrames.length + i); }} className={`h-4 flex-1 rounded-sm ${frameIdx === pastFrames.length + i ? 'bg-amber-400' : 'bg-amber-500/20'}`} />
-            ))}
-          </div>
-          <div className="text-right flex-shrink-0">
-            <div className="text-[9px] text-sky-200 font-mono font-bold">{frameLabel}</div>
-            <div className="text-[8px] text-white/40">↻ {nextRefreshSec}s</div>
-          </div>
-        </div>
-      )}
-
-      {mapViewMode === 'pagasa' && (
-        <div className="bg-[#0e2e42] px-3 py-2 flex items-center gap-2 border-b border-white/10">
-          <button
-            onClick={() => setIsSatPlaying(v => !v)}
-            className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition text-white flex-shrink-0"
-            title={isSatPlaying ? 'Pause Satellite animation' : 'Play 24-hour Satellite animation'}
-          >
-            {isSatPlaying ? <Pause size={13} /> : <Play size={13} />}
-          </button>
-          <button
-            onClick={() => { setIsSatPlaying(false); setSatFrameIdx(23); }}
-            className={`text-[9px] font-bold px-2 py-0.5 rounded-full border transition flex-shrink-0 ${
-              satFrameIdx === 23 ? 'bg-sky-500/30 border-sky-400/60 text-sky-300' : 'bg-white/10 border-white/20 text-white/60'
-            }`}
-          >
-            ● LIVE
-          </button>
-          <div className="flex-1 flex items-center gap-0.5 min-w-0">
-            {Array.from({ length: 24 }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => { setIsSatPlaying(false); setSatFrameIdx(i); }}
-                className={`h-4 flex-1 rounded-sm transition-all ${
-                  satFrameIdx === i ? 'bg-sky-400' : 'bg-white/20 hover:bg-white/35'
-                }`}
-                title={`Frame ${i + 1}/24 (-${24 - (i + 1)}h)`}
-              />
-            ))}
-          </div>
-          <div className="text-right flex-shrink-0">
-            <div className="text-[9px] text-sky-200 font-mono font-bold">{satHourLabel}</div>
-            <div className="text-[8px] text-white/40">24-Hour IR Loop</div>
-          </div>
-        </div>
-      )}
 
       <div className="relative h-[340px] sm:h-[500px] w-full overflow-hidden z-0">
         <div className="absolute top-3 left-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl shadow-lg border border-white/20 flex items-center gap-2 text-xs">
