@@ -4,7 +4,8 @@ import {
   CircleMarker, useMap, ImageOverlay,
 } from 'react-leaflet';
 import L from 'leaflet';
-import { Layers, Radio, Play, Pause, SkipForward } from 'lucide-react';
+import { Layers, Radio, Play, Pause, SkipForward, Info } from 'lucide-react';
+import DataSourcesDisclaimerModal from './components/DataSourcesDisclaimerModal';
 
 const API_KEY = '9c04674c3ef012dce3e3d789ea5ba263';
 
@@ -243,6 +244,7 @@ export default function WeatherMapCard({ severity = 0 }) {
   const forecastFrames = frames.filter(f => f.type === 'forecast');
 
   const b = BEACON[severity] || BEACON[0];
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] overflow-hidden">
@@ -252,6 +254,14 @@ export default function WeatherMapCard({ severity = 0 }) {
           <h2 className="text-sm font-semibold">Weather Map</h2>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowDisclaimer(true)}
+            className="flex items-center gap-1 bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/30 px-2.5 py-1 rounded-full text-[9px] font-bold transition cursor-pointer"
+            title="View Data Sources & Disclaimers"
+          >
+            <Info size={11} />
+            <span>Sources &amp; Disclaimers</span>
+          </button>
           <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-full text-[9px] font-bold text-sky-200">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
             {radarTimeStr}
@@ -346,6 +356,12 @@ export default function WeatherMapCard({ severity = 0 }) {
           </MapContainer>
         )}
       </div>
+
+      {/* Data Sources & Disclaimers Modal */}
+      <DataSourcesDisclaimerModal
+        isOpen={showDisclaimer}
+        onClose={() => setShowDisclaimer(false)}
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import WeatherMapCard from './WeatherMapCard.jsx';
 import WaterTankGauge from './components/WaterTankGauge.jsx';
 import SparklineBar from './components/SparklineBar.jsx';
 import ToastContainer, { useToast } from './components/ToastNotification.jsx';
+import DataSourcesDisclaimerModal from './components/DataSourcesDisclaimerModal.jsx';
 import useCountUp from './hooks/useCountUp.js';
 
 // ─── Helper: live Philippine Standard Time ───────────────────────────────────
@@ -240,6 +241,7 @@ export default function FloodMonitoringDashboard() {
   const [customUnit, setCustomUnit] = useState('hours');
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customRangeText, setCustomRangeText] = useState('2 Hours');
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   // Real Database History State
   const [dbHistory, setDbHistory] = useState([]);
@@ -1095,13 +1097,28 @@ export default function FloodMonitoringDashboard() {
         </main>
 
         {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-        <footer className="bg-gradient-to-r from-[#123a54] to-[#1f6f94] text-sky-200/90 text-center text-[10px] sm:text-xs py-3.5 px-4 flex items-center justify-center gap-2 flex-wrap border-t border-white/10">
-          <img src="/PUBMAT3.png" alt="logo" className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white p-0.5" />
-          <span>Smart Flood · Real-Time Monitoring &amp; Early Warning System · Capstone 2026</span>
+        <footer className="bg-gradient-to-r from-[#123a54] to-[#1f6f94] text-sky-200/90 text-center text-[10px] sm:text-xs py-3.5 px-4 flex items-center justify-between gap-2 flex-wrap border-t border-white/10">
+          <div className="flex items-center gap-2">
+            <img src="/PUBMAT3.png" alt="logo" className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white p-0.5" />
+            <span>Smart Flood · Real-Time Monitoring &amp; Early Warning System · Capstone 2026</span>
+          </div>
+          <button
+            onClick={() => setShowDisclaimer(true)}
+            className="flex items-center gap-1.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/30 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold transition cursor-pointer"
+          >
+            <Info size={13} />
+            <span>Data Sources &amp; Disclaimers</span>
+          </button>
         </footer>
 
       </div>
     </div>
+
+    {/* Data Sources & Disclaimers Modal */}
+    <DataSourcesDisclaimerModal
+      isOpen={showDisclaimer}
+      onClose={() => setShowDisclaimer(false)}
+    />
 
     {/* ── TOAST NOTIFICATIONS (portal, fixed bottom-right) ─────────────── */}
     <ToastContainer toasts={toasts} onDismiss={dismissToast} />
