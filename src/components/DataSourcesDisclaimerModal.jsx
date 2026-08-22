@@ -20,7 +20,7 @@ export default function DataSourcesDisclaimerModal({ isOpen, onClose }) {
       onClick={onClose}
     >
       <div 
-        className="bg-white text-[#123a54] rounded-2xl shadow-2xl border border-[#e4edf0] overflow-hidden flex flex-col max-h-[85vh]"
+        className="bg-[#123a54] text-[#123a54] rounded-2xl shadow-2xl border border-[#123a54] overflow-hidden flex flex-col max-h-[85vh]"
         style={{ width: '90%', maxWidth: '520px', margin: '0 auto' }}
         onClick={(e) => e.stopPropagation()}
       >
