@@ -12,7 +12,7 @@ import useCountUp from '../hooks/useCountUp.js';
  * - Circular arc progress ring behind the tank
  * - Animated digit readout via useCountUp
  */
-export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
+export default function WaterTankGauge({ levelM, maxM = 1.8, dangerM = 1.6, color }) {
   const pct    = Math.min(100, Math.max(0, (levelM / maxM) * 100));
   const fillH  = 160; // inner drawable height in SVG units
   const tankW  = 120; // wider tank width in SVG units
@@ -40,8 +40,9 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
   }
   const wavePath = `M 0,${fillY} L ${wavePoints.join(' L ')} L ${tankW},${fillH} L 0,${fillH} Z`;
 
-  // Danger line in SVG units (1.6 / 1.8 * 160 from bottom)
-  const dangerY = fillH * (1 - 1.6 / maxM);
+  // Danger line in SVG units
+  const dangerVal = dangerM || 1.6;
+  const dangerY = fillH * (1 - Math.min(maxM, Math.max(0, dangerVal)) / maxM);
 
   // Animated counter
   const displayVal = useCountUp(levelM, 900, 2);
@@ -129,7 +130,7 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
           <line x1="0" y1={dangerY} x2={tankW} y2={dangerY}
             stroke="#e0522f" strokeWidth="1.5" strokeDasharray="5,3" opacity="0.7" />
           <text x="6" y={dangerY - 4} fontSize="7.5" fill="#e0522f" fontWeight="bold">
-            DANGER 1.6m
+            DANGER {dangerVal.toFixed(1)}m
           </text>
 
           {/* Scale ticks on right edge */}
@@ -158,22 +159,29 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
           {displayVal} <span className="text-lg font-semibold opacity-60">m</span>
         </div>
         <div className="text-[10px] text-[#6d818d] mt-1 leading-snug">
-          Water Level · Danger at 1.60 m
+          Water Level · Danger at {dangerVal.toFixed(2)} m
         </div>
-        {/* Pct bar */}
-        <div className="mt-2 w-32 h-1.5 bg-[#eef4f6] rounded-full overflow-hidden mx-auto">
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: `${pct}%`,
-              background: color,
-              transition: 'width 1s ease-out',
-            }}
-          />
-        </div>
-        <div className="text-[9px] text-[#6d818d] mt-0.5">
-          {pct.toFixed(0)}% of danger capacity
-        </div>
+        {/* Pct bar relative to Danger Level */}
+        {(() => {
+          const dangerPct = Math.min(100, Math.max(0, (levelM / dangerVal) * 100));
+          return (
+            <>
+              <div className="mt-2 w-32 h-1.5 bg-[#eef4f6] rounded-full overflow-hidden mx-auto">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${dangerPct}%`,
+                    background: color,
+                    transition: 'width 1s ease-out',
+                  }}
+                />
+              </div>
+              <div className="text-[9px] text-[#6d818d] mt-0.5">
+                {dangerPct.toFixed(0)}% of danger capacity
+              </div>
+            </>
+          );
+        })()}
       </div>
     </div>
   );

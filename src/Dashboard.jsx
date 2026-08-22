@@ -41,8 +41,15 @@ const FLOOD_LEVELS = [
   { id: 2, min: 1.4, max: 1.6, color: '#e69138', soft: '#fdf1de', border: '#f4d6a4' },
   { id: 3, min: 1.6, max: 1.8, color: '#e0522f', soft: '#fce7e0', border: '#f2bfab' },
 ];
-function getFloodLevel(waterM) {
-  return FLOOD_LEVELS.find(l => waterM >= l.min && waterM < l.max) || FLOOD_LEVELS[3];
+function getFloodLevel(waterM, thresholds) {
+  const l1 = thresholds?.level1_watch ?? 1.0;
+  const l2 = thresholds?.level2_alarm ?? 1.4;
+  const l3 = thresholds?.level3_danger ?? 1.6;
+
+  if (waterM < l1) return { ...FLOOD_LEVELS[0], min: 0.0, max: l1 };
+  if (waterM < l2) return { ...FLOOD_LEVELS[1], min: l1, max: l2 };
+  if (waterM < l3) return { ...FLOOD_LEVELS[2], min: l2, max: l3 };
+  return { ...FLOOD_LEVELS[3], min: l3, max: 1.8 };
 }
 
 // ─── Plain-language content, keyed by flood level id ─────────────────────────
@@ -507,7 +514,7 @@ export default function FloodMonitoringDashboard() {
     };
   }, []);
 
-  const floodLevel = getFloodLevel(telemetry.waterLevelM);
+  const floodLevel = getFloodLevel(telemetry.waterLevelM, thresholds);
   const friendly = getFriendlyContent(floodLevel, telemetry, aiPrediction);
 
   const toggleSiren = () => {
@@ -747,7 +754,7 @@ export default function FloodMonitoringDashboard() {
               </div>
 
               <div className="relative z-[1] flex justify-center">
-                <WaterTankGauge levelM={telemetry.waterLevelM} color={floodLevel.color} />
+                <WaterTankGauge levelM={telemetry.waterLevelM} dangerM={thresholds.level3_danger} color={floodLevel.color} />
               </div>
             </div>
 
