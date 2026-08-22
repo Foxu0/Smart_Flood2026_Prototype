@@ -118,9 +118,11 @@ async function sendTelemetry(packet, stepStr = '01/01', comment = '', delaySec =
     const rainMm = parseFloat(logObj.rainfall_rate ?? (packet.rainTips * 6)).toFixed(1);
 
     const alertStatus = data.event?.event_code || data.eventTriggered?.event_type || data.alertStatus?.eventCode || (stageM >= 1.6 ? 'ALERT_L3' : stageM >= 1.4 ? 'ALERT_L2' : stageM >= 1.0 ? 'ALERT_L1' : 'NORMAL');
-    const projObj = data.projection || data.aiProjection || {};
-    const ai30m = (projObj.predicted30m ?? projObj.horizon_30m_m ?? stageM) != null ? `${parseFloat(projObj.predicted30m ?? projObj.horizon_30m_m ?? stageM).toFixed(2)}m` : '0.00m';
-    const aiConf = (projObj.confidenceScore ?? projObj.confidence_score ?? projObj.modelConfidence ?? 96.5) != null ? `${parseFloat(projObj.confidenceScore ?? projObj.confidence_score ?? projObj.modelConfidence ?? 96.5).toFixed(1)}%` : '96.5%';
+    const aiEval = data.aiEvaluation || {};
+    const rawConf = aiEval.avgAccuracy_pct;
+    const aiConf = typeof rawConf === 'number'
+      ? `${rawConf.toFixed(1)}%`
+      : (projObj.confidenceScore ? `${projObj.confidenceScore.toFixed(1)}%` : 'Evaluating...');
     const sirenText = (packet.relayState || data.sirenActive || stageM >= 1.4) ? `${C.red}${C.bold}ON 🚨${C.reset}` : `${C.dim}OFF${C.reset}`;
 
     let statusColor = C.green;

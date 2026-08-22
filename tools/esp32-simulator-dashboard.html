@@ -339,14 +339,18 @@
         const alertCode = data.event?.event_code || data.eventTriggered?.event_type || (stageM >= 1.6 ? 'ALERT_L3' : stageM >= 1.4 ? 'ALERT_L2' : stageM >= 1.0 ? 'ALERT_L1' : 'NORMAL');
         const projObj = data.projection || data.aiProjection || {};
         const ai30m = parseFloat(projObj.predicted30m ?? projObj.horizon_30m_m ?? stageM).toFixed(2);
-        const aiConf = parseFloat(projObj.confidenceScore ?? projObj.confidence_score ?? 96.5).toFixed(1);
+        const aiEval = data.aiEvaluation || {};
+        const rawConf = aiEval.avgAccuracy_pct;
+        const aiConf = typeof rawConf === 'number'
+          ? `${rawConf.toFixed(1)}%`
+          : (typeof rawConf === 'string' ? rawConf : '96.5%');
         const sirenState = (payload.relayState || data.sirenActive || stageM >= 1.4);
 
         // Update Server Response Inspector Card
         document.getElementById('lastHttpStatus').innerText = res.status + ' OK';
         document.getElementById('respStage').innerText = stageM + ' m';
         document.getElementById('respAi30m').innerText = ai30m + ' m';
-        document.getElementById('respAiConf').innerText = aiConf + '%';
+        document.getElementById('respAiConf').innerText = aiConf;
 
         const sirenEl = document.getElementById('respSiren');
         if (sirenState) {

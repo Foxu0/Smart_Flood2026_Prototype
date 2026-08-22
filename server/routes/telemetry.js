@@ -215,7 +215,8 @@ router.post('/', async (req, res) => {
       }).catch(err => console.error('[POST /telemetry] Web Push Alert error:', err.message));
     }
 
-    res.status(201).json({ success: true, log, event, projection, alertStatus });
+    const aiEvaluation = getEvaluationMetrics();
+    res.status(201).json({ success: true, log, event, projection, alertStatus, aiEvaluation });
   } catch (err) {
     console.error('[POST /telemetry]', err);
     res.status(500).json({ error: 'Internal server error', detail: err.message });
