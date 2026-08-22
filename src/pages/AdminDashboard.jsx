@@ -1263,186 +1263,21 @@ export default function FloodMonitoringDashboard() {
                   </button>
                 </div>
               </div>
-            </div>
 
-            {/* ── DEMONSTRATION & SCENARIO SIMULATOR CARD ─────────────────── */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#f1f5f6] pb-3">
-                <div className="flex items-center gap-2">
-                  <Play size={16} className="text-emerald-600" />
-                  <h2 className="text-sm font-semibold text-[#123a54]">Demonstration &amp; Scenario Simulator</h2>
-                </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                  scenarioState.isRunning
-                    ? 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30 animate-pulse'
-                    : 'bg-gray-100 text-gray-500 border-gray-200'
-                }`}>
-                  {scenarioState.isRunning ? `PLAYING STEP ${scenarioState.currentStep}/${scenarioState.totalSteps}` : 'READY'}
-                </span>
-              </div>
-
-              {/* Scenario Selector Dropdown */}
-              <div>
-                <label className="block text-xs font-bold text-[#123a54] mb-1">Select Hydrological Test Scenario</label>
-                <select
-                  value={selectedScenario}
-                  onChange={e => setSelectedScenario(e.target.value)}
-                  disabled={scenarioState.isRunning}
-                  className="w-full text-xs bg-[#f4f7f8] border border-[#d1dee3] rounded-xl p-2.5 font-medium text-[#123a54] focus:outline-none focus:ring-2 focus:ring-[#2b6e8f] disabled:opacity-50"
-                >
-                  <option value="flash_flood">⚡ Scenario 1: Flash Flood Surge (Level 2 Warning - 25 Steps)</option>
-                  <option value="moderate_rain">🌧️ Scenario 2: Moderate Rainfall (Level 1 Advisory - 15 Steps)</option>
-                  <option value="dry_baseline">☀️ Scenario 3: Dry Baseline with Turbulence Noise (15 Steps)</option>
-                </select>
-              </div>
-
-              {/* Live Step Progress Bar */}
-              {scenarioState.isRunning && (
-                <div className="bg-[#f0f9ff] border border-[#bfe6cf] rounded-xl p-3 space-y-1.5">
-                  <div className="flex justify-between text-[11px] font-bold">
-                    <span className="text-[#2b6e8f]">Playback Progress</span>
-                    <span className="font-mono text-[#2f9463]">Step {scenarioState.currentStep} / {scenarioState.totalSteps}</span>
-                  </div>
-                  <div className="h-2 w-full bg-[#eef4f6] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[#2f9463] rounded-full transition-all duration-500"
-                      style={{ width: `${(scenarioState.currentStep / Math.max(1, scenarioState.totalSteps)) * 100}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-[#6d818d] font-mono italic truncate">
-                    {scenarioState.comment || 'Streaming timestep telemetry payload...'}
-                  </p>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-3 gap-2 pt-1 border-t border-[#f1f5f6]">
-                <button
-                  onClick={handleStartScenario}
-                  disabled={scenarioState.isRunning}
-                  className="py-2 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                  title="Start step-by-step playback of selected scenario at 2.5s interval"
-                >
-                  <Play size={13} />
-                  <span>START</span>
-                </button>
-
-                <button
-                  onClick={handleStopScenario}
-                  disabled={!scenarioState.isRunning}
-                  className="py-2 px-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-sm transition hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                  title="Halt active scenario immediately"
-                >
-                  <Square size={13} />
-                  <span>STOP</span>
-                </button>
-
-                <button
-                  onClick={handleResetTestTelemetry}
-                  disabled={isResetting}
-                  className="py-2 px-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#3f5361] font-bold text-xs border border-gray-300 flex items-center justify-center gap-1 shadow-sm transition hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                  title="Purge database logs and reset baseline"
-                >
-                  <RotateCcw size={13} className={isResetting ? 'animate-spin' : ''} />
-                  <span>RESET</span>
-                </button>
-              </div>
-            </div>
-
-            {/* ── AI MODEL BENCHMARK & ACCURACY CARD ─────────────────────── */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#f1f5f6] pb-3">
-                <div className="flex items-center gap-2">
-                  <BarChart3 size={16} className="text-[#2b6e8f]" />
-                  <h2 className="text-sm font-semibold text-[#123a54]">AI Model Benchmark &amp; Accuracy</h2>
-                </div>
-                <span className="text-[10px] bg-[#2b6e8f]/15 text-[#2b6e8f] font-bold px-2 py-0.5 rounded-full border border-[#2b6e8f]/30 font-mono">
-                  {aiMetrics.methodUsed || 'ONNX_LSTM'}
-                </span>
-              </div>
-
-              {/* Summary Metric Badges */}
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="bg-[#f0f9ff] border border-[#bfe6cf] rounded-xl p-2.5">
-                  <p className="text-[9px] text-[#2b6e8f] font-bold uppercase tracking-wider">Avg Accuracy</p>
-                  <p className="text-lg font-bold font-mono text-[#2f9463]">{aiMetrics.avgAccuracy_pct}%</p>
-                </div>
-                <div className="bg-[#fcf8f2] border border-[#f4d6a4] rounded-xl p-2.5">
-                  <p className="text-[9px] text-[#e69138] font-bold uppercase tracking-wider">MAE (Error)</p>
-                  <p className="text-lg font-bold font-mono text-[#e69138]">{aiMetrics.mae_m} m</p>
-                </div>
-                <div className="bg-[#fbfdfe] border border-[#eef2f3] rounded-xl p-2.5">
-                  <p className="text-[9px] text-[#6d818d] font-bold uppercase tracking-wider">RMSE</p>
-                  <p className="text-lg font-bold font-mono text-[#123a54]">{aiMetrics.rmse_m} m</p>
-                </div>
-              </div>
-
-              {/* Defense Simulation Control Buttons */}
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#f1f5f6]">
-                <button
-                  onClick={handleRunSimulation}
-                  disabled={isSimulating}
-                  className="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                  title="Stream 20-step synthetic storm cycle into ONNX engine"
-                >
-                  <Play size={13} className={isSimulating ? 'animate-spin' : ''} />
-                  {isSimulating ? 'SIMULATING...' : 'RUN SIMULATION'}
-                </button>
-
-                <button
-                  onClick={handleResetTestTelemetry}
-                  disabled={isResetting}
-                  className="py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#3f5361] font-bold text-xs border border-gray-300 flex items-center justify-center gap-1.5 shadow-sm transition hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                  title="Purge database logs and reset baseline"
-                >
-                  <RotateCcw size={13} className={isResetting ? 'animate-spin' : ''} />
-                  {isResetting ? 'RESETTING...' : 'RESET TELEMETRY'}
-                </button>
-              </div>
-
-              {/* Recent Comparison History Table */}
+              {/* Reset Telemetry Data */}
               <div className="pt-2 border-t border-[#f1f5f6]">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-xs font-bold text-[#123a54] flex items-center gap-1.5">
-                    <Target size={13} className="text-[#2b6e8f]" /> Shifted Horizon (+30m) Evaluation Log
-                  </h3>
-                  <span className="text-[10px] text-[#6d818d] font-mono">Matched Pairs: {aiMetrics.history?.length || 0}</span>
-                </div>
-
-                <div className="overflow-x-auto max-h-48 overflow-y-auto rounded-xl border border-[#eef2f3] text-[10px]">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="bg-[#f4f7f8] text-[#6d818d] font-bold uppercase sticky top-0 border-b border-[#eef2f3]">
-                      <tr>
-                        <th className="p-2">Time</th>
-                        <th className="p-2">Actual (Now)</th>
-                        <th className="p-2">Forecast (From -30m)</th>
-                        <th className="p-2">Error</th>
-                        <th className="p-2">Accuracy</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#f1f5f6] font-mono">
-                      {(!aiMetrics.history || aiMetrics.history.length === 0) ? (
-                        <tr>
-                          <td colSpan={5} className="p-3 text-center text-[#2b6e8f] bg-[#f0f9ff] font-sans font-medium text-[11px]">
-                            ℹ️ Gathering baseline steps (Evaluations begin at Step 4)...
-                          </td>
-                        </tr>
-                      ) : (
-                        aiMetrics.history.map((row) => (
-                          <tr key={row.id || row.stepEvaluated} className="hover:bg-[#fbfdfe]">
-                            <td className="p-2 text-[#6d818d]">
-                              {row.time || (row.timestamp ? new Date(row.timestamp).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '--:--')}
-                            </td>
-                            <td className="p-2 font-bold text-[#123a54]">{row.actual ?? row.actual_m?.toFixed(2)} m</td>
-                            <td className="p-2 text-[#2b6e8f]">{row.predicted ?? row.predicted30m_m?.toFixed(2)} m</td>
-                            <td className="p-2 text-[#e69138]">±{row.error ?? row.error30m_m?.toFixed(2)} m</td>
-                            <td className="p-2 font-bold text-[#2f9463]">{row.accuracy ?? `${row.accuracy30m_pct}%`}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                <h3 className="text-xs font-bold text-[#123a54] mb-1.5 flex items-center gap-1.5">
+                  <RotateCcw size={14} className="text-gray-500" /> Database &amp; Telemetry Maintenance
+                </h3>
+                <button
+                  onClick={handleResetTestTelemetry}
+                  disabled={isResetting}
+                  className="w-full py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#3f5361] font-bold text-xs border border-gray-300 flex items-center justify-center gap-1.5 shadow-sm transition hover:scale-[1.01] active:scale-95 disabled:opacity-50"
+                  title="Purge database logs and reset telemetry baseline"
+                >
+                  <RotateCcw size={13} className={isResetting ? 'animate-spin' : ''} />
+                  {isResetting ? 'RESETTING TELEMETRY...' : 'RESET TELEMETRY LOGS'}
+                </button>
               </div>
             </div>
 
