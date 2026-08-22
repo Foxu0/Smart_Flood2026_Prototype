@@ -133,6 +133,29 @@ function RadarLayer({ path, opacity = 0.65 }) {
   );
 }
 
+/* ── Philippine Area Boundary & Map Limits ──────────────────────────────── */
+const PH_BOUNDS = [
+  [4.0, 115.0],  // Southwest (Celebes Sea / Sulu Sea)
+  [22.0, 132.0], // Northeast (Bashi Channel / Philippine Sea)
+];
+
+/* ── Dynamic Camera Controller Component ────────────────────────────────── */
+function MapViewController({ mapViewMode }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (mapViewMode === 'pagasa') {
+      // Smoothly fly to Philippine Area of Responsibility (PAR) for Satellite view
+      map.flyTo([13.2, 122.5], 5, { animate: true, duration: 0.8 });
+    } else {
+      // Smoothly fly to Antipolo & Greater Manila for Flood Radar view
+      map.flyTo([14.5869, 121.1754], 10, { animate: true, duration: 0.8 });
+    }
+  }, [mapViewMode, map]);
+
+  return null;
+}
+
 /* ══════════════════════════════════════════════════════════════════════════ */
 export default function WeatherMapCard({ severity = 0 }) {
   const antipoloPos = [14.5869, 121.1754];
@@ -452,10 +475,15 @@ export default function WeatherMapCard({ severity = 0 }) {
         </div>
         <MapContainer
           center={antipoloPos}
-          zoom={11}
+          zoom={10}
+          minZoom={5}
+          maxZoom={18}
+          maxBounds={PH_BOUNDS}
+          maxBoundsViscosity={1.0}
           style={{ height: '100%', width: '100%' }}
           attributionControl={false}
         >
+          <MapViewController mapViewMode={mapViewMode} />
           <LayersControl position="topright">
             <LayersControl.BaseLayer checked name="CartoDB Dark Matter">
               <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" maxZoom={19} />
