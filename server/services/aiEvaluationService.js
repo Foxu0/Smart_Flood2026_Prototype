@@ -53,10 +53,13 @@ export function recordActualAndEvaluate(actualLog) {
 
   for (const idx of matchedIndices) {
     const entry = predictionQueue[idx];
+    const actual = parseFloat(actualLog.water_level_m);
     const predicted = entry.predictedValue;
     const error = Math.abs(actual - predicted);
-    // Formula: accuracy = Math.max(0, (1 - (error / Math.max(actual, 0.5))) * 100)
-    const accuracy = Math.max(0, (1 - (error / Math.max(actual, 0.5))) * 100);
+
+    // Use a normalization baseline of at least 1.0m to prevent divide-by-fraction distortion
+    const denominator = Math.max(actual, 1.0);
+    const accuracy = Math.max(0, (1 - (error / denominator)) * 100);
 
     const timeStr = new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 

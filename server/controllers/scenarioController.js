@@ -109,9 +109,13 @@ export async function runScenario(req, res) {
       const stepData = scenario.steps[activeStepIndex];
       activeStepIndex++;
 
-      const water_level_m = parseFloat(stepData.stage.toFixed(3));
+      const rawStage = stepData.water_level_m ?? stepData.stage ?? 0.35;
+      const rawRain  = stepData.rainfall_rate_mmh ?? stepData.rain ?? 0.0;
+      const stepComment = stepData.description ?? stepData.comment ?? `Step ${activeStepIndex}`;
+
+      const water_level_m = parseFloat(Number(rawStage).toFixed(3));
       const raw_distance_cm = Math.max(15, Math.round(MOUNT_HEIGHT_CM - water_level_m * 100));
-      const rainfall_rate = parseFloat(stepData.rain.toFixed(2));
+      const rainfall_rate = parseFloat(Number(rawRain).toFixed(2));
       const tip_count = Math.round(rainfall_rate * 0.5);
 
       // Save log in Prisma DB
@@ -150,7 +154,7 @@ export async function runScenario(req, res) {
         event = await prisma.systemEvent.create({
           data: {
             event_code: eventCode,
-            message: `[${scenario.name} Step ${activeStepIndex}/${scenario.totalSteps}] ${stepData.comment} — Stage: ${water_level_m}m`,
+            message: `[${scenario.name} Step ${activeStepIndex}/${scenario.totalSteps}] ${stepComment} — Stage: ${water_level_m}m`,
             severity,
           },
         });
@@ -189,7 +193,7 @@ export async function runScenario(req, res) {
           scenarioName: scenario.name,
           currentStep: activeStepIndex,
           totalSteps: scenario.totalSteps,
-          comment: stepData.comment,
+          comment: stepComment,
           isRunning: true,
         },
       });
