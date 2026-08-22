@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MapContainer, TileLayer, Marker, Popup,
-  LayersControl, Polygon, Tooltip, CircleMarker, useMap,
+  LayersControl, Polygon, Tooltip, CircleMarker, useMap, ImageOverlay,
 } from 'react-leaflet';
 import L from 'leaflet';
 import { ShieldAlert, Layers, Radio, Play, Pause, SkipForward } from 'lucide-react';
@@ -137,6 +137,9 @@ function RadarLayer({ path, opacity = 0.65 }) {
 export default function WeatherMapCard({ severity = 0 }) {
   const antipoloPos = [14.5869, 121.1754];
 
+  /* ── Map View Mode: 'doppler' (RainViewer Rain Radar) vs 'pagasa' (DOST-PAGASA Himawari Satellite) ── */
+  const [mapViewMode, setMapViewMode] = useState('doppler');
+
   /* ── Radar frames state ─────────────────────────────────────────────── */
   const [frames, setFrames]             = useState([]);     // all past + nowcast frames
   const [frameIdx, setFrameIdx]         = useState(-1);     // -1 = live (latest)
@@ -144,7 +147,6 @@ export default function WeatherMapCard({ severity = 0 }) {
   const [radarTimeStr, setRadarTimeStr] = useState('Fetching radar...');
   const [nextRefreshSec, setNextRefreshSec] = useState(120);
   const playTimerRef  = useRef(null);
-  const refreshTimerRef = useRef(null);
 
   /* ── Flood zone toggle ──────────────────────────────────────────────── */
   const [showZones, setShowZones] = useState(true);
@@ -179,7 +181,6 @@ export default function WeatherMapCard({ severity = 0 }) {
       ];
 
       setFrames(allFrames);
-      // Default to live (last past frame)
       const lastPast = past[past.length - 1];
       if (lastPast) {
         const dateObj = new Date(lastPast.time * 1000);
@@ -197,12 +198,9 @@ export default function WeatherMapCard({ severity = 0 }) {
   useEffect(() => {
     fetchFrames();
     const interval = setInterval(fetchFrames, 120000);
-
-    // Countdown to next refresh
     const countdown = setInterval(() => {
       setNextRefreshSec(s => (s <= 1 ? 120 : s - 1));
     }, 1000);
-
     return () => {
       clearInterval(interval);
       clearInterval(countdown);
@@ -216,27 +214,23 @@ export default function WeatherMapCard({ severity = 0 }) {
 
     playTimerRef.current = setInterval(() => {
       setFrameIdx(prev => {
-        const pastCount = frames.filter(f => f.type === 'past').length;
         const next = prev + 1;
-        // Stop at last frame (cycle back to live after end)
         if (next >= frames.length) {
           setIsPlaying(false);
-          return -1; // back to live
+          return -1;
         }
         return next;
       });
-    }, 700); // 700ms per frame = smooth animation
+    }, 700);
 
     return () => clearInterval(playTimerRef.current);
   }, [isPlaying, frames]);
 
-  /* ── Compute active radar path ───────────────────────────────────────── */
   const activeFrame = frameIdx === -1
     ? frames.filter(f => f.type === 'past').slice(-1)[0]
     : frames[frameIdx];
   const activePath = activeFrame?.path || null;
 
-  /* ── Frame timestamp label ──────────────────────────────────────────── */
   const frameLabel = (() => {
     if (!activeFrame) return '—';
     const d = new Date(activeFrame.time * 1000);
@@ -249,20 +243,16 @@ export default function WeatherMapCard({ severity = 0 }) {
   const pastFrames     = frames.filter(f => f.type === 'past');
   const forecastFrames = frames.filter(f => f.type === 'forecast');
 
-  const beaconIcon = buildBeaconIcon(severity);
   const b = BEACON[severity] || BEACON[0];
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] overflow-hidden">
-
-      {/* ── Header Bar ──────────────────────────────────────────────── */}
       <div className="bg-[#123a54] text-white px-4 py-2.5 flex items-center justify-between gap-2 border-b border-white/10">
         <div className="flex items-center gap-2">
           <Layers size={15} className="text-sky-200" />
           <h2 className="text-sm font-semibold">Weather Map</h2>
         </div>
         <div className="flex items-center gap-2">
-          {/* Zone toggle pill */}
           <button
             onClick={() => setShowZones(v => !v)}
             className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold border transition-all ${
@@ -270,12 +260,10 @@ export default function WeatherMapCard({ severity = 0 }) {
                 ? 'bg-amber-500/20 border-amber-400/50 text-amber-300'
                 : 'bg-white/10 border-white/20 text-sky-300'
             }`}
-            title="Toggle flood hazard zone polygons"
           >
             <span className={`w-1.5 h-1.5 rounded-full ${showZones ? 'bg-amber-400' : 'bg-white/40'}`} />
             HAZARD ZONES
           </button>
-          {/* Live radar badge */}
           <div className="flex items-center gap-1.5 bg-white/10 px-2 py-0.5 rounded-full text-[9px] font-bold text-sky-200">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
             {radarTimeStr}
@@ -283,115 +271,104 @@ export default function WeatherMapCard({ severity = 0 }) {
         </div>
       </div>
 
-      {/* ── Radar Playback Controls ──────────────────────────────────── */}
-      <div className="bg-[#0e2e42] px-3 py-2 flex items-center gap-2 border-b border-white/10">
-        {/* Play/Pause */}
-        <button
-          onClick={() => {
-            if (!isPlaying && frameIdx === -1) setFrameIdx(0);
-            setIsPlaying(v => !v);
-          }}
-          className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition text-white flex-shrink-0"
-          title={isPlaying ? 'Pause' : 'Play radar animation'}
-        >
-          {isPlaying ? <Pause size={13} /> : <Play size={13} />}
-        </button>
-
-        {/* Live button */}
-        <button
-          onClick={() => { setIsPlaying(false); setFrameIdx(-1); }}
-          className={`text-[9px] font-bold px-2 py-0.5 rounded-full border transition flex-shrink-0 ${
-            frameIdx === -1
-              ? 'bg-emerald-500/30 border-emerald-400/60 text-emerald-300'
-              : 'bg-white/10 border-white/20 text-white/60 hover:text-white'
-          }`}
-        >
-          ● LIVE
-        </button>
-
-        {/* Frame scrubber */}
-        <div className="flex-1 flex items-center gap-0.5 min-w-0">
-          {/* Past frames */}
-          {pastFrames.map((f, i) => {
-            const globalIdx = i;
-            const isActive = frameIdx === globalIdx || (frameIdx === -1 && i === pastFrames.length - 1);
-            return (
-              <button
-                key={f.time}
-                onClick={() => { setIsPlaying(false); setFrameIdx(globalIdx); }}
-                className={`h-4 flex-1 rounded-sm transition-all ${
-                  isActive ? 'bg-sky-400' : 'bg-white/20 hover:bg-white/35'
-                }`}
-                title={new Date(f.time * 1000).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true })}
-              />
-            );
-          })}
-          {/* Divider */}
-          {forecastFrames.length > 0 && (
-            <div className="w-px h-4 bg-amber-400/60 mx-0.5 flex-shrink-0" title="Forecast begins" />
-          )}
-          {/* Forecast frames */}
-          {forecastFrames.map((f, i) => {
-            const globalIdx = pastFrames.length + i;
-            const isActive = frameIdx === globalIdx;
-            return (
-              <button
-                key={f.time}
-                onClick={() => { setIsPlaying(false); setFrameIdx(globalIdx); }}
-                className={`h-4 flex-1 rounded-sm transition-all ${
-                  isActive ? 'bg-amber-400' : 'bg-amber-500/20 hover:bg-amber-400/40'
-                }`}
-                title={`+Forecast: ${new Date(f.time * 1000).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true })}`}
-              />
-            );
-          })}
-        </div>
-
-        {/* Frame timestamp + next refresh */}
-        <div className="text-right flex-shrink-0">
-          <div className="text-[9px] text-sky-200 font-mono font-bold">{frameLabel}</div>
-          <div className="text-[8px] text-white/40">↻ {nextRefreshSec}s</div>
+      <div className="bg-[#0b2434] px-3 py-1.5 flex items-center justify-between gap-2 border-b border-white/10 text-xs">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setMapViewMode('doppler')}
+            className={`px-2.5 py-1 rounded-lg font-bold text-[10px] sm:text-xs flex items-center gap-1.5 transition-all ${
+              mapViewMode === 'doppler'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-white/10 text-sky-200 hover:bg-white/20'
+            }`}
+          >
+            <Radio size={12} className={mapViewMode === 'doppler' ? 'animate-pulse' : ''} />
+            <span>📡 Rain Radar</span>
+          </button>
+          <button
+            onClick={() => setMapViewMode('pagasa')}
+            className={`px-2.5 py-1 rounded-lg font-bold text-[10px] sm:text-xs flex items-center gap-1.5 transition-all ${
+              mapViewMode === 'pagasa'
+                ? 'bg-sky-600 text-white shadow-sm'
+                : 'bg-white/10 text-sky-200 hover:bg-white/20'
+            }`}
+          >
+            <Layers size={12} />
+            <span>🛰️ PAGASA Satellite</span>
+          </button>
         </div>
       </div>
 
-      {/* ── Map Container ───────────────────────────────────────────── */}
-      <div className="relative h-[340px] sm:h-[500px] w-full overflow-hidden z-0">
+      {mapViewMode === 'doppler' && (
+        <div className="bg-[#0e2e42] px-3 py-2 flex items-center gap-2 border-b border-white/10">
+          <button
+            onClick={() => {
+              if (!isPlaying && frameIdx === -1) setFrameIdx(0);
+              setIsPlaying(v => !v);
+            }}
+            className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition text-white"
+          >
+            {isPlaying ? <Pause size={13} /> : <Play size={13} />}
+          </button>
+          <button
+            onClick={() => { setIsPlaying(false); setFrameIdx(-1); }}
+            className={`text-[9px] font-bold px-2 py-0.5 rounded-full border transition ${
+              frameIdx === -1 ? 'bg-emerald-500/30 border-emerald-400/60 text-emerald-300' : 'bg-white/10 border-white/20 text-white/60'
+            }`}
+          >
+            ● LIVE
+          </button>
+          <div className="flex-1 flex items-center gap-0.5 min-w-0">
+            {pastFrames.map((f, i) => (
+              <button key={f.time} onClick={() => { setIsPlaying(false); setFrameIdx(i); }} className={`h-4 flex-1 rounded-sm ${frameIdx === i || (frameIdx === -1 && i === pastFrames.length - 1) ? 'bg-sky-400' : 'bg-white/20'}`} />
+            ))}
+            {forecastFrames.length > 0 && <div className="w-px h-4 bg-amber-400/60 mx-0.5" />}
+            {forecastFrames.map((f, i) => (
+              <button key={f.time} onClick={() => { setIsPlaying(false); setFrameIdx(pastFrames.length + i); }} className={`h-4 flex-1 rounded-sm ${frameIdx === pastFrames.length + i ? 'bg-amber-400' : 'bg-amber-500/20'}`} />
+            ))}
+          </div>
+          <div className="text-right flex-shrink-0">
+            <div className="text-[9px] text-sky-200 font-mono font-bold">{frameLabel}</div>
+            <div className="text-[8px] text-white/40">↻ {nextRefreshSec}s</div>
+          </div>
+        </div>
+      )}
 
-        {/* Active Warnings Badge — top left */}
-        <div className="absolute top-3 left-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl shadow-lg border border-white/20 flex items-center gap-2 text-xs float-badge">
+      <div className="relative h-[340px] sm:h-[500px] w-full overflow-hidden z-0">
+        <div className="absolute top-3 left-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl shadow-lg border border-white/20 flex items-center gap-2 text-xs">
           <ShieldAlert size={14} className="text-amber-400 animate-pulse" />
           <div>
             <p className="font-bold text-[11px] leading-tight">Active Warning Zone</p>
             <p className="text-[9px] text-sky-200">Antipolo &amp; Rizal Province</p>
           </div>
         </div>
-
-        {/* Severity pill — top right */}
         <div
           className="absolute top-3 right-3 z-[1000] px-2.5 py-1 rounded-full text-[10px] font-bold shadow-lg border"
           style={{ background: `${b.color}22`, borderColor: `${b.color}55`, color: b.color, backdropFilter: 'blur(8px)' }}
         >
           ● {b.label.toUpperCase()}
         </div>
-
-        {/* Legend — bottom right */}
         <div className="absolute bottom-3 right-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-2 rounded-xl shadow-lg border border-white/20 text-[10px] space-y-1.5">
           <div className="flex items-center gap-1.5 font-bold text-[11px] text-sky-200 border-b border-white/10 pb-1">
-            <Radio size={12} className="text-emerald-400" />
-            <span>RainViewer Doppler</span>
+            {mapViewMode === 'doppler' ? <Radio size={12} className="text-emerald-400" /> : <Layers size={12} className="text-sky-400" />}
+            <span>{mapViewMode === 'doppler' ? 'RainViewer Doppler' : 'DOST-PAGASA IR'}</span>
           </div>
-          {/* Radar scale */}
-          <div className="flex items-center gap-1 text-[9px] font-mono">
-            <span className="text-gray-300">Light</span>
-            <div className="h-2 w-14 rounded overflow-hidden flex mx-1">
-              <span className="w-1/4 h-full bg-emerald-400" />
-              <span className="w-1/4 h-full bg-yellow-400" />
-              <span className="w-1/4 h-full bg-orange-500" />
-              <span className="w-1/4 h-full bg-red-600" />
+          {mapViewMode === 'doppler' ? (
+            <div className="flex items-center gap-1 text-[9px] font-mono">
+              <span className="text-gray-300">Light</span>
+              <div className="h-2 w-14 rounded overflow-hidden flex mx-1">
+                <span className="w-1/4 h-full bg-emerald-400" /><span className="w-1/4 h-full bg-yellow-400" /><span className="w-1/4 h-full bg-orange-500" /><span className="w-1/4 h-full bg-red-600" />
+              </div>
+              <span className="text-red-300 font-bold">Heavy</span>
             </div>
-            <span className="text-red-300 font-bold">Heavy</span>
-          </div>
-          {/* Hazard zone key */}
+          ) : (
+            <div className="flex items-center gap-1 text-[9px] font-mono">
+              <span className="text-gray-300">Moisture</span>
+              <div className="h-2 w-16 rounded overflow-hidden flex mx-1">
+                <span className="w-1/4 h-full bg-gray-400" /><span className="w-1/4 h-full bg-cyan-400" /><span className="w-1/4 h-full bg-blue-600" /><span className="w-1/4 h-full bg-red-600" />
+              </div>
+              <span className="text-red-300 font-bold">Cold Storm Tops</span>
+            </div>
+          )}
           {showZones && (
             <div className="border-t border-white/10 pt-1 space-y-0.5">
               <p className="text-[8px] text-sky-300 font-bold uppercase tracking-wide mb-1">Flood Hazard</p>
@@ -404,40 +381,33 @@ export default function WeatherMapCard({ severity = 0 }) {
             </div>
           )}
         </div>
-
         <MapContainer
           center={antipoloPos}
           zoom={11}
-          scrollWheelZoom={true}
           style={{ height: '100%', width: '100%' }}
           attributionControl={false}
         >
           <LayersControl position="topright">
             <LayersControl.BaseLayer checked name="CartoDB Dark Matter">
-              <TileLayer
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                maxZoom={19}
-              />
+              <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" maxZoom={19} />
             </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="Esri World Satellite">
-              <TileLayer
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                attribution="Esri, Maxar, Earthstar Geographics"
-                maxZoom={19}
-              />
+            <LayersControl.BaseLayer name="Esri Satellite">
+              <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} />
             </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="OpenStreetMap">
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                maxZoom={19}
-              />
-            </LayersControl.BaseLayer>
-
-            {/* Animated radar frame (controlled by scrubber) */}
-            <LayersControl.Overlay checked name="RainViewer Doppler Radar">
-              <RadarLayer path={activePath} opacity={0.65} />
-            </LayersControl.Overlay>
-
+            {mapViewMode === 'doppler' && (
+              <LayersControl.Overlay checked name="RainViewer Doppler Radar">
+                <RadarLayer path={activePath} opacity={0.65} />
+              </LayersControl.Overlay>
+            )}
+            {mapViewMode === 'pagasa' && (
+              <LayersControl.Overlay checked name="DOST-PAGASA Himawari Satellite IR">
+                <ImageOverlay
+                  url="https://src.meteopilipinas.gov.ph/repo/himawari/24hour/irsml/1irsml.gif"
+                  bounds={[[4.0, 115.0], [25.0, 135.0]]}
+                  opacity={0.80}
+                />
+              </LayersControl.Overlay>
+            )}
             <LayersControl.Overlay name="OpenWeather Precipitation">
               <TileLayer
                 url={`https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${API_KEY}`}
