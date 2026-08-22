@@ -301,8 +301,12 @@ export default function WeatherMapCard({ severity = 0 }) {
         </div>
       </div>
 
-      {/* Inset Satellite / Radar Viewport Frame */}
-      <div className={`relative h-[340px] sm:h-[460px] w-full overflow-hidden rounded-xl border border-[#e4edf0] ${mapViewMode === 'pagasa' ? 'bg-white' : 'bg-[#05131e]'}`}>
+      {/* Inset Satellite / Radar Viewport Frame (Dynamic Height: 640px for PAGASA Satellite, 460px for Rain Radar) */}
+      <div className={`relative w-full overflow-hidden rounded-xl border border-[#e4edf0] transition-all duration-300 ${
+        mapViewMode === 'pagasa' 
+          ? 'h-[440px] sm:h-[640px] bg-white' 
+          : 'h-[340px] sm:h-[460px] bg-[#05131e]'
+      }`}>
         {/* Severity Status Badge */}
         <div
           className="absolute top-3 right-3 z-[1000] px-3 py-1 rounded-full text-xs font-bold shadow-sm border backdrop-blur-md flex items-center gap-1.5"
@@ -328,13 +332,13 @@ export default function WeatherMapCard({ severity = 0 }) {
           </div>
         )}
 
-        {/* 🛰️ MODE 1: PAGASA Satellite Viewport (Clean White Backdrop) */}
+        {/* 🛰️ MODE 1: PAGASA Satellite Viewport (Expanded Height for Full Aspect Fill) */}
         {mapViewMode === 'pagasa' ? (
-          <div className="w-full h-full bg-white relative flex items-center justify-center overflow-hidden p-1">
+          <div className="w-full h-full bg-white relative flex items-center justify-center overflow-hidden p-0.5">
             <img
               src={currentSatUrl}
               alt="DOST-PAGASA Himawari Satellite IR Scan"
-              className="max-h-full max-w-full object-contain transition-all duration-300 rounded-lg shadow-md border border-gray-200"
+              className="w-full h-full object-contain transition-all duration-300 rounded-lg shadow-sm"
             />
           </div>
         ) : (
