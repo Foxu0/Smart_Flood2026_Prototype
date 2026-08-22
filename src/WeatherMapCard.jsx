@@ -123,9 +123,9 @@ export default function WeatherMapCard({ severity = 0 }) {
   const [nextRefreshSec, setNextRefreshSec] = useState(120);
   const playTimerRef = useRef(null);
 
-  /* ── PAGASA Satellite Animation State (24-hour sequence) ─────────────── */
-  const [satFrameIdx, setSatFrameIdx]   = useState(23); // 23 = latest (1-24 sequence, 24th is latest)
-  const [isSatPlaying]                  = useState(true);   // Permanent active loop
+  /* ── PAGASA Satellite Animation State (Chronological loop: 24irsml.gif [-23h] → 1irsml.gif [Live]) ── */
+  const [satFrameIdx, setSatFrameIdx]   = useState(23); // 23 = 24irsml.gif (oldest past scan), decrements forward to 0 (1irsml.gif = Live)
+  const [isSatPlaying]                  = useState(true);
   const satTimerRef = useRef(null);
 
   /* Preload all 24 PAGASA Himawari Satellite GIF images into browser cache for zero-flicker 60fps animation */
@@ -136,24 +136,20 @@ export default function WeatherMapCard({ severity = 0 }) {
     }
   }, []);
 
-  /* Smooth continuous looping playback effect for PAGASA Satellite (300ms interval) */
+  /* Chronological forward playback: from Past (-23h) → Live (1irsml.gif) */
   useEffect(() => {
     if (satTimerRef.current) clearInterval(satTimerRef.current);
     if (!isSatPlaying) return;
 
     satTimerRef.current = setInterval(() => {
-      setSatFrameIdx(prev => {
-        const next = prev + 1;
-        if (next >= 24) return 0; // Infinite continuous loop back to start!
-        return next;
-      });
-    }, 300); // 300ms per satellite frame = smooth PAGASA cloud motion
+      setSatFrameIdx(prev => (prev <= 0 ? 23 : prev - 1));
+    }, 350); // 350ms per frame = smooth chronological PAGASA cloud motion
 
     return () => clearInterval(satTimerRef.current);
   }, [isSatPlaying]);
 
   const currentSatUrl = `https://src.meteopilipinas.gov.ph/repo/himawari/24hour/irsml/${satFrameIdx + 1}irsml.gif`;
-  const satHourLabel  = satFrameIdx === 23 ? 'Live (Latest)' : `-${24 - (satFrameIdx + 1)}h Ago`;
+  const satHourLabel  = satFrameIdx === 0 ? 'Live (Latest)' : `-${satFrameIdx}h Ago`;
 
   /* ── Flood zone toggle ──────────────────────────────────────────────── */
   const [showZones, setShowZones] = useState(true);
