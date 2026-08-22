@@ -13,7 +13,7 @@ import useCountUp from '../hooks/useCountUp.js';
  * - Animated digit readout via useCountUp
  */
 export default function WaterTankGauge({ levelM, maxM = 1.8, color }) {
-  const pct    = Math.min(100, Math.max(2, (levelM / maxM) * 100));
+  const pct    = Math.min(100, Math.max(0, (levelM / maxM) * 100));
   const fillH  = 160; // inner drawable height in SVG units
   const fillY  = fillH * (1 - pct / 100);
 
