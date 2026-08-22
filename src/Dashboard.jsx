@@ -154,21 +154,21 @@ export default function FloodMonitoringDashboard() {
   const [smsConfirmed, setSmsConfirmed] = useState(false);
 
   const [telemetry, setTelemetry] = useState({
-    waterLevelM: 1.05,
-    waterDistanceCm: 75,
-    rainRateMmHr: 14.5,
-    rainTips: 32,
-    wifiRssi: -62,
-    gridVoltage: 12.1,
-    espUptime: '04:12:35',
+    waterLevelM: 0.35,
+    waterDistanceCm: 145,
+    rainRateMmHr: 0.0,
+    rainTips: 0,
+    wifiRssi: -65,
+    gridVoltage: 12.2,
+    espUptime: '00:00:00',
   });
 
   const [aiPrediction, setAiPrediction] = useState({
-    riskScore: 58,
-    predicted30m: 1.18,
-    predicted60m: 1.30,
-    timeToCriticalMins: 42,
-    modelConfidence: 94,
+    riskScore: 0,
+    predicted30m: 0.35,
+    predicted60m: 0.35,
+    timeToCriticalMins: null,
+    modelConfidence: 96.5,
   });
 
   const [thresholds, setThresholds] = useState({
@@ -329,11 +329,61 @@ export default function FloodMonitoringDashboard() {
     setLogs(prev => [{ id: `log-${Date.now()}-${Math.random()}`, time: timeStr, type, msg }, ...prev.slice(0, 9)]);
   };
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+  // Poll latest telemetry from GET /api/v1/telemetry/latest every 3s
+  useEffect(() => {
+    async function fetchLatest() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/latest`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (json.success && json.data) {
+          const d = json.data;
+          const level = parseFloat(d.water_level_m ?? 0.35);
+          const dist = parseFloat(d.raw_distance_cm ?? Math.round((1.8 - level) * 100));
+          const rain = parseFloat(d.rainfall_rate ?? 0.0);
+          setTelemetry(prev => ({
+            ...prev,
+            waterLevelM: level,
+            waterDistanceCm: dist,
+            rainRateMmHr: rain,
+            wifiRssi: parseInt(d.rssi_dbm ?? -65),
+            gridVoltage: parseFloat(d.supply_voltage ?? 12.2),
+          }));
+        } else if (json.success && json.data === null) {
+          // Empty database — reset to baseline 0.35m / 0 mm/h
+          setTelemetry({
+            waterLevelM: 0.35,
+            waterDistanceCm: 145,
+            rainRateMmHr: 0.0,
+            rainTips: 0,
+            wifiRssi: -65,
+            gridVoltage: 12.2,
+            espUptime: '00:00:00',
+          });
+          setAiPrediction(prev => ({
+            ...prev,
+            riskScore: 0,
+            predicted30m: 0.35,
+            predicted60m: 0.35,
+          }));
+        }
+      } catch (err) {
+        console.error('[Fetch Latest Telemetry Error]', err);
+      }
+    }
+
+    fetchLatest();
+    const interval = setInterval(fetchLatest, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Fetch initial ML projection from GET /api/v1/telemetry/projection
   useEffect(() => {
     async function loadProjection() {
       try {
-        const res = await fetch('http://localhost:3001/api/v1/telemetry/projection');
+        const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/projection`);
         if (!res.ok) return;
         const json = await res.json();
         if (json.success && json.data) {
@@ -343,6 +393,13 @@ export default function FloodMonitoringDashboard() {
             predicted30m: parseFloat(p.horizon_30m_m),
             predicted60m: parseFloat(p.horizon_60m_m),
             modelConfidence: Math.round(parseFloat(p.confidence_score)),
+          }));
+        } else if (json.success && json.data === null) {
+          setAiPrediction(prev => ({
+            ...prev,
+            riskScore: 0,
+            predicted30m: 0.35,
+            predicted60m: 0.35,
           }));
         }
       } catch (err) {
