@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartFlood 2026 — Virtual ESP32 Hardware Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #081622;
+      color: #e2eef7;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glass-card {
+      background: rgba(14, 38, 56, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .terminal-box {
+      background: #050c13;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #081622; }
+    ::-webkit-scrollbar-thumb { background: #1f4f70; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col justify-start items-center">
+
+  <div class="w-full max-w-6xl space-y-6">
+
+    <!-- ── HEADER ───────────────────────────────────────────────────────────── -->
+    <header class="glass-card rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xl">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-sky-500 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 font-bold text-xl">
+          📡
+        </div>
+        <div>
+          <h1 class="text-xl md:text-2xl font-bold text-white tracking-wide flex items-center gap-2">
+            SmartFlood <span class="text-sky-400 font-light">ESP32 Simulator</span>
+          </h1>
+          <p class="text-xs text-sky-200/80">Standalone Virtual Hardware Edge Node &amp; AI Accuracy Control Panel</p>
+        </div>
+      </div>
+
+      <!-- Target Server Endpoint Selector -->
+      <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+        <div class="text-right text-xs text-sky-200/80 hidden lg:block">
+          <span class="block text-[10px] uppercase font-bold text-sky-400">Target Server</span>
+          <span>HTTP POST /api/v1/telemetry</span>
+        </div>
+        <select id="targetEndpointSelect" onchange="handleEndpointChange()" className="bg-[#0b2030] text-sky-100 border border-sky-500/30 text-xs rounded-xl px-3 py-2 font-mono outline-none focus:border-sky-400 transition">
+          <option value="https://smart-flood2026-prototype.onrender.com/api/v1/telemetry">☁️ Production Render Cloud</option>
+          <option value="http://localhost:3001/api/v1/telemetry">💻 Local Server (Port 3001)</option>
+          <option value="http://localhost:5000/api/v1/telemetry">💻 Local Server (Port 5000)</option>
+          <option value="custom">✏️ Custom Endpoint URL...</option>
+        </select>
+        <input id="customEndpointInput" type="text" placeholder="https://..." class="hidden bg-[#0b2030] text-sky-100 border border-sky-500/30 text-xs rounded-xl px-3 py-2 font-mono outline-none w-64" />
+      </div>
+    </header>
+
+    <!-- ── MAIN CONTENT GRID ────────────────────────────────────────────────── -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+      <!-- LEFT COLUMN: SENSORS & SCENARIO CONTROLS (7/12) -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- 🎛️ Manual Hardware Synthesizer Card -->
+        <div class="glass-card rounded-2xl p-6 space-y-5 shadow-xl">
+          <div class="flex items-center justify-between border-b border-white/10 pb-3">
+            <h2 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2">
+              <span>🎛️</span> Manual Hardware Sensor Controls
+            </h2>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30">
+              Mount Height: 1.80m (180cm)
+            </span>
+          </div>
+
+          <!-- Slider 1: Stage Height (Water Level m) -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-semibold text-white">River Stage Height (Water Level)</span>
+              <span id="levelValueDisplay" class="font-mono text-lg font-bold text-sky-400">0.00 m</span>
+            </div>
+            <input id="levelSlider" type="range" min="0" max="1.80" step="0.05" value="0.00" oninput="updateManualReadout()" class="w-full h-2 bg-[#0b2030] rounded-lg appearance-none cursor-pointer accent-sky-400" />
+            <div class="flex justify-between text-[10px] text-sky-200/60 font-mono">
+              <span>0.00m (Dry Baseline)</span>
+              <span>1.00m (L1 Watch)</span>
+              <span>1.40m (L2 Siren)</span>
+              <span class="text-amber-400">1.60m (L3 Danger)</span>
+            </div>
+          </div>
+
+          <!-- Ultrasonic Distance Conversion Box -->
+          <div class="bg-[#0b2030]/80 rounded-xl p-3.5 border border-sky-500/20 grid grid-cols-2 gap-4 text-xs font-mono">
+            <div>
+              <span class="text-[10px] text-sky-300/70 block uppercase">Raw Ultrasonic Distance</span>
+              <span id="rawDistanceDisplay" class="text-base font-bold text-emerald-400">180 cm</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-sky-300/70 block uppercase">JSN-SR04T Sensor Status</span>
+              <span id="sensorStatusDisplay" class="text-base font-bold text-emerald-400">OK (Normal)</span>
+            </div>
+          </div>
+
+          <!-- Slider 2: Rain Rate (mm/h) -->
+          <div class="space-y-2">
+            <div class="flex justify-between items-center text-xs">
+              <span class="font-semibold text-white">Rainfall Intensity</span>
+              <span id="rainValueDisplay" class="font-mono text-lg font-bold text-emerald-400">0.0 mm/h</span>
+            </div>
+            <input id="rainSlider" type="range" min="0" max="120" step="5" value="0" oninput="updateManualReadout()" class="w-full h-2 bg-[#0b2030] rounded-lg appearance-none cursor-pointer accent-emerald-400" />
+            <div class="flex justify-between text-[10px] text-sky-200/60 font-mono">
+              <span>0mm/h (None)</span>
+              <span>25mm/h (Moderate)</span>
+              <span>60mm/h (Heavy)</span>
+              <span class="text-emerald-400">120mm/h (Torrential)</span>
+            </div>
+          </div>
+
+          <!-- Hardware Diagnostics Info -->
+          <div class="grid grid-cols-3 gap-3 text-center text-xs font-mono pt-1">
+            <div class="bg-[#0b2030] p-2 rounded-lg border border-white/5">
+              <span class="text-[9px] text-sky-200/60 block">BATTERY VOLTAGE</span>
+              <span id="batteryDisplay" class="font-bold text-sky-300">12.42 V</span>
+            </div>
+            <div class="bg-[#0b2030] p-2 rounded-lg border border-white/5">
+              <span class="text-[9px] text-sky-200/60 block">WIFI SIGNAL</span>
+              <span id="rssiDisplay" class="font-bold text-sky-300">-56 dBm</span>
+            </div>
+            <div class="bg-[#0b2030] p-2 rounded-lg border border-white/5">
+              <span class="text-[9px] text-sky-200/60 block">SYSTEM UPTIME</span>
+              <span id="uptimeDisplay" class="font-bold text-sky-300">320s</span>
+            </div>
+          </div>
+
+          <!-- Transmit Button -->
+          <button onclick="transmitManualPacket()" class="w-full py-3 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-sky-500/25 transition flex items-center justify-center gap-2">
+            <span>📡 Transmit Hardware Telemetry Packet Now</span>
+          </button>
+        </div>
+
+        <!-- ⚡ Automated Scenario Test Suite Card -->
+        <div class="glass-card rounded-2xl p-6 space-y-4 shadow-xl">
+          <h2 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
+            <span>⚡</span> Automated Scenario Testing Suite
+          </h2>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button onclick="runScenario('surge')" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-amber-500/30 hover:border-amber-400 rounded-xl text-left transition space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-amber-300">🌊 Rapid Flash Flood Surge</span>
+                <span class="text-[10px] font-mono text-amber-400/80">18 Steps</span>
+              </div>
+              <p class="text-[11px] text-sky-200/70 leading-snug">Simulates rapid storm runoff rising to 1.65m peak (L3 Danger &amp; Siren) then draining.</p>
+            </button>
+
+            <button onclick="runScenario('moderate')" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-sky-500/30 hover:border-sky-400 rounded-xl text-left transition space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-sky-300">🌧️ Moderate Continuous Rain</span>
+                <span class="text-[10px] font-mono text-sky-400/80">11 Steps</span>
+              </div>
+              <p class="text-[11px] text-sky-200/70 leading-snug">Steady rain building up to 1.15m Level 1 Advisory Watch before receding.</p>
+            </button>
+
+            <button onclick="runScenario('calm')" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-emerald-500/30 hover:border-emerald-400 rounded-xl text-left transition space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-emerald-300">🍃 Calm Dry Baseline</span>
+                <span class="text-[10px] font-mono text-emerald-400/80">10 Steps</span>
+              </div>
+              <p class="text-[11px] text-sky-200/70 leading-snug">Transmits dry 0.00m stage height with minor ultrasonic surface ripples.</p>
+            </button>
+
+            <button id="autoStreamBtn" onclick="toggleAutoStream()" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-purple-500/30 hover:border-purple-400 rounded-xl text-left transition space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-purple-300">🔄 Auto Stream (5s Loop)</span>
+                <span id="autoStreamBadge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">OFF</span>
+              </div>
+              <p class="text-[11px] text-sky-200/70 leading-snug">Sends real-time telemetry indefinitely every 5 seconds until toggled OFF.</p>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: PACKET LOG & SERVER RESPONSE INSPECTOR (5/12) -->
+      <div class="lg:col-span-5 space-y-6">
+
+        <!-- 🤖 Live Server Response Inspector Card -->
+        <div class="glass-card rounded-2xl p-6 space-y-4 shadow-xl">
+          <h2 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center justify-between border-b border-white/10 pb-3">
+            <span class="flex items-center gap-2"><span>🤖</span> AI Accuracy &amp; Server Response</span>
+            <span id="lastHttpStatus" class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">201 OK</span>
+          </h2>
+
+          <div class="grid grid-cols-2 gap-3 text-xs font-mono">
+            <div class="bg-[#0b2030] p-3 rounded-xl border border-white/5 space-y-1">
+              <span class="text-[10px] text-sky-300/70 block uppercase">Server Stage Height</span>
+              <span id="respStage" class="text-lg font-bold text-white">0.00 m</span>
+            </div>
+            <div class="bg-[#0b2030] p-3 rounded-xl border border-white/5 space-y-1">
+              <span class="text-[10px] text-sky-300/70 block uppercase">ONNX +30m Forecast</span>
+              <span id="respAi30m" class="text-lg font-bold text-sky-400">0.00 m</span>
+            </div>
+            <div class="bg-[#0b2030] p-3 rounded-xl border border-white/5 space-y-1">
+              <span class="text-[10px] text-sky-300/70 block uppercase">AI Model Accuracy</span>
+              <span id="respAiConf" class="text-lg font-bold text-emerald-400">96.5%</span>
+            </div>
+            <div class="bg-[#0b2030] p-3 rounded-xl border border-white/5 space-y-1">
+              <span class="text-[10px] text-sky-300/70 block uppercase">Siren Relay State</span>
+              <span id="respSiren" class="text-lg font-bold text-gray-400">OFF</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 📟 Live Terminal Log Console -->
+        <div class="glass-card rounded-2xl p-6 space-y-3 shadow-xl">
+          <div class="flex items-center justify-between border-b border-white/10 pb-3">
+            <h2 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2">
+              <span>📟</span> Live Telemetry Terminal Log
+            </h2>
+            <button onclick="clearLogs()" class="text-[10px] font-mono text-sky-200/60 hover:text-sky-200 underline">
+              Clear Console
+            </button>
+          </div>
+
+          <div id="terminalLog" class="terminal-box rounded-xl p-3.5 h-80 overflow-y-auto font-mono text-[11px] space-y-1.5 leading-relaxed text-sky-100">
+            <div class="text-sky-400/80">[SYSTEM] ESP32 Edge Emulator Dashboard Initialized.</div>
+            <div class="text-sky-400/80">[SYSTEM] Ready to stream POST /api/v1/telemetry packets.</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    let uptimeSec = 320;
+    let autoStreamInterval = null;
+
+    function getTargetUrl() {
+      const sel = document.getElementById('targetEndpointSelect').value;
+      if (sel === 'custom') {
+        return document.getElementById('customEndpointInput').value.trim();
+      }
+      return sel;
+    }
+
+    function handleEndpointChange() {
+      const sel = document.getElementById('targetEndpointSelect').value;
+      const customInput = document.getElementById('customEndpointInput');
+      if (sel === 'custom') {
+        customInput.classList.remove('hidden');
+      } else {
+        customInput.classList.add('hidden');
+      }
+      logMessage(`[SYSTEM] Target Endpoint updated to: ${getTargetUrl()}`, 'text-amber-300');
+    }
+
+    function updateManualReadout() {
+      const level = parseFloat(document.getElementById('levelSlider').value);
+      const rain = parseFloat(document.getElementById('rainSlider').value);
+
+      document.getElementById('levelValueDisplay').innerText = level.toFixed(2) + ' m';
+      document.getElementById('rainValueDisplay').innerText = rain.toFixed(1) + ' mm/h';
+
+      // Ultrasonic Distance: 180cm - level * 100
+      let distanceCm = 180 - Math.round(level * 100);
+      distanceCm = Math.max(20, Math.min(180, distanceCm));
+
+      document.getElementById('rawDistanceDisplay').innerText = distanceCm + ' cm';
+      document.getElementById('sensorStatusDisplay').innerText = distanceCm <= 25 ? '⚠️ BLIND_SPOT (25cm)' : 'OK (Normal)';
+    }
+
+    function logMessage(msg, colorClass = 'text-sky-100') {
+      const logBox = document.getElementById('terminalLog');
+      const timeStr = new Date().toLocaleTimeString('en-PH', { hour12: false });
+      const line = document.createElement('div');
+      line.className = colorClass;
+      line.innerHTML = `<span class="text-gray-500">[${timeStr}]</span> ${msg}`;
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('terminalLog').innerHTML = '<div class="text-sky-400/80">[SYSTEM] Terminal logs cleared.</div>';
+    }
+
+    async function sendPacket(waterLevelM, rainRateMmHr, comment = '') {
+      const url = getTargetUrl();
+      if (!url) {
+        logMessage('[ERROR] Invalid target URL endpoint!', 'text-red-400');
+        return;
+      }
+
+      let rawDistance = 180 - Math.round(waterLevelM * 100);
+      rawDistance = Math.max(20, Math.min(180, rawDistance));
+      const rainTips = Math.max(0, Math.round(rainRateMmHr / 6));
+      uptimeSec += 5;
+
+      const batteryVoltage = parseFloat((12.2 + Math.random() * 0.4).toFixed(2));
+      const wifiRssi = -55 + Math.floor(Math.random() * 7 - 3);
+
+      document.getElementById('batteryDisplay').innerText = batteryVoltage + ' V';
+      document.getElementById('rssiDisplay').innerText = wifiRssi + ' dBm';
+      document.getElementById('uptimeDisplay').innerText = uptimeSec + 's';
+
+      const payload = {
+        rawDistance,
+        rainTips,
+        batteryVoltage,
+        wifiRssi,
+        uptime: uptimeSec,
+        relayState: waterLevelM >= 1.4,
+      };
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const isOk = res.ok;
+        let data = {};
+        try { data = await res.json(); } catch {}
+
+        const logObj = data.log || data.data || {};
+        const stageM = parseFloat(logObj.water_level_m ?? waterLevelM).toFixed(2);
+        const rainMm = parseFloat(logObj.rainfall_rate ?? rainRateMmHr).toFixed(1);
+        const alertCode = data.event?.event_code || data.eventTriggered?.event_type || (stageM >= 1.6 ? 'ALERT_L3' : stageM >= 1.4 ? 'ALERT_L2' : stageM >= 1.0 ? 'ALERT_L1' : 'NORMAL');
+        const projObj = data.projection || data.aiProjection || {};
+        const ai30m = parseFloat(projObj.predicted30m ?? projObj.horizon_30m_m ?? stageM).toFixed(2);
+        const aiConf = parseFloat(projObj.confidenceScore ?? projObj.confidence_score ?? 96.5).toFixed(1);
+        const sirenState = (payload.relayState || data.sirenActive || stageM >= 1.4);
+
+        // Update Server Response Inspector Card
+        document.getElementById('lastHttpStatus').innerText = res.status + ' OK';
+        document.getElementById('respStage').innerText = stageM + ' m';
+        document.getElementById('respAi30m').innerText = ai30m + ' m';
+        document.getElementById('respAiConf').innerText = aiConf + '%';
+
+        const sirenEl = document.getElementById('respSiren');
+        if (sirenState) {
+          sirenEl.innerText = 'ON 🚨';
+          sirenEl.className = 'text-lg font-bold text-red-400 animate-pulse';
+        } else {
+          sirenEl.innerText = 'OFF';
+          sirenEl.className = 'text-lg font-bold text-gray-400';
+        }
+
+        let color = 'text-emerald-400';
+        if (alertCode.includes('L1')) color = 'text-yellow-300';
+        if (alertCode.includes('L2') || alertCode.includes('L3')) color = 'text-red-400 font-bold';
+
+        logMessage(
+          `POST ${res.status} OK | Stage: <b>${stageM}m</b> (${rawDistance}cm) | Rain: ${rainMm}mm/h | Status: <span class="${color}">${alertCode}</span> | AI: ${ai30m}m (${aiConf}%) | Siren: ${sirenState ? 'ON 🚨' : 'OFF'} ${comment ? `— ${comment}` : ''}`
+        );
+
+      } catch (err) {
+        logMessage(`[POST FAILED] ${err.message} (${url})`, 'text-red-400');
+        document.getElementById('lastHttpStatus').innerText = 'FAILED';
+      }
+    }
+
+    function transmitManualPacket() {
+      const level = parseFloat(document.getElementById('levelSlider').value);
+      const rain = parseFloat(document.getElementById('rainSlider').value);
+      sendPacket(level, rain, 'Manual Transmission');
+    }
+
+    const scenarios = {
+      surge: [
+        { level: 0.00, rain: 0, comment: 'Baseline Dry' },
+        { level: 0.20, rain: 15, comment: 'Light Rain Onset' },
+        { level: 0.45, rain: 35, comment: 'Heavy Rain' },
+        { level: 0.75, rain: 55, comment: 'Runoff Surge' },
+        { level: 1.05, rain: 70, comment: 'Level 1 Advisory Watch' },
+        { level: 1.25, rain: 80, comment: 'Rising Rapidly' },
+        { level: 1.45, rain: 95, comment: 'Level 2 Siren Warning Alarm' },
+        { level: 1.65, rain: 110, comment: 'Level 3 Emergency Danger Level' },
+        { level: 1.70, rain: 90, comment: 'Peak Crest' },
+        { level: 1.55, rain: 40, comment: 'Rain Receding' },
+        { level: 1.35, rain: 15, comment: 'Water Draining' },
+        { level: 1.10, rain: 5, comment: 'Receding' },
+        { level: 0.50, rain: 0, comment: 'Clearing' },
+        { level: 0.00, rain: 0, comment: 'Baseline Subsidence' },
+      ],
+      moderate: [
+        { level: 0.00, rain: 0, comment: 'Dry' },
+        { level: 0.35, rain: 25, comment: 'Moderate Rain' },
+        { level: 0.75, rain: 35, comment: 'Stream Accumulation' },
+        { level: 1.15, rain: 45, comment: 'Level 1 Watch Advisory' },
+        { level: 0.85, rain: 15, comment: 'Rain Receding' },
+        { level: 0.00, rain: 0, comment: 'Normal' },
+      ],
+      calm: Array.from({ length: 8 }).map((_, i) => ({
+        level: Math.max(0, parseFloat((Math.sin(i) * 0.005).toFixed(3))),
+        rain: 0,
+        comment: 'Calm Baseline Ripple',
+      })),
+    };
+
+    async function runScenario(key) {
+      const list = scenarios[key];
+      logMessage(`[SCENARIO] Starting scenario: ${key.toUpperCase()} (${list.length} steps)...`, 'text-amber-300 font-bold');
+      for (let i = 0; i < list.length; i++) {
+        const item = list[i];
+        await sendPacket(item.level, item.rain, `[Step ${i+1}/${list.length}] ${item.comment}`);
+        if (i < list.length - 1) await new Promise(r => setTimeout(r, 2500));
+      }
+      logMessage(`[SCENARIO] ${key.toUpperCase()} execution complete!`, 'text-emerald-400 font-bold');
+    }
+
+    function toggleAutoStream() {
+      const badge = document.getElementById('autoStreamBadge');
+      if (autoStreamInterval) {
+        clearInterval(autoStreamInterval);
+        autoStreamInterval = null;
+        badge.innerText = 'OFF';
+        badge.className = 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300';
+        logMessage('[AUTO STREAM] Continuous real-time streaming stopped.', 'text-amber-300');
+      } else {
+        badge.innerText = 'ACTIVE 🔄';
+        badge.className = 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 animate-pulse';
+        logMessage('[AUTO STREAM] Started continuous streaming (1 packet every 5s)...', 'text-emerald-400 font-bold');
+
+        let currentLvl = 0.00;
+        let currentRain = 0;
+
+        autoStreamInterval = setInterval(() => {
+          currentRain = Math.max(0, Math.min(120, currentRain + (Math.random() * 12 - 6)));
+          if (currentRain > 20) {
+            currentLvl = Math.min(1.80, currentLvl + 0.04);
+          } else {
+            currentLvl = Math.max(0.00, currentLvl - 0.02);
+          }
+          sendPacket(currentLvl, currentRain, 'Auto Stream');
+        }, 5000);
+      }
+    }
+  </script>
+</body>
+</html>

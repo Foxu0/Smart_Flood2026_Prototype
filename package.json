@@ -8,6 +8,7 @@
     "dev:api": "node server/index.js",
     "start": "node server/index.js",
     "virtual-esp32": "node tools/virtual-esp32.js",
+    "simulator-gui": "node tools/server-simulator-gui.js",
     "test:simulate-stream": "node tools/virtual-esp32.js",
     "build": "vite build",
     "lint": "oxlint",
