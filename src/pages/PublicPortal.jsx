@@ -244,6 +244,12 @@ export default function PublicPortal() {
 
       const applicationServerKey = urlBase64ToUint8Array(vapidData.publicKey);
 
+      // Unsubscribe any stale previous subscription to prevent VAPID mismatch AbortError
+      const existingSub = await reg.pushManager.getSubscription();
+      if (existingSub) {
+        await existingSub.unsubscribe().catch(() => {});
+      }
+
       // 4. Subscribe via PushManager
       const subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -266,7 +272,11 @@ export default function PublicPortal() {
     } catch (err) {
       console.error('Push notification subscription failed:', err);
       setPushStatus('default');
-      alert('Could not enable push alerts: ' + err.message);
+      if (err.name === 'AbortError' || err.message?.includes('push service error')) {
+        alert('Push Service Connection Warning:\nIf using Brave Browser, enable "Use Google Services for Push Messaging" in brave://settings/privacy.\nOtherwise, ensure notifications and FCM services are enabled in your browser.');
+      } else {
+        alert('Could not enable push alerts: ' + err.message);
+      }
     }
   };
 
