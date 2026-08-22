@@ -1047,19 +1047,31 @@ export default function FloodMonitoringDashboard() {
                     { key: 'level1_watch', label: 'Level 1 — Advisory Watch', min: 0.5, max: 1.2, color: '#2b6e8f' },
                     { key: 'level2_alarm', label: 'Level 2 — Siren Warning Alarm', min: 1.0, max: 1.5, color: '#e69138' },
                     { key: 'level3_danger', label: 'Level 3 — Emergency Danger', min: 1.4, max: 1.8, color: '#e0522f' },
-                  ].map(({ key, label, min, max, color }) => (
-                    <div key={key}>
-                      <div className="flex justify-between mb-1 text-[11px]">
-                        <span className="text-[#3f5361] font-semibold">{label}</span>
-                        <span className="font-bold font-mono" style={{ color }}>{thresholds[key]} m</span>
+                  ].map(({ key, label, min, max, color }) => {
+                    const val = thresholds[key] || min;
+                    const pct = Math.min(100, Math.max(0, ((val - min) / (max - min)) * 100));
+                    return (
+                      <div key={key}>
+                        <div className="flex justify-between mb-1 text-[11px]">
+                          <span className="text-[#3f5361] font-semibold">{label}</span>
+                          <span className="font-bold font-mono" style={{ color }}>{val} m</span>
+                        </div>
+                        <input
+                          type="range"
+                          min={min}
+                          max={max}
+                          step="0.05"
+                          value={val}
+                          onChange={e => setThresholds({ ...thresholds, [key]: parseFloat(e.target.value) })}
+                          style={{
+                            background: `linear-gradient(to right, ${color} 0%, ${color} ${pct}%, #eef4f6 ${pct}%, #eef4f6 100%)`,
+                            accentColor: color,
+                          }}
+                          className="w-full h-2 rounded-lg cursor-pointer transition-all"
+                        />
                       </div>
-                      <input type="range" min={min} max={max} step="0.05"
-                        value={thresholds[key]}
-                        onChange={e => setThresholds({ ...thresholds, [key]: parseFloat(e.target.value) })}
-                        style={{ accentColor: color }}
-                        className="w-full h-1.5 rounded-lg bg-[#eef4f6] cursor-pointer" />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
