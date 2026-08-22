@@ -419,6 +419,13 @@ export default function WeatherMapCard({ severity = 0 }) {
                 maxZoom={19}
               />
             </LayersControl.BaseLayer>
+            <LayersControl.BaseLayer name="Esri World Satellite">
+              <TileLayer
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                attribution="Esri, Maxar, Earthstar Geographics"
+                maxZoom={19}
+              />
+            </LayersControl.BaseLayer>
             <LayersControl.BaseLayer name="OpenStreetMap">
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
