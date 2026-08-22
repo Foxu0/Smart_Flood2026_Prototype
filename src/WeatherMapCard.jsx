@@ -299,13 +299,13 @@ export default function WeatherMapCard({ severity = 0 }) {
           ● {b.label.toUpperCase()}
         </div>
 
-        {/* Bottom Floating Legend Badge */}
-        <div className="absolute bottom-3 right-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-2 rounded-xl shadow-lg border border-white/20 text-[10px] space-y-1.5">
-          <div className="flex items-center gap-1.5 font-bold text-[11px] text-sky-200 border-b border-white/10 pb-1">
-            {mapViewMode === 'doppler' ? <Radio size={12} className="text-emerald-400" /> : <Layers size={12} className="text-sky-400" />}
-            <span>{mapViewMode === 'doppler' ? 'RainViewer Doppler' : 'DOST-PAGASA IR'}</span>
-          </div>
-          {mapViewMode === 'doppler' ? (
+        {/* Bottom Floating Legend Badge (Only for Rain Radar Doppler) */}
+        {mapViewMode === 'doppler' && (
+          <div className="absolute bottom-3 right-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-2 rounded-xl shadow-lg border border-white/20 text-[10px] space-y-1.5">
+            <div className="flex items-center gap-1.5 font-bold text-[11px] text-sky-200 border-b border-white/10 pb-1">
+              <Radio size={12} className="text-emerald-400" />
+              <span>RainViewer Doppler</span>
+            </div>
             <div className="flex items-center gap-1 text-[9px] font-mono">
               <span className="text-gray-300">Light</span>
               <div className="h-2 w-14 rounded overflow-hidden flex mx-1">
@@ -313,16 +313,8 @@ export default function WeatherMapCard({ severity = 0 }) {
               </div>
               <span className="text-red-300 font-bold">Heavy</span>
             </div>
-          ) : (
-            <div className="flex items-center gap-1 text-[9px] font-mono">
-              <span className="text-gray-300">Moisture</span>
-              <div className="h-2 w-16 rounded overflow-hidden flex mx-1">
-                <span className="w-1/4 h-full bg-gray-400" /><span className="w-1/4 h-full bg-cyan-400" /><span className="w-1/4 h-full bg-blue-600" /><span className="w-1/4 h-full bg-red-600" />
-              </div>
-              <span className="text-red-300 font-bold">Cold Storm Tops</span>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* 🛰️ MODE 1: PAGASA Satellite Viewport (Zero distortion, zero border zoom-out bugs) */}
         {mapViewMode === 'pagasa' ? (
