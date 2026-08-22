@@ -92,11 +92,12 @@ export async function getPrediction(historyBuffer) {
     return null;
   }
 
-  // Pad to exactly 6 timesteps (repeat earliest entry if sequence is shorter)
+  // Pad to exactly 6 timesteps (initialize with 0.35m dry baseline for cold-starts)
   const SEQ_LEN = 6;
-  const padded = Array(SEQ_LEN).fill(historyBuffer[0]).map((base, i) => {
+  const DEFAULT_BASELINE = { water_level_m: 0.35, rainfall_rate: 0.0, surge_velocity: 0.0 };
+  const padded = Array(SEQ_LEN).fill(null).map((_, i) => {
     const offset = i - (SEQ_LEN - historyBuffer.length);
-    return offset >= 0 ? historyBuffer[offset] : base;
+    return offset >= 0 ? historyBuffer[offset] : DEFAULT_BASELINE;
   });
 
   const current      = padded[SEQ_LEN - 1];

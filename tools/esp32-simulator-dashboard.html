@@ -366,7 +366,7 @@
         if (alertCode.includes('L2') || alertCode.includes('L3')) color = 'text-red-400 font-bold';
 
         logMessage(
-          `POST ${res.status} OK | Stage: <b>${stageM}m</b> (${rawDistance}cm) | Rain: ${rainMm}mm/h | Status: <span class="${color}">${alertCode}</span> | AI: ${ai30m}m (${aiConf}%) | Siren: ${sirenState ? 'ON 🚨' : 'OFF'} ${comment ? `— ${comment}` : ''}`
+          `POST ${res.status} OK | Stage: <b>${stageM}m</b> (${rawDistance}cm) | Rain: ${rainMm}mm/h | Status: <span class="${color}">${alertCode}</span> | AI: ${ai30m}m (${aiConf.includes('%') ? aiConf : aiConf + '%'}) | Siren: ${sirenState ? 'ON 🚨' : 'OFF'} ${comment ? `— ${comment}` : ''}`
         );
 
       } catch (err) {
