@@ -100,14 +100,14 @@ router.post('/', async (req, res) => {
     // ── 6. Persist telemetry log ───────────────────────────────────────────
     const log = await prisma.telemetryLog.create({
       data: {
-        water_level_m,
-        raw_distance_cm,
-        rainfall_rate,
-        tip_count,
-        rssi_dbm,
-        supply_voltage,
-        uptime_sec,
-        sensor_status,
+        waterLevelM: water_level_m,
+        rawDistanceCm: raw_distance_cm,
+        rainfallRateMmh: rainfall_rate,
+        tipCount: tip_count,
+        rssiDbm: rssi_dbm,
+        supplyVoltageV: supply_voltage,
+        uptimeSec: uptime_sec,
+        sensorStatus: sensor_status,
       },
     });
 
@@ -141,7 +141,7 @@ router.post('/', async (req, res) => {
     let event = null;
     if (eventCode) {
       event = await prisma.systemEvent.create({
-        data: { event_code: eventCode, message: eventMsg, severity },
+        data: { eventCode, message: eventMsg, severity },
       });
     }
 
@@ -150,14 +150,14 @@ router.post('/', async (req, res) => {
     let projection = null;
     try {
       const recentLogs = await prisma.telemetryLog.findMany({
-        orderBy: { timestamp: 'desc' },
+        orderBy: { recordedAt: 'desc' },
         take: 5,
-        select: { water_level_m: true, rainfall_rate: true },
+        select: { waterLevelM: true, rainfallRateMmh: true },
       });
 
       // Combine: older records first, newest (current) last
       const chronological = [
-        ...([...recentLogs].reverse()),
+        ...([...recentLogs].map(r => ({ water_level_m: r.waterLevelM, rainfall_rate: r.rainfallRateMmh })).reverse()),
         { water_level_m, rainfall_rate },
       ];
 
@@ -228,7 +228,7 @@ router.post('/', async (req, res) => {
 router.get('/projection', async (req, res) => {
   try {
     const latest = await prisma.mLProjection.findFirst({
-      orderBy: { timestamp: 'desc' },
+      orderBy: { generatedAt: 'desc' },
     });
 
     if (!latest) {
@@ -249,28 +249,35 @@ router.get('/projection', async (req, res) => {
 router.get('/latest', async (req, res) => {
   try {
     const latest = await prisma.telemetryLog.findFirst({
-      orderBy: { timestamp: 'desc' },
+      orderBy: { recordedAt: 'desc' },
     });
 
     if (!latest) return res.json({ success: true, data: null, message: 'No telemetry data recorded yet.' });
 
     // 15-minute surge rate
-    const fifteenMinsAgo = new Date(latest.timestamp.getTime() - 15 * 60 * 1000);
+    const fifteenMinsAgo = new Date(latest.recordedAt.getTime() - 15 * 60 * 1000);
     const baseline = await prisma.telemetryLog.findFirst({
-      where:   { timestamp: { lte: fifteenMinsAgo } },
-      orderBy: { timestamp: 'desc' },
+      where:   { recordedAt: { lte: fifteenMinsAgo } },
+      orderBy: { recordedAt: 'desc' },
     });
 
     const surgeRate_m_per_hour = baseline
-      ? parseFloat(((latest.water_level_m - baseline.water_level_m) * 4).toFixed(3))
+      ? parseFloat(((latest.waterLevelM - baseline.waterLevelM) * 4).toFixed(3))
       : null;
 
     res.json({
       success: true,
       data: {
         ...latest,
+        // Backward-compatible properties
+        timestamp: latest.recordedAt,
+        water_level_m: latest.waterLevelM,
+        raw_distance_cm: latest.rawDistanceCm,
+        rainfall_rate: latest.rainfallRateMmh,
+        supply_voltage: latest.supplyVoltageV,
+        sensor_status: latest.sensorStatus,
         surgeRate_m_per_hour,
-        blind_spot_warning: latest.raw_distance_cm <= BLIND_SPOT_CM,
+        blind_spot_warning: latest.rawDistanceCm <= BLIND_SPOT_CM,
         mount_height_cm: MOUNT_HEIGHT_CM,
         thresholds: await getThresholds(),
       },
@@ -296,20 +303,30 @@ router.get('/history', async (req, res) => {
         else if (range.endsWith('h')) minutes = parseInt(range) * 60;
         else if (range.endsWith('d')) minutes = parseInt(range) * 1440;
       }
-      where.timestamp = { gte: new Date(now.getTime() - minutes * 60 * 1000) };
+      where.recordedAt = { gte: new Date(now.getTime() - minutes * 60 * 1000) };
     } else if (from || to) {
-      where.timestamp = {};
-      if (from) where.timestamp.gte = new Date(from);
-      if (to)   where.timestamp.lte = new Date(to);
+      where.recordedAt = {};
+      if (from) where.recordedAt.gte = new Date(from);
+      if (to)   where.recordedAt.lte = new Date(to);
     }
 
     const logs = await prisma.telemetryLog.findMany({
       where,
-      orderBy: { timestamp: 'asc' },
+      orderBy: { recordedAt: 'asc' },
       take: Math.min(parseInt(limit), 1000),
     });
 
-    res.json({ success: true, count: logs.length, data: logs });
+    const mappedLogs = logs.map(row => ({
+      ...row,
+      timestamp: row.recordedAt,
+      water_level_m: row.waterLevelM,
+      raw_distance_cm: row.rawDistanceCm,
+      rainfall_rate: row.rainfallRateMmh,
+      supply_voltage: row.supplyVoltageV,
+      sensor_status: row.sensorStatus,
+    }));
+
+    res.json({ success: true, count: mappedLogs.length, data: mappedLogs });
   } catch (err) {
     console.error('[GET /telemetry/history]', err);
     res.status(500).json({ error: 'Internal server error', detail: err.message });
@@ -322,25 +339,25 @@ router.get('/export/csv', async (req, res) => {
     const { from, to, limit = 1000 } = req.query;
     const where = {};
     if (from || to) {
-      where.timestamp = {};
-      if (from) where.timestamp.gte = new Date(from);
-      if (to)   where.timestamp.lte = new Date(to);
+      where.recordedAt = {};
+      if (from) where.recordedAt.gte = new Date(from);
+      if (to)   where.recordedAt.lte = new Date(to);
     }
 
     const logs = await prisma.telemetryLog.findMany({
       where,
-      orderBy: { timestamp: 'asc' },
+      orderBy: { recordedAt: 'asc' },
       take: Math.min(parseInt(limit), 5000),
     });
 
     const headers = [
-      'id', 'timestamp', 'water_level_m', 'raw_distance_cm',
-      'rainfall_rate', 'tip_count', 'rssi_dbm', 'supply_voltage',
-      'uptime_sec', 'sensor_status',
+      'id', 'recordedAt', 'waterLevelM', 'rawDistanceCm',
+      'rainfallRateMmh', 'tipCount', 'rssiDbm', 'supplyVoltageV',
+      'uptimeSec', 'sensorStatus',
     ];
 
     const csvRows = [
-      headers.join(','),
+      'ID,Recorded At,Water Level (m),Raw Distance (cm),Rainfall Rate (mm/h),Tip Count,RSSI (dBm),Supply Voltage (V),Uptime (s),Sensor Status',
       ...logs.map((row) =>
         headers.map((h) => {
           const val = row[h];

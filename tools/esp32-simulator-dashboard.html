@@ -334,11 +334,11 @@
         try { data = await res.json(); } catch {}
 
         const logObj = data.log || data.data || {};
-        const stageM = parseFloat(logObj.water_level_m ?? waterLevelM).toFixed(2);
-        const rainMm = parseFloat(logObj.rainfall_rate ?? rainRateMmHr).toFixed(1);
-        const alertCode = data.event?.event_code || data.eventTriggered?.event_type || (stageM >= 1.6 ? 'ALERT_L3' : stageM >= 1.4 ? 'ALERT_L2' : stageM >= 1.0 ? 'ALERT_L1' : 'NORMAL');
+        const stageM = parseFloat(logObj.waterLevelM ?? logObj.water_level_m ?? waterLevelM).toFixed(2);
+        const rainMm = parseFloat(logObj.rainfallRateMmh ?? logObj.rainfall_rate ?? rainRateMmHr).toFixed(1);
+        const alertCode = data.event?.eventCode || data.event?.event_code || data.eventTriggered?.event_type || (stageM >= 1.6 ? 'ALERT_L3' : stageM >= 1.4 ? 'ALERT_L2' : stageM >= 1.0 ? 'ALERT_L1' : 'NORMAL');
         const projObj = data.projection || data.aiProjection || {};
-        const ai30m = parseFloat(projObj.predicted30m ?? projObj.horizon_30m_m ?? stageM).toFixed(2);
+        const ai30m = parseFloat(projObj.horizon30mM ?? projObj.predicted30m ?? projObj.horizon_30m_m ?? stageM).toFixed(2);
         const aiEval = data.aiEvaluation || {};
         const rawConf = aiEval.avgAccuracy_pct;
         const aiConf = typeof rawConf === 'number'

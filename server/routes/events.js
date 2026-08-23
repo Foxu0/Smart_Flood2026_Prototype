@@ -12,11 +12,17 @@ router.get('/', async (req, res) => {
 
     const events = await prisma.systemEvent.findMany({
       where,
-      orderBy: { timestamp: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: Math.min(parseInt(limit), 100),
     });
 
-    res.json({ success: true, count: events.length, data: events });
+    const mappedEvents = events.map(e => ({
+      ...e,
+      timestamp: e.createdAt,
+      event_code: e.eventCode,
+    }));
+
+    res.json({ success: true, count: mappedEvents.length, data: mappedEvents });
   } catch (err) {
     console.error('[GET /events]', err);
     res.status(500).json({ error: 'Internal server error', detail: err.message });

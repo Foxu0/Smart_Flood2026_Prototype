@@ -189,13 +189,23 @@ export async function getPrediction(historyBuffer) {
   try {
     const projection = await prisma.mLProjection.create({
       data: {
-        horizon_30m_m:    predicted30m,
-        horizon_60m_m:    predicted60m,
-        confidence_score: confidenceScore,
+        horizon30mM:     predicted30m,
+        horizon60mM:     predicted60m,
+        confidenceScore: confidenceScore,
       },
     });
     console.log(`[dlService] Saved MLProjection (id: ${projection.id}) [${methodUsed}]`);
-    return { ...projection, predicted30m, predicted60m, confidenceScore, methodUsed };
+    return {
+      ...projection,
+      timestamp: projection.generatedAt,
+      horizon_30m_m: predicted30m,
+      horizon_60m_m: predicted60m,
+      confidence_score: confidenceScore,
+      predicted30m,
+      predicted60m,
+      confidenceScore,
+      methodUsed,
+    };
   } catch (dbErr) {
     console.error('[dlService] Failed to save MLProjection:', dbErr.message);
     return { predicted30m, predicted60m, confidenceScore, methodUsed };
@@ -206,7 +216,7 @@ export async function getPrediction(historyBuffer) {
 export async function runPredictionInference() {
   try {
     const logs = await prisma.telemetryLog.findMany({
-      orderBy: { timestamp: 'desc' },
+      orderBy: { recordedAt: 'desc' },
       take: 6,
     });
 
@@ -215,7 +225,10 @@ export async function runPredictionInference() {
       return null;
     }
 
-    const chronological = [...logs].reverse();
+    const chronological = [...logs].map(l => ({
+      water_level_m: l.waterLevelM,
+      rainfall_rate: l.rainfallRateMmh,
+    })).reverse();
     const historyBuffer = buildHistoryBuffer(chronological);
     return await getPrediction(historyBuffer);
   } catch (err) {

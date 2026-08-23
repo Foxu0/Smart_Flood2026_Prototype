@@ -1,50 +1,55 @@
-generator client {
-  provider = "prisma-client-js"
-}
-
 datasource db {
   provider = "postgresql"
 }
 
+generator client {
+  provider = "prisma-client-js"
+}
+
 model TelemetryLog {
   id              Int      @id @default(autoincrement())
-  timestamp       DateTime @default(now())
-  water_level_m   Float
-  raw_distance_cm Float
-  rainfall_rate   Float
-  tip_count       Int      @default(0)
-  rssi_dbm        Int
-  supply_voltage  Float
-  uptime_sec      Int
-  sensor_status   String   @default("OK")
+  recordedAt      DateTime @default(now()) @map("recorded_at")
+  waterLevelM     Float    @map("water_level_m")
+  rawDistanceCm   Float    @map("raw_distance_cm")
+  rainfallRateMmh Float    @map("rainfall_rate_mmh")
+  tipCount        Int      @map("tip_count")
+  rssiDbm         Int      @map("rssi_dbm")
+  supplyVoltageV  Float    @map("supply_voltage_v")
+  uptimeSec       Int      @map("uptime_sec")
+  sensorStatus    String   @default("OK") @map("sensor_status")
 
-  @@index([timestamp])
+  @@index([recordedAt])
+  @@map("telemetry_logs")
 }
 
 model SystemEvent {
-  id         Int      @id @default(autoincrement())
-  timestamp  DateTime @default(now())
-  event_code String
-  message    String
-  severity   String   @default("INFO")
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  eventCode String   @map("event_code")
+  message   String
+  severity  String
 
-  @@index([timestamp])
+  @@index([createdAt])
+  @@map("system_events")
 }
 
 model MLProjection {
-  id               Int      @id @default(autoincrement())
-  timestamp        DateTime @default(now())
-  horizon_30m_m    Float
-  horizon_60m_m    Float
-  confidence_score Float
+  id              Int      @id @default(autoincrement())
+  generatedAt     DateTime @default(now()) @map("generated_at")
+  horizon30mM     Float    @map("horizon_30m_m")
+  horizon60mM     Float    @map("horizon_60m_m")
+  confidenceScore Float    @map("confidence_score")
 
-  @@index([timestamp])
+  @@index([generatedAt])
+  @@map("ml_projections")
 }
 
 model SystemSetting {
-  key_name   String   @id
-  value      String
-  updated_at DateTime @updatedAt
+  keyName   String   @id @map("key_name")
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
 }
 
 model PushSubscription {
@@ -52,5 +57,7 @@ model PushSubscription {
   endpoint  String   @unique
   p256dh    String
   auth      String
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("push_subscriptions")
 }

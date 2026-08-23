@@ -121,14 +121,14 @@ export async function runScenario(req, res) {
       // Save log in Prisma DB
       const log = await prisma.telemetryLog.create({
         data: {
-          water_level_m,
-          raw_distance_cm,
-          rainfall_rate,
-          tip_count,
-          rssi_dbm: -65,
-          supply_voltage: 12.2,
-          uptime_sec: activeStepIndex * 600,
-          sensor_status: raw_distance_cm <= 25 ? 'BLIND_SPOT' : 'OK',
+          waterLevelM: water_level_m,
+          rawDistanceCm: raw_distance_cm,
+          rainfallRateMmh: rainfall_rate,
+          tipCount: tip_count,
+          rssiDbm: -65,
+          supplyVoltageV: 12.2,
+          uptimeSec: activeStepIndex * 600,
+          sensorStatus: raw_distance_cm <= 25 ? 'BLIND_SPOT' : 'OK',
         },
       });
 
@@ -153,7 +153,7 @@ export async function runScenario(req, res) {
       if (eventCode) {
         event = await prisma.systemEvent.create({
           data: {
-            event_code: eventCode,
+            eventCode,
             message: `[${scenario.name} Step ${activeStepIndex}/${scenario.totalSteps}] ${stepComment} — Stage: ${water_level_m}m`,
             severity,
           },
@@ -162,13 +162,13 @@ export async function runScenario(req, res) {
 
       // Run ONNX LSTM inference
       const recentLogs = await prisma.telemetryLog.findMany({
-        orderBy: { timestamp: 'desc' },
+        orderBy: { recordedAt: 'desc' },
         take: 5,
-        select: { water_level_m: true, rainfall_rate: true },
+        select: { waterLevelM: true, rainfallRateMmh: true },
       });
 
       const chronological = [
-        ...([...recentLogs].reverse()),
+        ...([...recentLogs].map(r => ({ water_level_m: r.waterLevelM, rainfall_rate: r.rainfallRateMmh })).reverse()),
         { water_level_m, rainfall_rate },
       ];
 

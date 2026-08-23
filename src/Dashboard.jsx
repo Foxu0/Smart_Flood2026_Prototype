@@ -320,7 +320,7 @@ export default function FloodMonitoringDashboard() {
         if (json.success && json.data && json.data.length > 0) {
           const mapped = json.data.map(ev => ({
             id: `event-${ev.id}`,
-            time: new Date(ev.timestamp).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
+            time: new Date(ev.recordedAt ?? ev.recorded_at ?? ev.timestamp).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
             type: ev.severity === 'WARNING' || ev.severity === 'CRITICAL' ? 'alarm' : 'notice',
             msg: ev.message,
           }));
@@ -347,16 +347,16 @@ export default function FloodMonitoringDashboard() {
         const json = await res.json();
         if (json.success && json.data) {
           const d = json.data;
-          const level = parseFloat(d.water_level_m ?? 0.00);
-          const dist = parseFloat(d.raw_distance_cm ?? Math.round((1.8 - level) * 100));
-          const rain = parseFloat(d.rainfall_rate ?? 0.0);
+          const level = parseFloat(d.waterLevelM ?? d.water_level_m ?? 0.00);
+          const dist = parseFloat(d.rawDistanceCm ?? d.raw_distance_cm ?? Math.round((1.8 - level) * 100));
+          const rain = parseFloat(d.rainfallRateMmh ?? d.rainfall_rate ?? 0.0);
           setTelemetry(prev => ({
             ...prev,
             waterLevelM: level,
             waterDistanceCm: dist,
             rainRateMmHr: rain,
-            wifiRssi: parseInt(d.rssi_dbm ?? -65),
-            gridVoltage: parseFloat(d.supply_voltage ?? 12.2),
+            wifiRssi: parseInt(d.rssiDbm ?? d.rssi_dbm ?? -65),
+            gridVoltage: parseFloat(d.supplyVoltageV ?? d.supply_voltage ?? 12.2),
           }));
           fetchHistory();
         } else if (json.success && json.data === null) {
@@ -398,9 +398,9 @@ export default function FloodMonitoringDashboard() {
           const p = json.data;
           setAiPrediction(prev => ({
             ...prev,
-            predicted30m: parseFloat(p.horizon_30m_m),
-            predicted60m: parseFloat(p.horizon_60m_m),
-            modelConfidence: Math.round(parseFloat(p.confidence_score)),
+            predicted30m: parseFloat(p.horizon30mM ?? p.horizon_30m_m ?? 0.00),
+            predicted60m: parseFloat(p.horizon60mM ?? p.horizon_60m_m ?? 0.00),
+            modelConfidence: Math.round(parseFloat(p.confidenceScore ?? p.confidence_score ?? 96.5)),
           }));
         } else if (json.success && json.data === null) {
           setAiPrediction(prev => ({
@@ -436,11 +436,11 @@ export default function FloodMonitoringDashboard() {
           const message = JSON.parse(event.data);
           if (message.type === 'TELEMETRY' && message.data) {
             const d = message.data;
-            const level = d.water_level_m ?? d.waterLevel ?? 0.00;
-            const dist = d.raw_distance_cm ?? d.rawDistanceCm ?? Math.round((1.8 - level) * 100);
-            const rain = d.rainfall_rate ?? d.rainfallRate ?? 0;
-            const rssi = d.rssi_dbm ?? d.rssiDbm ?? -65;
-            const voltage = d.supply_voltage ?? d.supplyVoltage ?? 12.0;
+            const level = d.waterLevelM ?? d.water_level_m ?? d.waterLevel ?? 0.00;
+            const dist = d.rawDistanceCm ?? d.raw_distance_cm ?? Math.round((1.8 - level) * 100);
+            const rain = d.rainfallRateMmh ?? d.rainfall_rate ?? d.rainfallRate ?? 0;
+            const rssi = d.rssiDbm ?? d.rssi_dbm ?? -65;
+            const voltage = d.supplyVoltageV ?? d.supply_voltage ?? d.batteryVoltage ?? 12.0;
 
             setTelemetry(prev => ({
               ...prev,

@@ -38,10 +38,11 @@ export function recordPrediction(projection) {
  * @param {object} actualLog - { timestamp, water_level_m }
  */
 export function recordActualAndEvaluate(actualLog) {
-  if (!actualLog || actualLog.water_level_m == null) return;
+  const actualVal = actualLog?.waterLevelM ?? actualLog?.water_level_m;
+  if (actualVal == null) return;
 
   virtualStepCounter++;
-  const actual = parseFloat(actualLog.water_level_m);
+  const actual = parseFloat(actualVal);
 
   // Find entries in predictionQueue where targetStep === virtualStepCounter
   const matchedIndices = [];
@@ -53,7 +54,6 @@ export function recordActualAndEvaluate(actualLog) {
 
   for (const idx of matchedIndices) {
     const entry = predictionQueue[idx];
-    const actual = parseFloat(actualLog.water_level_m);
     const predicted = entry.predictedValue;
     const error = Math.abs(actual - predicted);
 

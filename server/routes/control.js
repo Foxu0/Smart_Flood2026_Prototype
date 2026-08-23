@@ -70,14 +70,14 @@ router.post('/siren', authMiddleware, async (req, res) => {
 
     // ── Persist siren state in SystemSetting ──────────────────────────────
     await prisma.systemSetting.upsert({
-      where:  { key_name: 'siren_state' },
+      where:  { keyName: 'siren_state' },
       update: { value: sirenState },
-      create: { key_name: 'siren_state', value: sirenState },
+      create: { keyName: 'siren_state', value: sirenState },
     });
 
     // ── Log the operator action as a SystemEvent ───────────────────────────
     const event = await prisma.systemEvent.create({
-      data: { event_code: eventCode, message: eventMsg, severity },
+      data: { eventCode, message: eventMsg, severity },
     });
 
     // ── Build the broadcast payload ────────────────────────────────────────
@@ -104,7 +104,7 @@ router.post('/siren', authMiddleware, async (req, res) => {
 router.get('/siren', async (req, res) => {
   try {
     const setting = await prisma.systemSetting.findUnique({
-      where: { key_name: 'siren_state' },
+      where: { keyName: 'siren_state' },
     });
     const sirenState = setting?.value ?? 'OFF';
     res.json({ success: true, sirenState });

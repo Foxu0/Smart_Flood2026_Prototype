@@ -8,9 +8,9 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const settings = await prisma.systemSetting.findMany({
-      orderBy: { key_name: 'asc' },
+      orderBy: { keyName: 'asc' },
     });
-    const map = Object.fromEntries(settings.map((s) => [s.key_name, s.value]));
+    const map = Object.fromEntries(settings.map((s) => [s.keyName, s.value]));
     res.json({ success: true, data: map });
   } catch (err) {
     console.error('[GET /settings]', err);
@@ -47,11 +47,11 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 
     const results = await Promise.all(
-      entries.map(([key_name, value]) =>
+      entries.map(([keyName, value]) =>
         prisma.systemSetting.upsert({
-          where: { key_name },
+          where: { keyName },
           update: { value: String(value) },
-          create: { key_name, value: String(value) },
+          create: { keyName, value: String(value) },
         })
       )
     );

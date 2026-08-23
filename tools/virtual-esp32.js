@@ -113,9 +113,9 @@ async function sendTelemetry(packet, stepStr = '01/01', comment = '', delaySec =
 
     // Parse Response Highlights
     const logObj = data.log || data.data || {};
-    const stageM = parseFloat(logObj.water_level_m ?? (180 - packet.rawDistance) / 100).toFixed(2);
-    const rawCm = logObj.raw_distance_cm ?? packet.rawDistance;
-    const rainMm = parseFloat(logObj.rainfall_rate ?? (packet.rainTips * 1.2)).toFixed(1);
+    const stageM = parseFloat(logObj.waterLevelM ?? logObj.water_level_m ?? (180 - packet.rawDistance) / 100).toFixed(2);
+    const rawCm = logObj.rawDistanceCm ?? logObj.raw_distance_cm ?? packet.rawDistance;
+    const rainMm = parseFloat(logObj.rainfallRateMmh ?? logObj.rainfall_rate ?? (packet.rainTips * 1.2)).toFixed(1);
 
     const alertStatus = data.event?.event_code || data.eventTriggered?.event_type || data.alertStatus?.eventCode || (stageM >= 1.6 ? 'ALERT_L3' : stageM >= 1.4 ? 'ALERT_L2' : stageM >= 1.0 ? 'ALERT_L1' : 'NORMAL');
     const aiEval = data.aiEvaluation || {};
