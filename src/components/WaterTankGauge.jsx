@@ -12,7 +12,7 @@ import useCountUp from '../hooks/useCountUp.js';
  * - Circular arc progress ring behind the tank
  * - Animated digit readout via useCountUp
  */
-export default function WaterTankGauge({ levelM, maxM = 1.8, dangerM = 1.6, color }) {
+export default function WaterTankGauge({ levelM, maxM = 2.0, dangerM = 1.6, color }) {
   const pct    = Math.min(100, Math.max(0, (levelM / maxM) * 100));
   const fillH  = 160; // inner drawable height in SVG units
   const tankW  = 120; // wider tank width in SVG units
@@ -40,9 +40,10 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, dangerM = 1.6, colo
   }
   const wavePath = `M 0,${fillY} L ${wavePoints.join(' L ')} L ${tankW},${fillH} L 0,${fillH} Z`;
 
-  // Danger line in SVG units
+  // Danger line in SVG units (bounded within tank height)
   const dangerVal = dangerM || 1.6;
   const dangerY = fillH * (1 - Math.min(maxM, Math.max(0, dangerVal)) / maxM);
+  const textY = dangerY < 18 ? dangerY + 10 : dangerY - 4;
 
   // Animated counter
   const displayVal = useCountUp(levelM, 900, 2);
@@ -129,7 +130,7 @@ export default function WaterTankGauge({ levelM, maxM = 1.8, dangerM = 1.6, colo
           {/* Danger dashed line */}
           <line x1="0" y1={dangerY} x2={tankW} y2={dangerY}
             stroke="#e0522f" strokeWidth="1.5" strokeDasharray="5,3" opacity="0.7" />
-          <text x="6" y={dangerY - 4} fontSize="7.5" fill="#e0522f" fontWeight="bold">
+          <text x="6" y={textY} fontSize="7.5" fill="#e0522f" fontWeight="bold">
             DANGER {dangerVal.toFixed(1)}m
           </text>
 
