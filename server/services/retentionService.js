@@ -38,14 +38,18 @@ export async function purgeOldData(retentionDays = 30) {
       `[Retention] Purge complete: ${stats.deletedTelemetry} telemetry logs, ${stats.deletedEvents} events, ${stats.deletedProjections} projections removed.`
     );
 
-    // Log the purge event in SystemEvent
-    await prisma.systemEvent.create({
-      data: {
-        event_code: 'DATA_RETENTION_PURGE',
-        message: `DATA_RETENTION_PURGE: Cleaned records older than ${days} days. Deleted ${stats.deletedTelemetry} telemetry logs, ${stats.deletedEvents} events, ${stats.deletedProjections} projections.`,
-        severity: 'INFO',
-      },
-    });
+    const totalDeleted = stats.deletedTelemetry + stats.deletedEvents + stats.deletedProjections;
+
+    // Only log system event if actual old records were purged to avoid log clutter
+    if (totalDeleted > 0) {
+      await prisma.systemEvent.create({
+        data: {
+          event_code: 'DATA_RETENTION_PURGE',
+          message: `DATA_RETENTION_PURGE: Cleaned records older than ${days} days. Deleted ${stats.deletedTelemetry} telemetry logs, ${stats.deletedEvents} events, ${stats.deletedProjections} projections.`,
+          severity: 'INFO',
+        },
+      });
+    }
 
     return stats;
   } catch (err) {
