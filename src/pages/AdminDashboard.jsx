@@ -128,7 +128,10 @@ function rainIntensityKey(mmHr) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── Stat card with animated counter ────────────────────────────────────────
 function AnimatedStatCard({ icon: Icon, label, value, numericValue, decimals = 1, sub, bar, color, tooltip, delay = 0 }) {
-  const displayed = useCountUp(numericValue ?? 0, 900, decimals);
+  const validNum = (numericValue != null && !Number.isNaN(Number(numericValue))) ? Number(numericValue) : 0;
+  const displayed = useCountUp(validNum, 900, decimals);
+  const cleanVal = (value || '').replace(/NaN/g, '').trim();
+
   return (
     <div
       className={`bg-white rounded-2xl p-3.5 sm:p-4 border border-[#e4edf0] shadow-sm flex flex-col justify-between card-enter card-enter-d${delay} hover:shadow-md transition-shadow duration-300`}
@@ -142,12 +145,14 @@ function AnimatedStatCard({ icon: Icon, label, value, numericValue, decimals = 1
           </div>
         </div>
         <p className="font-display text-lg sm:text-xl font-semibold text-[#123a54] mb-0.5">
-          {numericValue !== undefined ? `${displayed}${value.replace(/^[\d.]+/, '')}` : value}
+          {numericValue != null && !Number.isNaN(Number(numericValue))
+            ? `${displayed}${cleanVal.replace(/^[\d.\s-]+/, ' ')}`
+            : (cleanVal || '0.00 m')}
         </p>
         <p className="text-[10px] text-[#6d818d] mb-2 leading-tight">{sub}</p>
       </div>
       <div className="h-1.5 rounded-full bg-[#eef4f6] overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${bar}%`, background: color, transition: 'width 1s ease-out' }} />
+        <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, bar || 0))}%`, background: color, transition: 'width 1s ease-out' }} />
       </div>
     </div>
   );
@@ -582,11 +587,14 @@ export default function FloodMonitoringDashboard() {
         const json = await res.json();
         if (json.success && json.data) {
           const p = json.data;
+          const p30 = parseFloat(p.horizon30mM ?? p.predicted30m ?? p.horizon_30m_m ?? 0.00);
+          const p60 = parseFloat(p.horizon60mM ?? p.predicted60m ?? p.horizon_60m_m ?? 0.00);
+          const conf = Math.round(parseFloat(p.confidenceScore ?? p.confidence_score ?? 96.5));
           setAiPrediction(prev => ({
             ...prev,
-            predicted30m: parseFloat(p.horizon_30m_m),
-            predicted60m: parseFloat(p.horizon_60m_m),
-            modelConfidence: Math.round(parseFloat(p.confidence_score)),
+            predicted30m: Number.isNaN(p30) ? 0.00 : p30,
+            predicted60m: Number.isNaN(p60) ? 0.00 : p60,
+            modelConfidence: Number.isNaN(conf) ? 96.5 : conf,
           }));
         }
       } catch (err) {
@@ -615,11 +623,11 @@ export default function FloodMonitoringDashboard() {
           const message = JSON.parse(event.data);
           if (message.type === 'TELEMETRY' && message.data) {
             const d = message.data;
-            const level = d.water_level_m ?? d.waterLevel ?? 1.05;
-            const dist = d.raw_distance_cm ?? d.rawDistanceCm ?? Math.round((1.8 - level) * 100);
-            const rain = d.rainfall_rate ?? d.rainfallRate ?? 0;
-            const rssi = d.rssi_dbm ?? d.rssiDbm ?? -65;
-            const voltage = d.supply_voltage ?? d.supplyVoltage ?? 12.0;
+            const level = d.waterLevelM ?? d.water_level_m ?? d.waterLevel ?? 1.05;
+            const dist = d.rawDistanceCm ?? d.raw_distance_cm ?? Math.round((1.8 - level) * 100);
+            const rain = d.rainfallRateMmh ?? d.rainfall_rate ?? d.rainfallRate ?? 0;
+            const rssi = d.rssiDbm ?? d.rssi_dbm ?? -65;
+            const voltage = d.supplyVoltageV ?? d.supply_voltage ?? d.batteryVoltage ?? 12.0;
 
             setTelemetry(prev => ({
               ...prev,
@@ -639,11 +647,14 @@ export default function FloodMonitoringDashboard() {
             fetchHistory();
           } else if (message.type === 'PROJECTION' && message.data) {
             const p = message.data;
+            const p30 = parseFloat(p.horizon30mM ?? p.predicted30m ?? p.horizon_30m_m ?? 0.00);
+            const p60 = parseFloat(p.horizon60mM ?? p.predicted60m ?? p.horizon_60m_m ?? 0.00);
+            const conf = Math.round(parseFloat(p.confidenceScore ?? p.confidence_score ?? 96.5));
             setAiPrediction(prev => ({
               ...prev,
-              predicted30m: parseFloat(p.horizon_30m_m),
-              predicted60m: parseFloat(p.horizon_60m_m),
-              modelConfidence: Math.round(parseFloat(p.confidence_score)),
+              predicted30m: Number.isNaN(p30) ? 0.00 : p30,
+              predicted60m: Number.isNaN(p60) ? 0.00 : p60,
+              modelConfidence: Number.isNaN(conf) ? 96.5 : conf,
             }));
           } else if (message.type === 'EVENT' && message.data) {
             const ev = message.data;

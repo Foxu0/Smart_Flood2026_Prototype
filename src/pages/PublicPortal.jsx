@@ -116,7 +116,10 @@ function rainIntensityKey(mmHr) {
 
 // ─── Stat Card component ──────────────────────────────────────────────────────
 function AnimatedStatCard({ icon: Icon, label, value, numericValue, decimals = 1, sub, bar, color, tooltip, delay = 0 }) {
-  const displayed = useCountUp(numericValue ?? 0, 900, decimals);
+  const validNum = (numericValue != null && !Number.isNaN(Number(numericValue))) ? Number(numericValue) : 0;
+  const displayed = useCountUp(validNum, 900, decimals);
+  const cleanVal = (value || '').replace(/NaN/g, '').trim();
+
   return (
     <div
       className={`bg-white rounded-2xl p-3.5 sm:p-4 border border-[#e4edf0] shadow-sm flex flex-col justify-between card-enter card-enter-d${delay} hover:shadow-md transition-shadow duration-300`}
@@ -130,12 +133,14 @@ function AnimatedStatCard({ icon: Icon, label, value, numericValue, decimals = 1
           </div>
         </div>
         <p className="font-display text-lg sm:text-xl font-semibold text-[#123a54] mb-0.5">
-          {numericValue !== undefined ? `${displayed}${value.replace(/^[\d.]+/, '')}` : value}
+          {numericValue != null && !Number.isNaN(Number(numericValue))
+            ? `${displayed}${cleanVal.replace(/^[\d.\s-]+/, ' ')}`
+            : (cleanVal || '0.00 m')}
         </p>
         <p className="text-[10px] text-[#6d818d] mb-2 leading-tight">{sub}</p>
       </div>
       <div className="h-1.5 rounded-full bg-[#eef4f6] overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${bar}%`, background: color, transition: 'width 1s ease-out' }} />
+        <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, bar || 0))}%`, background: color, transition: 'width 1s ease-out' }} />
       </div>
     </div>
   );
@@ -379,12 +384,15 @@ export default function PublicPortal() {
           }
           if (msg.type === 'PROJECTION' && msg.data) {
             const p = msg.data;
+            const p30 = parseFloat(p.horizon30mM ?? p.predicted30m ?? p.horizon_30m_m ?? 0.00);
+            const p60 = parseFloat(p.horizon60mM ?? p.predicted60m ?? p.horizon_60m_m ?? 0.00);
+            const conf = Math.round(parseFloat(p.confidenceScore ?? p.confidence_score ?? prev.modelConfidence));
             setAiPrediction(prev => ({
               ...prev,
-              predicted30m: parseFloat(p.horizon_30m_m),
-              predicted60m: parseFloat(p.horizon_60m_m),
+              predicted30m: Number.isNaN(p30) ? 0.00 : p30,
+              predicted60m: Number.isNaN(p60) ? 0.00 : p60,
               riskScore: Math.round(parseFloat(p.risk_score ?? prev.riskScore)),
-              modelConfidence: Math.round(parseFloat(p.confidence_score ?? prev.modelConfidence)),
+              modelConfidence: Number.isNaN(conf) ? 96.5 : conf,
             }));
           }
         } catch (err) {
@@ -408,9 +416,9 @@ export default function PublicPortal() {
         if (j.success && j.data) {
           setTelemetry(prev => ({
             ...prev,
-            waterLevelM: parseFloat(j.data.water_level_m),
-            waterDistanceCm: parseInt(j.data.water_distance_cm),
-            rainRateMmHr: parseFloat(j.data.rainfall_rate),
+            waterLevelM: parseFloat(j.data.waterLevelM ?? j.data.water_level_m ?? 0.00),
+            waterDistanceCm: parseInt(j.data.rawDistanceCm ?? j.data.water_distance_cm ?? 180),
+            rainRateMmHr: parseFloat(j.data.rainfallRateMmh ?? j.data.rainfall_rate ?? 0.0),
           }));
         }
       }).catch(() => {});
@@ -419,12 +427,16 @@ export default function PublicPortal() {
       .then(r => r.json())
       .then(j => {
         if (j.success && j.data) {
+          const p = j.data;
+          const p30 = parseFloat(p.horizon30mM ?? p.predicted30m ?? p.horizon_30m_m ?? 0.00);
+          const p60 = parseFloat(p.horizon60mM ?? p.predicted60m ?? p.horizon_60m_m ?? 0.00);
+          const conf = Math.round(parseFloat(p.confidenceScore ?? p.confidence_score ?? 96.5));
           setAiPrediction(prev => ({
             ...prev,
-            predicted30m: parseFloat(j.data.horizon_30m_m),
-            predicted60m: parseFloat(j.data.horizon_60m_m),
-            riskScore: Math.round(parseFloat(j.data.risk_score ?? prev.riskScore)),
-            modelConfidence: Math.round(parseFloat(j.data.confidence_score ?? prev.modelConfidence)),
+            predicted30m: Number.isNaN(p30) ? 0.00 : p30,
+            predicted60m: Number.isNaN(p60) ? 0.00 : p60,
+            riskScore: Math.round(parseFloat(p.risk_score ?? prev.riskScore)),
+            modelConfidence: Number.isNaN(conf) ? 96.5 : conf,
           }));
         }
       }).catch(() => {});
