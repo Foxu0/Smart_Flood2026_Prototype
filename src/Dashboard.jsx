@@ -921,10 +921,33 @@ export default function FloodMonitoringDashboard() {
                   {/* Measured Telemetry Line */}
                   <path d={buildPath(histLevels)} fill="none" stroke="#2b6e8f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#lineGlow)" />
 
-                  {/* Forecast Dashed Connection Line & Target Node */}
-                  <line x1={lastMeasuredPt.x} y1={lastMeasuredPt.y} x2={forecastPt.x} y2={forecastPt.y} stroke="#e69138" strokeWidth="2.5" strokeDasharray="4,4" />
-                  <circle cx={forecastPt.x} cy={forecastPt.y} r="5" fill="#e69138" stroke="white" strokeWidth="2" />
-                  <text x={forecastPt.x} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+60m ML</text>
+                  {/* Forecast Dashed Connection Trajectory Line (+30m and +60m ML) */}
+                  {(() => {
+                    const p30Val = aiPrediction?.predicted30m ?? telemetry.waterLevelM;
+                    const p60Val = aiPrediction?.predicted60m ?? telemetry.waterLevelM;
+                    const p30X = lastMeasuredPt.x + (chartW - 10 - lastMeasuredPt.x) * 0.5;
+                    const p30Y = chartH - (Math.min(maxLevel, Math.max(0, p30Val)) / maxLevel) * chartH;
+                    const p60X = chartW - 10;
+                    const p60Y = chartH - (Math.min(maxLevel, Math.max(0, p60Val)) / maxLevel) * chartH;
+
+                    return (
+                      <g>
+                        <path
+                          d={`M ${lastMeasuredPt.x},${lastMeasuredPt.y} L ${p30X},${p30Y} L ${p60X},${p60Y}`}
+                          fill="none"
+                          stroke="#e69138"
+                          strokeWidth="2.5"
+                          strokeDasharray="4,4"
+                        />
+                        {/* +30m Node */}
+                        <circle cx={p30X} cy={p30Y} r="4.5" fill="#e69138" stroke="white" strokeWidth="2" />
+                        <text x={p30X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+30m ML</text>
+                        {/* +60m Node */}
+                        <circle cx={p60X} cy={p60Y} r="5" fill="#e69138" stroke="white" strokeWidth="2" />
+                        <text x={p60X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+60m ML</text>
+                      </g>
+                    );
+                  })()}
 
                   {/* Measured Telemetry Nodes */}
                   {histLevels.map((v, i, a) => {
