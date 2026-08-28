@@ -263,10 +263,7 @@ export default function WeatherMapCard({ severity = 0 }) {
             <Info size={13} />
             <span>Sources &amp; Disclaimers</span>
           </button>
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-[#2f9463]/10 text-[#2f9463] rounded-full text-xs font-bold border border-[#2f9463]/20 font-mono">
-            <span className="w-2 h-2 rounded-full bg-[#2f9463] animate-ping" />
-            <span>{radarTimeStr}</span>
-          </div>
+
         </div>
       </div>
 
