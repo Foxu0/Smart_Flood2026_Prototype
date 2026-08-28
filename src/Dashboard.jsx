@@ -892,7 +892,7 @@ export default function FloodMonitoringDashboard() {
                 </div>
                 <div className="flex items-center gap-2.5 text-[10px] sm:text-[11px] text-[#6d818d] flex-wrap">
                   <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#2b6e8f] inline-block rounded" /> Ultrasonic Telemetry</span>
-                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#e69138] inline-block rounded" /> ML Projection</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#e69138] inline-block rounded" /> AI Forecast</span>
                   <button
                     onClick={exportTelemetryCsv}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#2b6e8f]/10 text-[#2b6e8f] font-bold text-[10px] hover:bg-[#2b6e8f]/20 transition border border-[#2b6e8f]/30 shadow-xs ml-1"
@@ -949,10 +949,10 @@ export default function FloodMonitoringDashboard() {
                         />
                         {/* +30m Node */}
                         <circle cx={p30X} cy={p30Y} r="4.5" fill="#e69138" stroke="white" strokeWidth="2" />
-                        <text x={p30X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+30m ML</text>
+                        <text x={p30X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+30m AI</text>
                         {/* +60m Node */}
                         <circle cx={p60X} cy={p60Y} r="5" fill="#e69138" stroke="white" strokeWidth="2" />
-                        <text x={p60X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+60m ML</text>
+                        <text x={p60X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+60m AI</text>
                       </g>
                     );
                   })()}

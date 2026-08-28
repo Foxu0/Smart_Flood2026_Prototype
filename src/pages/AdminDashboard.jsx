@@ -1147,10 +1147,10 @@ export default function FloodMonitoringDashboard() {
                         />
                         {/* +30m Node */}
                         <circle cx={p30X} cy={p30Y} r="4.5" fill="#e69138" stroke="white" strokeWidth="2" />
-                        <text x={p30X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+30m ML</text>
+                        <text x={p30X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+30m AI</text>
                         {/* +60m Node */}
                         <circle cx={p60X} cy={p60Y} r="5" fill="#e69138" stroke="white" strokeWidth="2" />
-                        <text x={p60X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+60m ML</text>
+                        <text x={p60X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+60m AI</text>
                       </g>
                     );
                   })()}
