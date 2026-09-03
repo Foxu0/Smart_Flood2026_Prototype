@@ -61,3 +61,57 @@ model PushSubscription {
 
   @@map("push_subscriptions")
 }
+
+model EmailSubscriber {
+  id               Int                @id @default(autoincrement())
+  email            String             @unique
+  fullName         String?            @map("full_name")
+  barangay         String             @default("Mayamot")
+  subscriberRole   String             @default("RESIDENT") @map("subscriber_role")
+  minAlertLevel    Int                @default(2) @map("min_alert_level")
+  isVerified       Boolean            @default(true) @map("is_verified")
+  unsubscribeToken String             @unique @default(uuid()) @map("unsubscribe_token")
+  status           String             @default("ACTIVE")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+
+  dispatchLogs     EmailDispatchLog[]
+
+  @@index([status, minAlertLevel, barangay])
+  @@map("email_subscribers")
+}
+
+model AlertBroadcast {
+  id              Int                @id @default(autoincrement())
+  triggeredAt     DateTime           @default(now()) @map("triggered_at")
+  alertLevel      Int                @map("alert_level")
+  title           String
+  message         String
+  waterLevelM     Float              @map("water_level_m")
+  rainfallRateMmh Float?             @map("rainfall_rate_mmh")
+  broadcastSource String             @default("AUTOMATED_SENSOR") @map("broadcast_source")
+
+  dispatchLogs    EmailDispatchLog[]
+
+  @@index([triggeredAt])
+  @@map("alert_broadcasts")
+}
+
+model EmailDispatchLog {
+  id             Int              @id @default(autoincrement())
+  broadcastId    Int?             @map("broadcast_id")
+  subscriberId   Int?             @map("subscriber_id")
+  recipientEmail String           @map("recipient_email")
+  subject        String
+  status         String           @default("QUEUED")
+  errorMessage   String?          @map("error_message")
+  sentAt         DateTime?        @map("sent_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  broadcast      AlertBroadcast?  @relation(fields: [broadcastId], references: [id], onDelete: SetNull)
+  subscriber     EmailSubscriber? @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@map("email_dispatch_logs")
+}
+

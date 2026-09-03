@@ -6,6 +6,7 @@ import { recordPrediction, recordActualAndEvaluate, getEvaluationMetrics } from 
 import { buildHistoryBuffer, getPrediction } from '../services/dlService.js';
 import { broadcast } from '../websocket.js';
 import { broadcastPushAlert } from '../services/webpushService.js';
+import { broadcastEmailAlert } from '../services/emailService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -211,6 +212,14 @@ export async function runScenario(req, res) {
           body: `WARNING: Water level reached ${water_level_m.toFixed(2)}m in Antipolo during test scenario.`,
           level: alertStatus.level,
           url: '/',
+        }).catch(() => {});
+
+        broadcastEmailAlert({
+          title: alertStatus.level === 3 ? '🚨 LEVEL 3 EMERGENCY ALERT' : '⚠️ LEVEL 2 WARNING ALARM',
+          message: `WARNING: Water level reached ${water_level_m.toFixed(2)}m in Antipolo during simulated scenario.`,
+          level: alertStatus.level,
+          waterLevelM: water_level_m,
+          source: 'SCENARIO_SIMULATION',
         }).catch(() => {});
       }
 

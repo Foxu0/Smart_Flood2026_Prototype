@@ -15,13 +15,13 @@ export async function purgeOldData(retentionDays = 30) {
 
     const [telemetryResult, eventResult, projectionResult] = await Promise.all([
       prisma.telemetryLog.deleteMany({
-        where: { timestamp: { lt: cutoffDate } },
+        where: { recordedAt: { lt: cutoffDate } },
       }),
       prisma.systemEvent.deleteMany({
-        where: { timestamp: { lt: cutoffDate } },
+        where: { createdAt: { lt: cutoffDate } },
       }),
       prisma.mLProjection.deleteMany({
-        where: { timestamp: { lt: cutoffDate } },
+        where: { generatedAt: { lt: cutoffDate } },
       }),
     ]);
 

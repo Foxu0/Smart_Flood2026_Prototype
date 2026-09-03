@@ -3,13 +3,14 @@ import {
   AlertTriangle, CheckCircle2, Info, CloudRain,
   Droplets, Phone, MapPin, ChevronDown, ChevronUp,
   Zap, Shield, Waves, Radio, Timer, Lock, ArrowRight,
-  HelpCircle, Compass, LifeBuoy, ExternalLink, Bell, BellRing
+  HelpCircle, Compass, LifeBuoy, ExternalLink, Bell, BellRing, Mail
 } from 'lucide-react';
 import RainOverlay from '../RainOverlay.jsx';
 import WeatherMapCard from '../WeatherMapCard.jsx';
 import WaterTankGauge from '../components/WaterTankGauge.jsx';
 import SparklineBar from '../components/SparklineBar.jsx';
 import SkeletonDashboard from '../components/SkeletonDashboard.jsx';
+import EmailSubscriptionCard from '../components/EmailSubscriptionCard.jsx';
 import useCountUp from '../hooks/useCountUp.js';
 import { API_BASE_URL, WS_BASE_URL } from '../config.js';
 
@@ -524,6 +525,16 @@ export default function PublicPortal() {
                 )}
               </button>
 
+              {/* Email Alert Quick Button */}
+              <a
+                href="#email-alerts"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-sky-500/25 border border-sky-400/50 text-sky-200 hover:bg-sky-500/40 active:scale-95 transition-all shadow-sm cursor-pointer"
+                title="Register for Flood Warning Email Alerts"
+              >
+                <Mail size={13} />
+                <span>Email Alerts</span>
+              </a>
+
               {/* Local Clock */}
               <div className="text-right hidden sm:block">
                 <p className="text-[9px] text-sky-200 uppercase tracking-wide">Local time</p>
@@ -701,6 +712,11 @@ export default function PublicPortal() {
 
             {/* Weather Map Component */}
             <WeatherMapCard severity={floodLevel.id} />
+
+            {/* Emergency Email Subscription Card */}
+            <div id="email-alerts">
+              <EmailSubscriptionCard />
+            </div>
 
             {/* Quick Public Alert Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-3">

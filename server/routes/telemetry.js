@@ -4,6 +4,7 @@ import { broadcast } from '../websocket.js';
 import { buildHistoryBuffer, getPrediction, runPredictionInference } from '../services/dlService.js';
 import { purgeOldData } from '../services/retentionService.js';
 import { broadcastPushAlert } from '../services/webpushService.js';
+import { broadcastEmailAlert } from '../services/emailService.js';
 import { recordPrediction, recordActualAndEvaluate, getEvaluationMetrics } from '../services/aiEvaluationService.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
@@ -213,6 +214,16 @@ router.post('/', async (req, res) => {
         level: alertStatus.level,
         url:   '/',
       }).catch(err => console.error('[POST /telemetry] Web Push Alert error:', err.message));
+
+      // ── 12. Trigger Email Emergency Broadcast (with anti-spam cooldown) ──
+      broadcastEmailAlert({
+        title: alertTitle,
+        message: alertBody,
+        level: alertStatus.level,
+        waterLevelM,
+        rainfallRateMmh: rainfall_rate_mmh,
+        source: 'AUTOMATED_SENSOR',
+      }).catch(err => console.error('[POST /telemetry] Email Alert error:', err.message));
     }
 
     const aiEvaluation = getEvaluationMetrics();

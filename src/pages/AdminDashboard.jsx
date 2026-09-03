@@ -5,7 +5,7 @@ import {
   Droplets, Info, MapPin, RefreshCw,
   Sliders, Volume2, VolumeX, Wifi, Zap, Activity,
   Radio, Globe, Send, Download, FileSpreadsheet, Timer, LogOut,
-  Play, RotateCcw, Target, TrendingUp, BarChart3, Square
+  Play, RotateCcw, Target, TrendingUp, BarChart3, Square, Mail
 } from 'lucide-react';
 import RainOverlay from '../RainOverlay.jsx';
 import WeatherMapCard from '../WeatherMapCard.jsx';
@@ -13,6 +13,7 @@ import WaterTankGauge from '../components/WaterTankGauge.jsx';
 import SparklineBar from '../components/SparklineBar.jsx';
 import ToastContainer, { useToast } from '../components/ToastNotification.jsx';
 import DataSourcesDisclaimerModal from '../components/DataSourcesDisclaimerModal.jsx';
+import EmailSubscribersModal from '../components/EmailSubscribersModal.jsx';
 import SkeletonDashboard from '../components/SkeletonDashboard.jsx';
 import useCountUp from '../hooks/useCountUp.js';
 import { API_BASE_URL, WS_BASE_URL } from '../config.js';
@@ -191,6 +192,7 @@ export default function FloodMonitoringDashboard() {
   const [radarZoom, setRadarZoom] = useState(1);
   const [phone, setPhone] = useState('');
   const [smsConfirmed, setSmsConfirmed] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   const [telemetry, setTelemetry] = useState({
     waterLevelM: 0.00,
@@ -901,6 +903,16 @@ export default function FloodMonitoringDashboard() {
                 {wsConnected ? 'LIVE WS' : 'CONNECTING WS'}
               </div>
 
+              {/* Email Alerts Modal Button */}
+              <button
+                onClick={() => setShowEmailModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-sky-500/25 border border-sky-400/50 text-sky-200 hover:bg-sky-500/40 active:scale-95 transition-all shadow-sm cursor-pointer"
+                title="Manage Community Email Subscribers and Broadcast Alerts"
+              >
+                <Mail size={13} />
+                <span>Email Alerts</span>
+              </button>
+
               <div className="text-right hidden lg:block border-l border-white/20 pl-3 sm:pl-4">
                 <p className="text-[9px] text-sky-200 uppercase tracking-wide">Local time</p>
                 <p className="text-base font-mono font-semibold leading-tight">{pst}</p>
@@ -1382,6 +1394,13 @@ export default function FloodMonitoringDashboard() {
     <DataSourcesDisclaimerModal
       isOpen={showDisclaimer}
       onClose={() => setShowDisclaimer(false)}
+    />
+
+    {/* Email Subscribers & Broadcast Center Modal */}
+    <EmailSubscribersModal
+      isOpen={showEmailModal}
+      onClose={() => setShowEmailModal(false)}
+      onNotification={({ type, msg }) => pushToast(type, 'Email Alert', msg)}
     />
 
     {/* ── TOAST NOTIFICATIONS (portal, fixed bottom-right) ─────────────── */}
