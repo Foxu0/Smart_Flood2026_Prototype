@@ -704,6 +704,10 @@ export default function PublicPortal() {
                 </div>
               )}
             </div>
+            {/* Emergency Email Subscription Card */}
+            <div id="email-alerts">
+              <EmailSubscriptionCard />
+            </div>
 
           </div>
 
@@ -712,11 +716,6 @@ export default function PublicPortal() {
 
             {/* Weather Map Component */}
             <WeatherMapCard severity={floodLevel.id} />
-
-            {/* Emergency Email Subscription Card */}
-            <div id="email-alerts">
-              <EmailSubscriptionCard />
-            </div>
 
             {/* Quick Public Alert Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-3">
