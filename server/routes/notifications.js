@@ -1,4 +1,5 @@
 import express from 'express';
+import { prisma } from '../db.js';
 import { getVapidPublicKey, saveSubscription, broadcastPushAlert } from '../services/webpushService.js';
 
 const router = express.Router();
@@ -19,14 +20,23 @@ router.get('/vapid-public-key', (req, res) => {
 // Saves or updates a browser Web Push subscription in PostgreSQL
 router.post('/subscribe', async (req, res) => {
   try {
-    const subscription = req.body;
+    const { subscriberId, subscriberEmail, ...subscription } = req.body || {};
     if (!subscription || !subscription.endpoint || !subscription.keys) {
       return res.status(400).json({
         error: 'Invalid subscription payload. Must include endpoint and keys (p256dh, auth).',
       });
     }
 
-    const saved = await saveSubscription(subscription);
+    let linkedId = subscriberId ? Number(subscriberId) : null;
+    if (!linkedId && subscriberEmail) {
+      const match = await prisma.emailSubscriber.findUnique({
+        where: { email: subscriberEmail.trim().toLowerCase() },
+        select: { id: true },
+      });
+      if (match) linkedId = match.id;
+    }
+
+    const saved = await saveSubscription(subscription, linkedId);
     res.status(201).json({ success: true, message: 'Push subscription registered successfully', data: saved });
   } catch (err) {
     console.error('[POST /notifications/subscribe]', err);

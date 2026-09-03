@@ -7,29 +7,36 @@ generator client {
 }
 
 model TelemetryLog {
-  id              Int      @id @default(autoincrement())
-  recordedAt      DateTime @default(now()) @map("recorded_at")
-  waterLevelM     Float    @map("water_level_m")
-  rawDistanceCm   Float    @map("raw_distance_cm")
-  rainfallRateMmh Float    @map("rainfall_rate_mmh")
-  tipCount        Int      @map("tip_count")
-  rssiDbm         Int      @map("rssi_dbm")
-  supplyVoltageV  Float    @map("supply_voltage_v")
-  uptimeSec       Int      @map("uptime_sec")
-  sensorStatus    String   @default("OK") @map("sensor_status")
+  id              Int              @id @default(autoincrement())
+  recordedAt      DateTime         @default(now()) @map("recorded_at")
+  waterLevelM     Float            @map("water_level_m")
+  rawDistanceCm   Float            @map("raw_distance_cm")
+  rainfallRateMmh Float            @map("rainfall_rate_mmh")
+  tipCount        Int              @map("tip_count")
+  rssiDbm         Int              @map("rssi_dbm")
+  supplyVoltageV  Float            @map("supply_voltage_v")
+  uptimeSec       Int              @map("uptime_sec")
+  sensorStatus    String           @default("OK") @map("sensor_status")
+
+  systemEvents    SystemEvent[]
+  alertBroadcasts AlertBroadcast[]
 
   @@index([recordedAt])
   @@map("telemetry_logs")
 }
 
 model SystemEvent {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now()) @map("created_at")
-  eventCode String   @map("event_code")
-  message   String
-  severity  String
+  id             Int           @id @default(autoincrement())
+  createdAt      DateTime      @default(now()) @map("created_at")
+  eventCode      String        @map("event_code")
+  message        String
+  severity       String
+
+  telemetryLogId Int?          @map("telemetry_log_id")
+  telemetryLog   TelemetryLog? @relation(fields: [telemetryLogId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+  @@index([telemetryLogId])
   @@map("system_events")
 }
 
@@ -53,29 +60,34 @@ model SystemSetting {
 }
 
 model PushSubscription {
-  id        Int      @id @default(autoincrement())
-  endpoint  String   @unique
-  p256dh    String
-  auth      String
-  createdAt DateTime @default(now()) @map("created_at")
+  id           Int              @id @default(autoincrement())
+  endpoint     String           @unique
+  p256dh       String
+  auth         String
+  createdAt    DateTime         @default(now()) @map("created_at")
 
+  subscriberId Int?             @map("subscriber_id")
+  subscriber   EmailSubscriber? @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
+
+  @@index([subscriberId])
   @@map("push_subscriptions")
 }
 
 model EmailSubscriber {
-  id               Int                @id @default(autoincrement())
-  email            String             @unique
-  fullName         String?            @map("full_name")
-  barangay         String             @default("Mayamot")
-  subscriberRole   String             @default("RESIDENT") @map("subscriber_role")
-  minAlertLevel    Int                @default(2) @map("min_alert_level")
-  isVerified       Boolean            @default(true) @map("is_verified")
-  unsubscribeToken String             @unique @default(uuid()) @map("unsubscribe_token")
-  status           String             @default("ACTIVE")
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
+  id                Int                @id @default(autoincrement())
+  email             String             @unique
+  fullName          String?            @map("full_name")
+  barangay          String             @default("Mayamot")
+  subscriberRole    String             @default("RESIDENT") @map("subscriber_role")
+  minAlertLevel     Int                @default(2) @map("min_alert_level")
+  isVerified        Boolean            @default(true) @map("is_verified")
+  unsubscribeToken  String             @unique @default(uuid()) @map("unsubscribe_token")
+  status            String             @default("ACTIVE")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
 
-  dispatchLogs     EmailDispatchLog[]
+  dispatchLogs      EmailDispatchLog[]
+  pushSubscriptions PushSubscription[]
 
   @@index([status, minAlertLevel, barangay])
   @@map("email_subscribers")
@@ -91,9 +103,13 @@ model AlertBroadcast {
   rainfallRateMmh Float?             @map("rainfall_rate_mmh")
   broadcastSource String             @default("AUTOMATED_SENSOR") @map("broadcast_source")
 
+  triggerLogId    Int?               @map("trigger_log_id")
+  triggerLog      TelemetryLog?      @relation(fields: [triggerLogId], references: [id], onDelete: SetNull)
+
   dispatchLogs    EmailDispatchLog[]
 
   @@index([triggeredAt])
+  @@index([triggerLogId])
   @@map("alert_broadcasts")
 }
 
@@ -114,4 +130,3 @@ model EmailDispatchLog {
   @@index([status, createdAt])
   @@map("email_dispatch_logs")
 }
-

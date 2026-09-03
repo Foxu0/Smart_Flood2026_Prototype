@@ -256,6 +256,7 @@ export async function broadcastEmailAlert({
   rainfallRateMmh = 0,
   source = 'AUTOMATED_SENSOR',
   force = false,
+  triggerLogId = null,
 }) {
   try {
     const now = Date.now();
@@ -282,7 +283,7 @@ export async function broadcastEmailAlert({
       return { success: true, count: 0, sent: 0, failed: 0 };
     }
 
-    // 2. Record the AlertBroadcast entry in DB
+    // 2. Record the AlertBroadcast entry in DB (linking to triggerLog if available)
     const broadcast = await prisma.alertBroadcast.create({
       data: {
         alertLevel: level,
@@ -291,6 +292,7 @@ export async function broadcastEmailAlert({
         waterLevelM: Number(waterLevelM || 0),
         rainfallRateMmh: rainfallRateMmh ? Number(rainfallRateMmh) : null,
         broadcastSource: source,
+        triggerLogId: triggerLogId ? Number(triggerLogId) : null,
       },
     });
 

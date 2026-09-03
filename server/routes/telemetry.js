@@ -142,7 +142,12 @@ router.post('/', async (req, res) => {
     let event = null;
     if (eventCode) {
       event = await prisma.systemEvent.create({
-        data: { eventCode, message: eventMsg, severity },
+        data: {
+          eventCode,
+          message: eventMsg,
+          severity,
+          telemetryLogId: log.id,
+        },
       });
     }
 
@@ -223,6 +228,7 @@ router.post('/', async (req, res) => {
         waterLevelM,
         rainfallRateMmh: rainfall_rate_mmh,
         source: 'AUTOMATED_SENSOR',
+        triggerLogId: log.id,
       }).catch(err => console.error('[POST /telemetry] Email Alert error:', err.message));
     }
 

@@ -157,6 +157,7 @@ export async function runScenario(req, res) {
             eventCode,
             message: `[${scenario.name} Step ${activeStepIndex}/${scenario.totalSteps}] ${stepComment} — Stage: ${water_level_m}m`,
             severity,
+            telemetryLogId: log.id,
           },
         });
       }
@@ -220,6 +221,7 @@ export async function runScenario(req, res) {
           level: alertStatus.level,
           waterLevelM: water_level_m,
           source: 'SCENARIO_SIMULATION',
+          triggerLogId: log.id,
         }).catch(() => {});
       }
 

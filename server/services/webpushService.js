@@ -28,7 +28,7 @@ export function getVapidPublicKey() {
  * @param {object} subscription - { endpoint, keys: { p256dh, auth } }
  * @returns {Promise<object>}
  */
-export async function saveSubscription(subscription) {
+export async function saveSubscription(subscription, subscriberId = null) {
   if (!subscription || !subscription.endpoint || !subscription.keys) {
     throw new Error('Invalid Web Push subscription format');
   }
@@ -41,11 +41,16 @@ export async function saveSubscription(subscription) {
     throw new Error('Missing subscription keys (p256dh or auth)');
   }
 
+  const payload = { p256dh, auth };
+  if (subscriberId) {
+    payload.subscriberId = Number(subscriberId);
+  }
+
   // Upsert subscription into PostgreSQL
   const saved = await prisma.pushSubscription.upsert({
     where: { endpoint },
-    update: { p256dh, auth },
-    create: { endpoint, p256dh, auth },
+    update: payload,
+    create: { endpoint, ...payload },
   });
 
   console.log(`[WebPush] Subscription saved (id:${saved.id}, endpoint: ${endpoint.slice(-20)})`);
