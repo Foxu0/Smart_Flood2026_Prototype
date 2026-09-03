@@ -247,7 +247,7 @@ export default function WeatherMapCard({ severity = 0 }) {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 flex flex-col justify-between">
+    <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 flex flex-col justify-between min-w-0 w-full overflow-hidden">
       {/* Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3.5">
         <div className="flex items-center gap-2">
@@ -335,7 +335,7 @@ export default function WeatherMapCard({ severity = 0 }) {
             <img
               src={currentSatUrl}
               alt="DOST-PAGASA Himawari Satellite IR Scan"
-              className="w-full h-full object-contain transition-all duration-300 rounded-lg shadow-sm"
+              className="w-full h-full max-w-full max-h-full object-contain transition-all duration-300 rounded-lg shadow-sm"
             />
           </div>
         ) : (

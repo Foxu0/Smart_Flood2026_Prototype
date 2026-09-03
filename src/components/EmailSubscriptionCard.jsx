@@ -133,7 +133,7 @@ export default function EmailSubscriptionCard({ onNotification }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-3.5 transition-all card-enter">
+    <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-3.5 transition-all card-enter min-w-0 w-full overflow-hidden">
       {/* Card Header */}
       <div className="flex items-center justify-between border-b border-[#f1f5f6] pb-2.5">
         <div className="flex items-center gap-2">
@@ -267,11 +267,11 @@ export default function EmailSubscriptionCard({ onNotification }) {
               <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6d818d] mb-1">
                 Alert Sensitivity
               </label>
-              <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
                 <button
                   type="button"
                   onClick={() => setMinAlertLevel(2)}
-                  className={`py-1.5 px-2 rounded-lg border text-left flex items-center gap-1.5 transition ${
+                  className={`py-1.5 px-2 rounded-lg border text-left flex items-center gap-1.5 transition min-w-0 ${
                     minAlertLevel === 2
                       ? 'bg-[#2b6e8f]/10 border-[#2b6e8f] text-[#2b6e8f] font-bold'
                       : 'bg-[#f8fafc] border-[#e2e8f0] text-[#64748b]'
@@ -283,7 +283,7 @@ export default function EmailSubscriptionCard({ onNotification }) {
                 <button
                   type="button"
                   onClick={() => setMinAlertLevel(1)}
-                  className={`py-1.5 px-2 rounded-lg border text-left flex items-center gap-1.5 transition ${
+                  className={`py-1.5 px-2 rounded-lg border text-left flex items-center gap-1.5 transition min-w-0 ${
                     minAlertLevel === 1
                       ? 'bg-[#2b6e8f]/10 border-[#2b6e8f] text-[#2b6e8f] font-bold'
                       : 'bg-[#f8fafc] border-[#e2e8f0] text-[#64748b]'
