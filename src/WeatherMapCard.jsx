@@ -351,9 +351,17 @@ export default function WeatherMapCard({ severity = 0 }) {
             attributionControl={false}
           >
             <MapViewController mapViewMode={mapViewMode} />
+            {/* Base: Esri World Imagery (satellite) — free, no API key required */}
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
               maxZoom={19}
+              attribution="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+            />
+            {/* Labels overlay on top of satellite */}
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+              opacity={0.6}
             />
             <RadarLayer path={activePath} opacity={0.70} />
           </MapContainer>
