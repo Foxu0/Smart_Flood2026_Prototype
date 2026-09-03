@@ -1,26 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, CheckCircle2, AlertTriangle, Send, Loader2, ShieldAlert, Sparkles } from 'lucide-react';
+import { Mail, CheckCircle2, Send, Loader2, Sparkles } from 'lucide-react';
 import { API_BASE_URL } from '../config.js';
 
-const ANTIPOLO_BARANGAYS = [
-  'Mayamot',
-  'Mambugan',
-  'Cupang',
-  'Dela Paz',
-  'San Roque',
-  'Bagong Nayon',
-  'Dalig',
-  'Sta. Cruz',
-  'Beverly Hills',
-  'San Jose',
-  'San Isidro',
-];
+
 
 export default function EmailSubscriptionCard({ onNotification }) {
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
-  const [barangay, setBarangay] = useState('Mayamot');
-  const [minAlertLevel, setMinAlertLevel] = useState(2);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [subscribedUser, setSubscribedUser] = useState(null);
@@ -57,11 +43,11 @@ export default function EmailSubscriptionCard({ onNotification }) {
         body: JSON.stringify({
           email,
           fullName,
-          barangay,
-          minAlertLevel,
+          minAlertLevel: 2,
           subscriberRole: 'RESIDENT',
         }),
       });
+
 
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -162,10 +148,7 @@ export default function EmailSubscriptionCard({ onNotification }) {
                 {subscribedUser.fullName ? `${subscribedUser.fullName} (${subscribedUser.email})` : subscribedUser.email}
               </p>
               <p className="text-[10px] text-[#6d818d] mt-0.5">
-                Monitoring Barangay: <strong>{subscribedUser.barangay}</strong> • Filter:{' '}
-                <span className="text-[#2b6e8f] font-semibold">
-                  {subscribedUser.minAlertLevel === 1 ? 'All Advisories (L1+)' : 'Warning & Danger (L2+)'}
-                </span>
+                Subscribed for Warning & Danger alerts (Level 2+)
               </p>
             </div>
           </div>
@@ -231,68 +214,17 @@ export default function EmailSubscriptionCard({ onNotification }) {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6d818d] mb-1">
-                  Name (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Juan Dela Cruz"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl bg-[#f8fafc] border border-[#d9e2ec] focus:outline-none focus:ring-2 focus:ring-[#2b6e8f] text-[#123a54] placeholder-gray-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6d818d] mb-1">
-                  Barangay
-                </label>
-                <select
-                  value={barangay}
-                  onChange={(e) => setBarangay(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl bg-[#f8fafc] border border-[#d9e2ec] focus:outline-none focus:ring-2 focus:ring-[#2b6e8f] text-[#123a54]"
-                >
-                  {ANTIPOLO_BARANGAYS.map((b) => (
-                    <option key={b} value={b}>
-                      Brgy. {b}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6d818d] mb-1">
-                Alert Sensitivity
+                Name (Optional)
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => setMinAlertLevel(2)}
-                  className={`py-1.5 px-2 rounded-lg border text-left flex items-center gap-1.5 transition min-w-0 ${
-                    minAlertLevel === 2
-                      ? 'bg-[#2b6e8f]/10 border-[#2b6e8f] text-[#2b6e8f] font-bold'
-                      : 'bg-[#f8fafc] border-[#e2e8f0] text-[#64748b]'
-                  }`}
-                >
-                  <ShieldAlert size={12} className="flex-shrink-0" />
-                  <span className="truncate">Level 2+ (Alarms only)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMinAlertLevel(1)}
-                  className={`py-1.5 px-2 rounded-lg border text-left flex items-center gap-1.5 transition min-w-0 ${
-                    minAlertLevel === 1
-                      ? 'bg-[#2b6e8f]/10 border-[#2b6e8f] text-[#2b6e8f] font-bold'
-                      : 'bg-[#f8fafc] border-[#e2e8f0] text-[#64748b]'
-                  }`}
-                >
-                  <AlertTriangle size={12} className="flex-shrink-0" />
-                  <span className="truncate">Level 1+ (All Notices)</span>
-                </button>
-              </div>
+              <input
+                type="text"
+                placeholder="Juan Dela Cruz"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full text-xs px-3 py-2 rounded-xl bg-[#f8fafc] border border-[#d9e2ec] focus:outline-none focus:ring-2 focus:ring-[#2b6e8f] text-[#123a54] placeholder-gray-400"
+              />
             </div>
           </div>
 
