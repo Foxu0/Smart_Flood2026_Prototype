@@ -463,10 +463,10 @@ export default function PublicPortal() {
   return (
     <div className="min-h-screen w-full font-sans text-[#3f5361] py-0 md:py-6 px-0 sm:px-3 md:px-6 lg:px-8 xl:px-12 flex flex-col justify-start items-center">
 
-      <div className="w-full max-w-7xl shadow-2xl rounded-none md:rounded-[28px] border-none overflow-hidden min-h-screen md:min-h-0">
+      <div className="w-full max-w-7xl shadow-2xl rounded-none md:rounded-[28px] border-none min-h-screen md:min-h-0">
 
         {/* ── HEADER ─────────────────────────────────────────────────────── */}
-        <header className="bg-gradient-to-r from-[#123a54] to-[#1f6f94] text-white">
+        <header className="bg-gradient-to-r from-[#123a54] to-[#1f6f94] text-white md:rounded-t-[28px]">
           <div className="max-w-full px-3 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 sm:gap-4 text-center sm:text-left flex-wrap justify-center sm:justify-start">
               <img src="/PUBMAT3.png" alt="SmartFlood Logo"
@@ -737,7 +737,7 @@ export default function PublicPortal() {
         </main>
 
         {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-        <footer className="bg-gradient-to-r from-[#123a54] to-[#1f6f94] text-sky-200/90 text-center text-[10px] sm:text-xs py-3.5 px-4 flex items-center justify-between gap-2 flex-wrap border-t border-white/10">
+        <footer className="bg-gradient-to-r from-[#123a54] to-[#1f6f94] text-sky-200/90 text-center text-[10px] sm:text-xs py-3.5 px-4 flex items-center justify-between gap-2 flex-wrap border-t border-white/10 md:rounded-b-[28px]">
           <div className="flex items-center gap-2">
             <img src="/PUBMAT3.png" alt="logo" className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white p-0.5" />
             <span>Smart Flood · Real-Time Monitoring &amp; Early Warning System · Capstone 2026</span>
