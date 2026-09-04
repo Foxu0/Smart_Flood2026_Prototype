@@ -463,7 +463,7 @@ export default function PublicPortal() {
   return (
     <div className="min-h-screen w-full font-sans text-[#3f5361] py-0 md:py-6 px-0 sm:px-3 md:px-6 lg:px-8 xl:px-12 flex flex-col justify-start items-center">
 
-      <div className="w-full max-w-7xl bg-[#123a54] backdrop-blur-xl shadow-2xl rounded-none md:rounded-[28px] border-none overflow-hidden min-h-screen md:min-h-0">
+      <div className="w-full max-w-7xl bg-[#123a54]/70 backdrop-blur-xl shadow-2xl rounded-none md:rounded-[28px] border-none overflow-hidden min-h-screen md:min-h-0">
 
         {/* ── HEADER ─────────────────────────────────────────────────────── */}
         <header className="bg-gradient-to-r from-[#123a54] to-[#1f6f94] text-white">
@@ -546,7 +546,7 @@ export default function PublicPortal() {
         </header>
 
         {/* ── MAIN GRID LAYOUT ────────────────────────────────────────────── */}
-        <main className="bg-[#f4f7f8] px-3 sm:px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <main className="bg-[#f4f7f8]/75 backdrop-blur-sm px-3 sm:px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
 
           {/* LEFT COLUMN: Hero Status, Water Gauge, Metrics & Safety Guidelines (7/12 width) */}
           <div className="lg:col-span-7 min-w-0 w-full flex flex-col justify-start space-y-4">
