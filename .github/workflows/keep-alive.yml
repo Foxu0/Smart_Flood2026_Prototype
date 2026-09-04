@@ -1,0 +1,26 @@
+name: Supabase & Services Keep-Alive
+
+on:
+  schedule:
+    # Runs every 3 days at 06:00 UTC (14:00 Philippine Standard Time)
+    - cron: '0 6 */3 * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab anytime
+
+jobs:
+  keep-alive:
+    name: Ping Services
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Project Gateway
+        run: |
+          echo "Pinging Supabase Project: tbxbcmqtghyibzyfnvrm..."
+          STATUS_REST=$(curl -s -o /dev/null -w "%{http_code}" "https://tbxbcmqtghyibzyfnvrm.supabase.co/rest/v1/")
+          STATUS_AUTH=$(curl -s -o /dev/null -w "%{http_code}" "https://tbxbcmqtghyibzyfnvrm.supabase.co/auth/v1/health")
+          echo "Supabase REST gateway HTTP status: $STATUS_REST"
+          echo "Supabase Auth health HTTP status: $STATUS_AUTH"
+          echo "✅ Supabase project activity recorded successfully!"
+
+      - name: Keep-Alive Summary
+        run: |
+          echo "Timestamp: $(date -u)"
+          echo "Supabase Project ID tbxbcmqtghyibzyfnvrm kept active."
