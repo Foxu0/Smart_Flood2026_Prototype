@@ -59,20 +59,6 @@ model SystemSetting {
   @@map("system_settings")
 }
 
-model PushSubscription {
-  id           Int              @id @default(autoincrement())
-  endpoint     String           @unique
-  p256dh       String
-  auth         String
-  createdAt    DateTime         @default(now()) @map("created_at")
-
-  subscriberId Int?             @map("subscriber_id")
-  subscriber   EmailSubscriber? @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
-
-  @@index([subscriberId])
-  @@map("push_subscriptions")
-}
-
 model EmailSubscriber {
   id                Int                @id @default(autoincrement())
   email             String             @unique
@@ -87,7 +73,6 @@ model EmailSubscriber {
   updatedAt         DateTime           @updatedAt @map("updated_at")
 
   dispatchLogs      EmailDispatchLog[]
-  pushSubscriptions PushSubscription[]
 
   @@index([status, minAlertLevel, barangay])
   @@map("email_subscribers")

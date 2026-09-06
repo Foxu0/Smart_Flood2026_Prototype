@@ -8,7 +8,6 @@ import eventsRouter from './routes/events.js';
 import controlRouter from './routes/control.js';
 import settingsRouter from './routes/settings.js';
 import weatherRouter from './routes/weather.js';
-import notificationsRouter from './routes/notifications.js';
 import subscribersRouter from './routes/subscribers.js';
 import testRouter from './routes/testRoutes.js';
 import { startWeatherPoller } from './services/weatherService.js';
@@ -57,7 +56,6 @@ app.use('/api/v1/events', eventsRouter);
 app.use('/api/v1/control', controlRouter);
 app.use('/api/v1/settings', settingsRouter);
 app.use('/api/v1/weather', weatherRouter);
-app.use('/api/v1/notifications', notificationsRouter);
 app.use('/api/v1/subscribers', subscribersRouter);
 app.use('/api/v1/test', testRouter);
 

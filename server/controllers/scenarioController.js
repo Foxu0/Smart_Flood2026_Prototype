@@ -5,7 +5,6 @@ import { prisma } from '../db.js';
 import { recordPrediction, recordActualAndEvaluate, getEvaluationMetrics } from '../services/aiEvaluationService.js';
 import { buildHistoryBuffer, getPrediction } from '../services/dlService.js';
 import { broadcast } from '../websocket.js';
-import { broadcastPushAlert } from '../services/webpushService.js';
 import { broadcastEmailAlert } from '../services/emailService.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -206,15 +205,8 @@ export async function runScenario(req, res) {
       broadcast({ type: 'ALERT_STATUS', data: alertStatus });
       broadcast({ type: 'AI_EVALUATION', data: getEvaluationMetrics() });
 
-      // Trigger Web Push alert on Level 2+
+      // Trigger Email alert on Level 2+
       if (alertStatus.level >= 2) {
-        broadcastPushAlert({
-          title: alertStatus.level === 3 ? '🚨 LEVEL 3 EMERGENCY ALERT' : '⚠️ LEVEL 2 WARNING ALARM',
-          body: `WARNING: Water level reached ${water_level_m.toFixed(2)}m in Antipolo during test scenario.`,
-          level: alertStatus.level,
-          url: '/',
-        }).catch(() => {});
-
         broadcastEmailAlert({
           title: alertStatus.level === 3 ? '🚨 LEVEL 3 EMERGENCY ALERT' : '⚠️ LEVEL 2 WARNING ALARM',
           message: `WARNING: Water level reached ${water_level_m.toFixed(2)}m in Antipolo during simulated scenario.`,
