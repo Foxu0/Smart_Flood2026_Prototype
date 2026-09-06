@@ -3,7 +3,7 @@ import {
   AlertTriangle, CheckCircle2, Info, CloudRain,
   Droplets, Phone, MapPin, ChevronDown, ChevronUp,
   Zap, Shield, Waves, Radio, Timer, Lock, ArrowRight,
-  HelpCircle, Compass, LifeBuoy, ExternalLink, Mail
+  HelpCircle, Compass, LifeBuoy, ExternalLink
 } from 'lucide-react';
 import RainOverlay from '../RainOverlay.jsx';
 import WeatherMapCard from '../WeatherMapCard.jsx';
@@ -391,15 +391,7 @@ export default function PublicPortal() {
                 {wsConnected ? 'LIVE WS' : 'CONNECTING WS'}
               </div>
 
-              {/* Email Alert Quick Button */}
-              <a
-                href="#email-alerts"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-sky-500/25 border border-sky-400/50 text-sky-200 hover:bg-sky-500/40 active:scale-95 transition-all shadow-sm cursor-pointer"
-                title="Register for Flood Warning Email Alerts"
-              >
-                <Mail size={13} />
-                <span>Email Alerts</span>
-              </a>
+
 
               {/* Local Clock */}
               <div className="text-right hidden sm:block">
