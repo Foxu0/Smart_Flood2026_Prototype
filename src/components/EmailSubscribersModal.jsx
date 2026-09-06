@@ -1,29 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
-  X, Mail, Users, Send, AlertTriangle,
-  Trash2, Search, Loader2, ShieldAlert, Radio, RefreshCw, ExternalLink
+  X, Mail, Users, Radio,
+  Trash2, Search, RefreshCw
 } from 'lucide-react';
 import { API_BASE_URL } from '../config.js';
 
 export default function EmailSubscribersModal({ isOpen, onClose, onNotification }) {
-  const [activeTab, setActiveTab] = useState('directory'); // directory | test | broadcasts
+  const [activeTab, setActiveTab] = useState('directory'); // directory | broadcasts
   const [subscribers, setSubscribers] = useState([]);
   const [stats, setStats] = useState({ total: 0, active: 0, unsubscribed: 0, byBarangay: {} });
   const [broadcasts, setBroadcasts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // Test Email form state
-  const [testEmail, setTestEmail] = useState('');
-  const [testLevel, setTestLevel] = useState(2);
-  const [sendingTest, setSendingTest] = useState(false);
-  const [testResult, setTestResult] = useState(null);
-
-  // Manual broadcast state
-  const [manualTitle, setManualTitle] = useState('⚠️ MANUAL FLOOD ADVISORY');
-  const [manualMsg, setManualMsg] = useState('CDRRMO flood warning: Rapid river rise detected.');
-  const [manualLevel, setManualLevel] = useState(2);
-  const [broadcasting, setBroadcasting] = useState(false);
 
   // Auth header helper
   const getAuthHeader = () => ({
@@ -97,68 +85,6 @@ export default function EmailSubscribersModal({ isOpen, onClose, onNotification 
     }
   };
 
-  const handleSendTestEmail = async (e) => {
-    e.preventDefault();
-    if (!testEmail) return;
-
-    setSendingTest(true);
-    setTestResult(null);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/subscribers/test-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toEmail: testEmail, level: testLevel }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTestResult({
-          success: true,
-          msg: `Dispatched Level ${testLevel} test email to ${testEmail}!`,
-          previewUrl: data.data?.previewUrl,
-          isEthereal: data.data?.isEthereal,
-        });
-        if (onNotification) onNotification({ type: 'weather', msg: `Test alert email sent to ${testEmail}` });
-      } else {
-        throw new Error(data.error || 'Failed to dispatch test email.');
-      }
-    } catch (err) {
-      setTestResult({ success: false, msg: err.message });
-    } finally {
-      setSendingTest(false);
-    }
-  };
-
-  const handleManualBroadcast = async (e) => {
-    e.preventDefault();
-    if (!window.confirm(`Broadcast Level ${manualLevel} email alert to ALL ${stats.active} active subscribers?`)) return;
-
-    setBroadcasting(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/subscribers/broadcast`, {
-        method: 'POST',
-        headers: getAuthHeader(),
-        body: JSON.stringify({
-          title: manualTitle,
-          message: manualMsg,
-          level: manualLevel,
-          waterLevelM: 1.55,
-          force: true,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        alert(`Alert broadcast sent! ${data.data.sent} sent, ${data.data.failed} failed.`);
-        fetchBroadcasts();
-        setActiveTab('broadcasts');
-      } else {
-        alert(data.error || 'Broadcast failed.');
-      }
-    } catch (err) {
-      alert('Error sending broadcast: ' + err.message);
-    } finally {
-      setBroadcasting(false);
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -203,7 +129,7 @@ export default function EmailSubscribersModal({ isOpen, onClose, onNotification 
         <div className="bg-[#f8fafc] p-4 sm:p-6 overflow-y-auto flex-1 space-y-5 font-sans">
           
           {/* Top Metric Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <div className="bg-white p-3 rounded-xl border border-[#e2e8f0] shadow-2xs">
               <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">Total Registered</span>
               <p className="text-xl font-bold text-[#0f172a] mt-0.5">{stats.total}</p>
@@ -216,19 +142,12 @@ export default function EmailSubscribersModal({ isOpen, onClose, onNotification 
               <span className="text-[10px] font-bold text-[#e0522f] uppercase tracking-wider">Unsubscribed</span>
               <p className="text-xl font-bold text-[#e0522f] mt-0.5">{stats.unsubscribed}</p>
             </div>
-            <div className="bg-white p-3 rounded-xl border border-[#e2e8f0] shadow-2xs">
-              <span className="text-[10px] font-bold text-[#2b6e8f] uppercase tracking-wider">Top Barangay</span>
-              <p className="text-base font-bold text-[#2b6e8f] mt-0.5 truncate">
-                {Object.keys(stats.byBarangay || {})[0] || 'Mayamot'}
-              </p>
-            </div>
           </div>
 
           {/* Tab Navigation */}
           <div className="flex border-b border-[#e2e8f0] gap-2">
             {[
               { id: 'directory', label: `Subscribers (${subscribers.length})`, icon: Users },
-              { id: 'test', label: 'Test Email & Broadcast', icon: Send },
               { id: 'broadcasts', label: `Broadcast Logs (${broadcasts.length})`, icon: Radio },
             ].map(({ id, label, icon: Icon }) => (
               <button
@@ -338,130 +257,7 @@ export default function EmailSubscribersModal({ isOpen, onClose, onNotification 
             </div>
           )}
 
-          {/* ── TAB 2: TEST & BROADCAST ───────────────────────────────────── */}
-          {activeTab === 'test' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Test Alert Dispatch Card */}
-              <div className="bg-white p-4 rounded-xl border border-[#e2e8f0] shadow-2xs space-y-3">
-                <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
-                  <Send size={15} className="text-[#2b6e8f]" />
-                  <h3 className="text-xs font-bold text-[#0f172a]">Send Test Warning Email</h3>
-                </div>
-                <form onSubmit={handleSendTestEmail} className="space-y-3">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-[#64748b] mb-1">
-                      Recipient Email
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="operator@antipolo.gov.ph"
-                      value={testEmail}
-                      onChange={(e) => setTestEmail(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 rounded-lg bg-[#f8fafc] border border-[#d9e2ec] focus:outline-none focus:ring-2 focus:ring-[#2b6e8f]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-[#64748b] mb-1">
-                      Test Alert Level
-                    </label>
-                    <select
-                      value={testLevel}
-                      onChange={(e) => setTestLevel(Number(e.target.value))}
-                      className="w-full text-xs px-3 py-1.5 rounded-lg bg-[#f8fafc] border border-[#d9e2ec]"
-                    >
-                      <option value={1}>Level 1: Advisory Watch</option>
-                      <option value={2}>Level 2: Siren Warning Alarm</option>
-                      <option value={3}>Level 3: Critical Evacuation</option>
-                    </select>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={sendingTest}
-                    className="w-full py-2 rounded-lg bg-[#2b6e8f] hover:bg-[#1f6f94] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-60"
-                  >
-                    {sendingTest ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-                    <span>{sendingTest ? 'Dispatching...' : 'Send Test Alert Email'}</span>
-                  </button>
-                </form>
 
-                {testResult && (
-                  <div
-                    className={`p-2.5 rounded-lg text-xs border ${
-                      testResult.success ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'
-                    }`}
-                  >
-                    <p className="font-semibold">{testResult.msg}</p>
-                    {testResult.previewUrl && (
-                      <a
-                        href={testResult.previewUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-1 inline-flex items-center gap-1 text-[11px] text-sky-600 underline font-semibold"
-                      >
-                        <ExternalLink size={11} /> Open Ethereal Test Email Preview
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Manual Operator Broadcast Card */}
-              <div className="bg-white p-4 rounded-xl border border-[#e2e8f0] shadow-2xs space-y-3">
-                <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
-                  <ShieldAlert size={15} className="text-[#e0522f]" />
-                  <h3 className="text-xs font-bold text-[#0f172a]">Live Operator Emergency Broadcast</h3>
-                </div>
-                <form onSubmit={handleManualBroadcast} className="space-y-3">
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-[#64748b] mb-1">
-                      Advisory Headline
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={manualTitle}
-                      onChange={(e) => setManualTitle(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 rounded-lg bg-[#f8fafc] border border-[#d9e2ec]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-[#64748b] mb-1">
-                      Message Body
-                    </label>
-                    <textarea
-                      rows={2}
-                      required
-                      value={manualMsg}
-                      onChange={(e) => setManualMsg(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 rounded-lg bg-[#f8fafc] border border-[#d9e2ec]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase text-[#64748b] mb-1">
-                      Severity Level
-                    </label>
-                    <select
-                      value={manualLevel}
-                      onChange={(e) => setManualLevel(Number(e.target.value))}
-                      className="w-full text-xs px-3 py-1.5 rounded-lg bg-[#f8fafc] border border-[#d9e2ec]"
-                    >
-                      <option value={2}>Level 2: Warning Alarm</option>
-                      <option value={3}>Level 3: Critical Danger / Evacuate</option>
-                    </select>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={broadcasting || stats.active === 0}
-                    className="w-full py-2 rounded-lg bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-60 shadow-sm"
-                  >
-                    {broadcasting ? <Loader2 size={13} className="animate-spin" /> : <AlertTriangle size={13} />}
-                    <span>{broadcasting ? 'Broadcasting...' : `Broadcast to ${stats.active} Subscribers`}</span>
-                  </button>
-                </form>
-              </div>
-            </div>
-          )}
 
           {/* ── TAB 3: BROADCAST HISTORY ─────────────────────────────────── */}
           {activeTab === 'broadcasts' && (
