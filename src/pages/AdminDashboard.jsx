@@ -663,8 +663,18 @@ export default function FloodMonitoringDashboard() {
             addLog(ev.severity === 'WARNING' || ev.severity === 'CRITICAL' ? 'alarm' : 'notice', ev.message);
           } else if (message.type === 'SIREN_CONTROL' && message.data) {
             const { sirenState } = message.data;
-            if (sirenState === 'ON' || sirenState === 'TEST') setSirenActive(true);
-            if (sirenState === 'OFF' || sirenState === 'MUTED') setSirenActive(false);
+            if (sirenState === 'ON' || sirenState === 'TEST') {
+              setSirenActive(true);
+              setManualOverride(false);
+            }
+            if (sirenState === 'MUTED') {
+              setSirenActive(false);
+              setManualOverride(true);
+            }
+            if (sirenState === 'OFF') {
+              setSirenActive(false);
+              setManualOverride(false);
+            }
           } else if (message.type === 'AI_EVALUATION' && message.data) {
             setAiMetrics(message.data);
           } else if (message.type === 'SCENARIO_PROGRESS' && message.data) {
@@ -711,10 +721,28 @@ export default function FloodMonitoringDashboard() {
     addLog('override', `A barangay official manually ${next ? 'turned ON' : 'turned OFF'} the alarm.`);
   };
 
+  const sendSirenControl = async (action, durationMs = 5000) => {
+    try {
+      const token = getToken();
+      if (!token) return;
+      await fetch(`${API_BASE_URL}/api/v1/control/siren`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action, durationMs }),
+      });
+    } catch (err) {
+      console.error('[Siren Control Error]', err);
+    }
+  };
+
   const testSiren = () => {
     setSirenActive(true);
     setManualOverride(false);
     addLog('system', 'TEST SIREN: Operator triggered a 5-second acoustic relay test.');
+    sendSirenControl('TEST', 5000);
     setTimeout(() => {
       if (telemetry.waterLevelM < thresholds.level2_alarm) {
         setSirenActive(false);
@@ -724,9 +752,21 @@ export default function FloodMonitoringDashboard() {
   };
 
   const muteSiren = () => {
-    setSirenActive(false);
-    setManualOverride(true);
-    addLog('override', 'MUTE ALARM: Operator silenced acoustic siren (Manual Override active).');
+    if (manualOverride) {
+      setManualOverride(false);
+      const shouldAlarm = telemetry.waterLevelM >= thresholds.level2_alarm;
+      setSirenActive(shouldAlarm);
+      addLog('override', shouldAlarm
+        ? 'UNMUTE ALARM: Operator unmuted siren (alarm active due to water level).'
+        : 'UNMUTE ALARM: Operator cleared manual mute override.'
+      );
+      sendSirenControl(shouldAlarm ? 'ENABLE' : 'DISABLE');
+    } else {
+      setSirenActive(false);
+      setManualOverride(true);
+      addLog('override', 'MUTE ALARM: Operator silenced acoustic siren (Manual Override active).');
+      sendSirenControl('MUTE');
+    }
   };
 
   // ── Keyboard shortcuts: T = test siren, M = mute ─────────────────────────
@@ -1339,9 +1379,12 @@ export default function FloodMonitoringDashboard() {
                   </button>
                   <button
                     onClick={muteSiren}
+                    title={manualOverride ? 'Click to unmute siren (M)' : 'Mute siren alarm (M)'}
                     className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition border hover:scale-[1.02] active:scale-95 ${
-                      sirenActive || manualOverride
-                        ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600 siren-shake'
+                      sirenActive && !manualOverride
+                        ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600'
+                        : manualOverride
+                        ? 'bg-gray-200 hover:bg-gray-300 text-[#123a54] border-gray-300'
                         : 'bg-gray-100 hover:bg-gray-200 text-[#3f5361] border-gray-300'
                     }`}
                   >
