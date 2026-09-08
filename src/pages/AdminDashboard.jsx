@@ -714,13 +714,6 @@ export default function FloodMonitoringDashboard() {
   const floodLevel = getFloodLevel(telemetry.waterLevelM, thresholds);
   const friendly = getFriendlyContent(floodLevel, telemetry, aiPrediction);
 
-  const toggleSiren = () => {
-    const next = !sirenActive;
-    setSirenActive(next);
-    setManualOverride(true);
-    addLog('override', `A barangay official manually ${next ? 'turned ON' : 'turned OFF'} the alarm.`);
-  };
-
   const sendSirenControl = async (action, durationMs = 5000) => {
     try {
       const token = getToken();
@@ -738,47 +731,46 @@ export default function FloodMonitoringDashboard() {
     }
   };
 
-  const testSiren = () => {
-    setSirenActive(true);
-    setManualOverride(false);
-    addLog('system', 'TEST SIREN: Operator triggered a 5-second acoustic relay test.');
-    sendSirenControl('TEST', 5000);
-    setTimeout(() => {
-      if (telemetry.waterLevelM < thresholds.level2_alarm) {
-        setSirenActive(false);
-        addLog('system', 'TEST SIREN: Test sequence completed automatically.');
-      }
-    }, 5000);
-  };
+  const testTimeoutRef = useRef(null);
 
-  const muteSiren = () => {
-    if (manualOverride) {
-      setManualOverride(false);
-      const shouldAlarm = telemetry.waterLevelM >= thresholds.level2_alarm;
-      setSirenActive(shouldAlarm);
-      addLog('override', shouldAlarm
-        ? 'UNMUTE ALARM: Operator unmuted siren (alarm active due to water level).'
-        : 'UNMUTE ALARM: Operator cleared manual mute override.'
-      );
-      sendSirenControl(shouldAlarm ? 'ENABLE' : 'DISABLE');
-    } else {
+  const toggleSiren = useCallback(() => {
+    if (sirenActive) {
+      if (testTimeoutRef.current) {
+        clearTimeout(testTimeoutRef.current);
+        testTimeoutRef.current = null;
+      }
       setSirenActive(false);
       setManualOverride(true);
       addLog('override', 'MUTE ALARM: Operator silenced acoustic siren (Manual Override active).');
       sendSirenControl('MUTE');
+    } else {
+      setSirenActive(true);
+      setManualOverride(false);
+      addLog('system', 'SIREN ACTIVATED: Operator manually triggered acoustic relay.');
+      sendSirenControl('ENABLE');
+      if (telemetry.waterLevelM < thresholds.level2_alarm) {
+        if (testTimeoutRef.current) clearTimeout(testTimeoutRef.current);
+        testTimeoutRef.current = setTimeout(() => {
+          setSirenActive(false);
+          addLog('system', 'SIREN TEST: 5-second relay test completed automatically.');
+          sendSirenControl('DISABLE');
+        }, 5000);
+      }
     }
-  };
+  }, [sirenActive, telemetry.waterLevelM, thresholds.level2_alarm]);
 
-  // ── Keyboard shortcuts: T = test siren, M = mute ─────────────────────────
+  // ── Keyboard shortcuts: S = toggle siren (also T / M) ───────────────────
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      if (e.key === 't' || e.key === 'T') testSiren();
-      if (e.key === 'm' || e.key === 'M') muteSiren();
+      if (e.key === 's' || e.key === 'S' || e.key === 't' || e.key === 'T' || e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        toggleSiren();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [toggleSiren]);
 
   // ── Toast when flood level rises ─────────────────────────────────────────
   const prevLevelIdRef = useRef(floodLevel.id);
@@ -1368,31 +1360,29 @@ export default function FloodMonitoringDashboard() {
                 <h3 className="text-xs font-bold text-[#123a54] mb-2 flex items-center gap-1.5">
                   <Volume2 size={14} className="text-[#e0522f]" /> Manual Siren Relay Override
                 </h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={testSiren}
-                    className="py-2 px-3 rounded-xl bg-[#2b6e8f] hover:bg-[#1f6f94] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition hover:scale-[1.02] active:scale-95"
-                  >
-                    <Volume2 size={13} />
-                    TEST SIREN
-                    <kbd className="text-[8px] bg-white/20 rounded px-1 ml-0.5">T</kbd>
-                  </button>
-                  <button
-                    onClick={muteSiren}
-                    title={manualOverride ? 'Click to unmute siren (M)' : 'Mute siren alarm (M)'}
-                    className={`py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition border hover:scale-[1.02] active:scale-95 ${
-                      sirenActive && !manualOverride
-                        ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-600'
-                        : manualOverride
-                        ? 'bg-gray-200 hover:bg-gray-300 text-[#123a54] border-gray-300'
-                        : 'bg-gray-100 hover:bg-gray-200 text-[#3f5361] border-gray-300'
-                    }`}
-                  >
-                    <VolumeX size={13} />
-                    {manualOverride ? 'SIREN MUTED' : 'MUTE ALARM'}
-                    <kbd className="text-[8px] bg-black/10 rounded px-1 ml-0.5">M</kbd>
-                  </button>
-                </div>
+                <button
+                  onClick={toggleSiren}
+                  title={sirenActive ? 'Click to silence siren relay (S)' : 'Click to test / activate siren relay (S)'}
+                  className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all border hover:scale-[1.01] active:scale-95 ${
+                    sirenActive
+                      ? 'bg-rose-600 hover:bg-rose-700 text-white border-rose-700'
+                      : 'bg-[#2b6e8f] hover:bg-[#1f6f94] text-white border-[#245e7b]'
+                  }`}
+                >
+                  {sirenActive ? (
+                    <>
+                      <VolumeX size={14} />
+                      <span>SIREN IS ACTIVE — CLICK TO SILENCE</span>
+                      <kbd className="text-[8px] bg-black/20 rounded px-1.5 py-0.5 ml-1">S</kbd>
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 size={14} />
+                      <span>TEST / ACTIVATE SIREN (TOGGLE ON)</span>
+                      <kbd className="text-[8px] bg-white/20 rounded px-1.5 py-0.5 ml-1">S</kbd>
+                    </>
+                  )}
+                </button>
               </div>
 
               {/* Reset Telemetry Data */}
