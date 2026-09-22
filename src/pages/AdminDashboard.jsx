@@ -173,7 +173,7 @@ export default function FloodMonitoringDashboard() {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3001/api/v1/auth/logout', {
+      await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
         method: 'POST',
         headers: getAuthHeader(),
       });
@@ -385,12 +385,10 @@ export default function FloodMonitoringDashboard() {
           const d = json.data;
           const level = parseFloat(d.water_level_m ?? 0.00);
           const dist = parseFloat(d.raw_distance_cm ?? Math.round((1.8 - level) * 100));
-          const rain = parseFloat(d.rainfall_rate ?? 0.0);
           setTelemetry(prev => ({
             ...prev,
             waterLevelM: level,
             waterDistanceCm: dist,
-            rainRateMmHr: rain,
             wifiRssi: parseInt(d.rssi_dbm ?? -65),
             gridVoltage: parseFloat(d.supply_voltage ?? 12.2),
           }));
@@ -523,7 +521,6 @@ export default function FloodMonitoringDashboard() {
             time: timeLabel,
             waterLevel: parseFloat(item.water_level_m),
             rawDistanceCm: parseFloat(item.raw_distance_cm),
-            rainfallRate: parseFloat(item.rainfall_rate),
             timestamp: item.timestamp,
           };
         });
@@ -627,7 +624,6 @@ export default function FloodMonitoringDashboard() {
             const d = message.data;
             const level = d.waterLevelM ?? d.water_level_m ?? d.waterLevel ?? 1.05;
             const dist = d.rawDistanceCm ?? d.raw_distance_cm ?? Math.round((1.8 - level) * 100);
-            const rain = d.rainfallRateMmh ?? d.rainfall_rate ?? d.rainfallRate ?? 0;
             const rssi = d.rssiDbm ?? d.rssi_dbm ?? -65;
             const voltage = d.supplyVoltageV ?? d.supply_voltage ?? d.batteryVoltage ?? 12.0;
 
@@ -635,7 +631,6 @@ export default function FloodMonitoringDashboard() {
               ...prev,
               waterLevelM: parseFloat(level),
               waterDistanceCm: parseFloat(dist),
-              rainRateMmHr: parseFloat(rain),
               wifiRssi: parseInt(rssi),
               gridVoltage: parseFloat(voltage),
             }));
@@ -1013,19 +1008,7 @@ export default function FloodMonitoringDashboard() {
                 delay={2}
                 variant="water"
               />
-              <AnimatedStatCard
-                icon={CloudRain}
-                label="Rainfall"
-                value={`${telemetry.rainRateMmHr.toFixed(1)} mm/h`}
-                numericValue={telemetry.rainRateMmHr}
-                decimals={1}
-                sub={rainDescription(telemetry.rainRateMmHr)}
-                bar={Math.min(100, (telemetry.rainRateMmHr / 60) * 100)}
-                color="#2b6e8f"
-                tooltip="Tipping bucket rain gauge — accumulated tips converted to mm/hr"
-                delay={3}
-                variant="rain"
-              />
+
               <AnimatedStatCard
                 icon={Cpu}
                 label="Station Health"

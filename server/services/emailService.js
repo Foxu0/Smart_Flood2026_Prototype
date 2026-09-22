@@ -75,13 +75,11 @@ function generateAlertEmailHtml({
   title,
   message,
   waterLevelM,
-  rainfallRateMmh,
   recipientName,
   unsubscribeUrl,
 }) {
   const pstTime = getFormattedPST();
   const waterStr = Number(waterLevelM || 0).toFixed(2);
-  const rainStr = Number(rainfallRateMmh || 0).toFixed(1);
 
   // Level Theme Configuration
   const theme = {
@@ -186,13 +184,9 @@ function generateAlertEmailHtml({
               <!-- Real-time Telemetry Metrics Table -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:24px; background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
                 <tr>
-                  <td width="50%" style="padding:16px; border-right:1px solid #e2e8f0; text-align:center;">
+                  <td style="padding:16px; text-align:center;">
                     <div style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:600; letter-spacing:0.5px;">Current Water Level</div>
                     <div style="font-size:24px; font-weight:800; color:${theme.color}; margin-top:4px;">${waterStr} <span style="font-size:14px; font-weight:600;">meters</span></div>
-                  </td>
-                  <td width="50%" style="padding:16px; text-align:center;">
-                    <div style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:600; letter-spacing:0.5px;">Rainfall Intensity</div>
-                    <div style="font-size:24px; font-weight:800; color:#0284c7; margin-top:4px;">${rainStr} <span style="font-size:14px; font-weight:600;">mm/h</span></div>
                   </td>
                 </tr>
               </table>
@@ -253,7 +247,6 @@ export async function broadcastEmailAlert({
   message,
   level = 2,
   waterLevelM = 0,
-  rainfallRateMmh = 0,
   source = 'AUTOMATED_SENSOR',
   force = false,
   triggerLogId = null,
@@ -290,7 +283,6 @@ export async function broadcastEmailAlert({
         title: title || `SmartFlood Alert Level ${level}`,
         message: message || 'Flood advisory issued for Lower Antipolo.',
         waterLevelM: Number(waterLevelM || 0),
-        rainfallRateMmh: rainfallRateMmh ? Number(rainfallRateMmh) : null,
         broadcastSource: source,
         triggerLogId: triggerLogId ? Number(triggerLogId) : null,
       },
@@ -317,7 +309,6 @@ export async function broadcastEmailAlert({
           title,
           message,
           waterLevelM,
-          rainfallRateMmh,
           recipientName: sub.fullName,
           unsubscribeUrl,
         });
@@ -396,7 +387,6 @@ export async function sendTestEmail({ toEmail, level = 2 }) {
     title: '🔔 SmartFlood System Test Alert',
     message: 'This is a test broadcast from the SmartFlood Early Warning System in Antipolo City. If you received this, your email notifications are properly configured.',
     waterLevelM: 1.48,
-    rainfallRateMmh: 35.0,
     recipientName: 'Valued Subscriber',
     unsubscribeUrl: `${appBaseUrl}/#email-alerts`,
   });

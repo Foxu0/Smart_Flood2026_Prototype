@@ -2,23 +2,19 @@
   "method": "minmax",
   "feature_order": [
     "water_level_m",
-    "rain_rate_mmh",
     "surge_velocity"
   ],
   "min": [
-    0.3148500919342041,
-    0.0,
-    -1.1485602855682373
+    0.3065374004726366,
+    -1.4045383424563846
   ],
   "max": [
-    3.5,
-    88.30110168457031,
-    1.7365379333496094
+    1.8529335553386717,
+    0.7850006815050685
   ],
   "range": [
-    3.185149908065796,
-    88.30110168457031,
-    2.8850982189178467
+    1.546396154866035,
+    2.189539023961453
   ],
   "target_source_feature": "water_level_m",
   "target_source_index": 0,
@@ -32,5 +28,6 @@
     6
   ],
   "timestep_minutes": 10,
-  "notes": "Apply x_norm = (x - min) / range per feature (order: water_level_m, rain_rate_mmh, surge_velocity) before running inference. Model output is normalized water level; invert with y = y_norm * range[0] + min[0] to recover meters."
+  "n_features": 2,
+  "notes": "Apply x_norm = (x - min) / range per feature (order: water_level_m, surge_velocity). rainfall_rate REMOVED per adviser instruction. Invert output: y = y_norm * range[0] + min[0]."
 }

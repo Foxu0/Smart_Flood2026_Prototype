@@ -63,8 +63,6 @@ export function broadcast(message) {
       timestamp: d.timestamp ?? d.recordedAt ?? new Date().toISOString(),
       waterLevelM: d.waterLevelM ?? d.water_level_m ?? 0.0,
       water_level_m: d.water_level_m ?? d.waterLevelM ?? 0.0,
-      rainfallRateMmh: d.rainfallRateMmh ?? d.rainfall_rate ?? 0.0,
-      rainfall_rate: d.rainfall_rate ?? d.rainfallRateMmh ?? 0.0,
       supplyVoltageV: d.supplyVoltageV ?? d.supply_voltage ?? 12.0,
       supply_voltage: d.supply_voltage ?? d.supplyVoltageV ?? 12.0,
       sensorStatus: d.sensorStatus ?? d.sensor_status ?? 'OK',

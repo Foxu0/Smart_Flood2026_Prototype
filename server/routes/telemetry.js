@@ -11,7 +11,6 @@ const router = express.Router();
 
 // ── Physical sensor constants ────────────────────────────────────────────────
 const MOUNT_HEIGHT_CM  = parseFloat(process.env.SENSOR_MOUNT_HEIGHT_CM  ?? 180);  // cm above riverbed
-const TIP_VOLUME_MM    = parseFloat(process.env.RAIN_TIP_VOLUME_MM      ?? 0.2);  // mm per tipping-bucket tip
 const BLIND_SPOT_CM    = parseFloat(process.env.SENSOR_BLIND_SPOT_CM    ?? 25);   // JSN-SR04T min range
 
 // ── Default alert thresholds (overridable via SystemSetting) ─────────────────
@@ -72,21 +71,7 @@ router.post('/', async (req, res) => {
       ? parseFloat(rawDistance)
       : parseFloat(((MOUNT_HEIGHT_CM - water_level_m * 100)).toFixed(1));
 
-    // ── 3. Compute rainfall rate ───────────────────────────────────────────
-    let rainfall_rate = 0;
-    const rainTipsDelta = body.rainTips ?? body.tip_count ?? 0;
-
-    if (body.rainfall_rate != null) {
-      rainfall_rate = parseFloat(body.rainfall_rate);
-    } else if (body.rainRate != null) {
-      rainfall_rate = parseFloat(body.rainRate);
-    } else if (rainTipsDelta > 0) {
-      // 1 tip = 0.2 mm. Standard 10-minute physical timestep = 600s
-      rainfall_rate = parseFloat(((rainTipsDelta * TIP_VOLUME_MM) * (3600 / 600)).toFixed(2));
-    }
-
-    // ── 4. Map remaining ESP32 fields ─────────────────────────────────────
-    const tip_count      = parseInt(body.rainTips        ?? body.tip_count      ?? 0);
+    // ── 3. Map remaining ESP32 fields ─────────────────────────────────────────
     const rssi_dbm       = parseInt(body.wifiRssi        ?? body.rssi_dbm       ?? -65);
     const supply_voltage = parseFloat(body.batteryVoltage ?? body.supply_voltage ?? body.batteryLevel ?? 12.0);
     const uptime_sec     = parseInt(body.uptime           ?? body.uptime_sec     ?? 0);
@@ -102,8 +87,6 @@ router.post('/', async (req, res) => {
       data: {
         waterLevelM: water_level_m,
         rawDistanceCm: raw_distance_cm,
-        rainfallRateMmh: rainfall_rate,
-        tipCount: tip_count,
         rssiDbm: rssi_dbm,
         supplyVoltageV: supply_voltage,
         uptimeSec: uptime_sec,
@@ -157,13 +140,13 @@ router.post('/', async (req, res) => {
       const recentLogs = await prisma.telemetryLog.findMany({
         orderBy: { recordedAt: 'desc' },
         take: 5,
-        select: { waterLevelM: true, rainfallRateMmh: true },
+        select: { waterLevelM: true },
       });
 
       // Combine: older records first, newest (current) last
       const chronological = [
-        ...([...recentLogs].map(r => ({ water_level_m: r.waterLevelM, rainfall_rate: r.rainfallRateMmh })).reverse()),
-        { water_level_m, rainfall_rate },
+        ...([...recentLogs].map(r => ({ water_level_m: r.waterLevelM })).reverse()),
+        { water_level_m },
       ];
 
       const historyBuffer = buildHistoryBuffer(chronological);
@@ -190,11 +173,9 @@ router.post('/', async (req, res) => {
       type: 'TELEMETRY',
       data: {
         ...log,
-        // Include computed & ESP32-native fields for frontend convenience
         relay_state,
         water_level_m,
         raw_distance_cm,
-        rainfall_rate,
         mount_height_cm: MOUNT_HEIGHT_CM,
         blind_spot_warning: sensor_status === 'BLIND_SPOT',
       },
@@ -216,8 +197,7 @@ router.post('/', async (req, res) => {
         title: alertTitle,
         message: alertBody,
         level: alertStatus.level,
-        waterLevelM,
-        rainfallRateMmh: rainfall_rate_mmh,
+        waterLevelM: water_level_m,
         source: 'AUTOMATED_SENSOR',
         triggerLogId: log.id,
       }).catch(err => console.error('[POST /telemetry] Email Alert error:', err.message));
@@ -281,7 +261,6 @@ router.get('/latest', async (req, res) => {
         timestamp: latest.recordedAt,
         water_level_m: latest.waterLevelM,
         raw_distance_cm: latest.rawDistanceCm,
-        rainfall_rate: latest.rainfallRateMmh,
         supply_voltage: latest.supplyVoltageV,
         sensor_status: latest.sensorStatus,
         surgeRate_m_per_hour,
@@ -329,7 +308,6 @@ router.get('/history', async (req, res) => {
       timestamp: row.recordedAt,
       water_level_m: row.waterLevelM,
       raw_distance_cm: row.rawDistanceCm,
-      rainfall_rate: row.rainfallRateMmh,
       supply_voltage: row.supplyVoltageV,
       sensor_status: row.sensorStatus,
     }));
@@ -360,12 +338,11 @@ router.get('/export/csv', async (req, res) => {
 
     const headers = [
       'id', 'recordedAt', 'waterLevelM', 'rawDistanceCm',
-      'rainfallRateMmh', 'tipCount', 'rssiDbm', 'supplyVoltageV',
-      'uptimeSec', 'sensorStatus',
+      'rssiDbm', 'supplyVoltageV', 'uptimeSec', 'sensorStatus',
     ];
 
     const csvRows = [
-      'ID,Recorded At,Water Level (m),Raw Distance (cm),Rainfall Rate (mm/h),Tip Count,RSSI (dBm),Supply Voltage (V),Uptime (s),Sensor Status',
+      'ID,Recorded At,Water Level (m),Raw Distance (cm),RSSI (dBm),Supply Voltage (V),Uptime (s),Sensor Status',
       ...logs.map((row) =>
         headers.map((h) => {
           const val = row[h];

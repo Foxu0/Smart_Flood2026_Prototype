@@ -55,10 +55,10 @@ async function getSession(ortModule) {
 // ── History Buffer Builder ───────────────────────────────────────────────────
 /**
  * Converts an array of TelemetryLog records (chronological, oldest-first)
- * into feature vectors: [water_level_m, rainfall_rate, surge_velocity]
+ * into feature vectors: [water_level_m, surge_velocity]
  *
- * @param {Array<{water_level_m: number, rainfall_rate: number}>} chronologicalLogs
- * @returns {Array<{water_level_m: number, rainfall_rate: number, surge_velocity: number}>}
+ * @param {Array<{water_level_m: number}>} chronologicalLogs
+ * @returns {Array<{water_level_m: number, surge_velocity: number}>}
  */
 export function buildHistoryBuffer(chronologicalLogs) {
   return chronologicalLogs.map((item, i) => {
@@ -71,7 +71,6 @@ export function buildHistoryBuffer(chronologicalLogs) {
     );
     return {
       water_level_m: item.water_level_m,
-      rainfall_rate:  item.rainfall_rate,
       surge_velocity,
     };
   });
@@ -94,7 +93,7 @@ export async function getPrediction(historyBuffer) {
 
   // Pad to exactly 6 timesteps (initialize with 0.35m dry baseline for cold-starts)
   const SEQ_LEN = 6;
-  const DEFAULT_BASELINE = { water_level_m: 0.35, rainfall_rate: 0.0, surge_velocity: 0.0 };
+  const DEFAULT_BASELINE = { water_level_m: 0.35, surge_velocity: 0.0 };
   const padded = Array(SEQ_LEN).fill(null).map((_, i) => {
     const offset = i - (SEQ_LEN - historyBuffer.length);
     return offset >= 0 ? historyBuffer[offset] : DEFAULT_BASELINE;
@@ -115,32 +114,28 @@ export async function getPrediction(historyBuffer) {
     if (session) {
       try {
         const scaler = getScalerParams();
-        const sequenceData = new Float32Array(SEQ_LEN * 3);
+        const sequenceData = new Float32Array(SEQ_LEN * 2);
 
-        // Populate tensor [1, 6, 3] with normalized inputs
+        // Populate tensor [1, 6, 2] with normalized inputs
         for (let i = 0; i < SEQ_LEN; i++) {
           const rawWL    = padded[i].water_level_m;
-          const rawRain  = padded[i].rainfall_rate;
           const rawSurge = padded[i].surge_velocity;
 
           let normWL    = rawWL;
-          let normRain  = rawRain;
           let normSurge = rawSurge;
 
           // Apply MinMax scaling if scaler_params.json is loaded
           if (scaler && scaler.min && scaler.range) {
             normWL    = (rawWL    - scaler.min[0]) / scaler.range[0];
-            normRain  = (rawRain  - scaler.min[1]) / scaler.range[1];
-            normSurge = (rawSurge - scaler.min[2]) / scaler.range[2];
+            normSurge = (rawSurge - scaler.min[1]) / scaler.range[1];
           }
 
-          sequenceData[i * 3 + 0] = normWL;
-          sequenceData[i * 3 + 1] = normRain;
-          sequenceData[i * 3 + 2] = normSurge;
+          sequenceData[i * 2 + 0] = normWL;
+          sequenceData[i * 2 + 1] = normSurge;
         }
 
         const inputName = session.inputNames[0] ?? 'input';
-        const tensor    = new ortModule.Tensor('float32', sequenceData, [1, SEQ_LEN, 3]);
+        const tensor    = new ortModule.Tensor('float32', sequenceData, [1, SEQ_LEN, 2]);
         const results   = await session.run({ [inputName]: tensor });
         const output    = results[session.outputNames[0] ?? 'output'].data;
 
@@ -172,14 +167,13 @@ export async function getPrediction(historyBuffer) {
 
   // ── Fallback Surge-Rate Math (if ONNX fails or is missing) ─────────────────
   if (methodUsed === 'SurgeRate_Fallback') {
-    const avgSurge  = current.surge_velocity;
-    const rainBoost = current.rainfall_rate > 10 ? 0.08 : 0.03;
+    const avgSurge = current.surge_velocity;
 
     predicted30m = parseFloat(
-      Math.min(3.5, Math.max(0, currentLevel + avgSurge * 0.5 + rainBoost)).toFixed(2)
+      Math.min(3.5, Math.max(0, currentLevel + avgSurge * 0.5 + 0.03)).toFixed(2)
     );
     predicted60m = parseFloat(
-      Math.min(3.5, Math.max(0, currentLevel + avgSurge * 1.0 + rainBoost * 2)).toFixed(2)
+      Math.min(3.5, Math.max(0, currentLevel + avgSurge * 1.0 + 0.06)).toFixed(2)
     );
     confidenceScore = 94.0;
     console.log(`[dlService] SurgeRate_Fallback → +30m: ${predicted30m}m  +60m: ${predicted60m}m`);
@@ -227,7 +221,6 @@ export async function runPredictionInference() {
 
     const chronological = [...logs].map(l => ({
       water_level_m: l.waterLevelM,
-      rainfall_rate: l.rainfallRateMmh,
     })).reverse();
     const historyBuffer = buildHistoryBuffer(chronological);
     return await getPrediction(historyBuffer);

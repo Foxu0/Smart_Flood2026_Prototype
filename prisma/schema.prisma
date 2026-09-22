@@ -11,8 +11,8 @@ model TelemetryLog {
   recordedAt      DateTime         @default(now()) @map("recorded_at")
   waterLevelM     Float            @map("water_level_m")
   rawDistanceCm   Float            @map("raw_distance_cm")
-  rainfallRateMmh Float            @map("rainfall_rate_mmh")
-  tipCount        Int              @map("tip_count")
+  rainfallRateMmh Float?           @map("rainfall_rate_mmh")  // Deprecated: kept nullable for legacy row compatibility
+  tipCount        Int?             @map("tip_count")           // Deprecated: tipping-bucket sensor removed
   rssiDbm         Int              @map("rssi_dbm")
   supplyVoltageV  Float            @map("supply_voltage_v")
   uptimeSec       Int              @map("uptime_sec")
@@ -85,7 +85,7 @@ model AlertBroadcast {
   title           String
   message         String
   waterLevelM     Float              @map("water_level_m")
-  rainfallRateMmh Float?             @map("rainfall_rate_mmh")
+  rainfallRateMmh Float?             @map("rainfall_rate_mmh")  // Deprecated: always null for new alerts
   broadcastSource String             @default("AUTOMATED_SENSOR") @map("broadcast_source")
 
   triggerLogId    Int?               @map("trigger_log_id")

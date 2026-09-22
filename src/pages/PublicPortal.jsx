@@ -211,19 +211,16 @@ export default function PublicPortal() {
           const d = json.data;
           const level = parseFloat(d.water_level_m ?? 0.00);
           const dist = parseFloat(d.raw_distance_cm ?? Math.round((1.8 - level) * 100));
-          const rain = parseFloat(d.rainfall_rate ?? 0.0);
           setTelemetry(prev => ({
             ...prev,
             waterLevelM: level,
             waterDistanceCm: dist,
-            rainRateMmHr: rain,
           }));
         } else if (json.success && json.data === null) {
           // Empty database — reset to 0.00m / 0 mm/h
           setTelemetry({
             waterLevelM: 0.00,
             waterDistanceCm: 180,
-            rainRateMmHr: 0.0,
           });
           setAiPrediction(prev => ({
             ...prev,
@@ -268,14 +265,12 @@ export default function PublicPortal() {
               ...prev,
               waterLevelM: parseFloat(d.water_level_m ?? d.waterLevel ?? prev.waterLevelM),
               waterDistanceCm: parseInt(d.water_distance_cm ?? d.waterDistanceCm ?? prev.waterDistanceCm),
-              rainRateMmHr: parseFloat(d.rainfall_rate ?? d.rainRateMmHr ?? prev.rainRateMmHr),
             }));
             resetSecondsAgo();
           } else if (msg.type === 'TEST_RESET' || msg.type === 'TELEMETRY_RESET') {
             setTelemetry({
               waterLevelM: 0.00,
               waterDistanceCm: 180,
-              rainRateMmHr: 0.0,
             });
             setAiPrediction({
               riskScore: 0,
@@ -322,7 +317,6 @@ export default function PublicPortal() {
             ...prev,
             waterLevelM: parseFloat(j.data.waterLevelM ?? j.data.water_level_m ?? 0.00),
             waterDistanceCm: parseInt(j.data.rawDistanceCm ?? j.data.water_distance_cm ?? 180),
-            rainRateMmHr: parseFloat(j.data.rainfallRateMmh ?? j.data.rainfall_rate ?? 0.0),
           }));
         }
       }).catch(() => {});
@@ -464,19 +458,7 @@ export default function PublicPortal() {
                 delay={2}
                 variant="water"
               />
-              <AnimatedStatCard
-                icon={CloudRain}
-                label="Rainfall Rate"
-                value={`${telemetry.rainRateMmHr.toFixed(1)} mm/h`}
-                numericValue={telemetry.rainRateMmHr}
-                decimals={1}
-                sub={rainDescription(telemetry.rainRateMmHr)}
-                bar={Math.min(100, (telemetry.rainRateMmHr / 60) * 100)}
-                color="#2b6e8f"
-                tooltip="Station rain gauge tip accumulation"
-                delay={3}
-                variant="rain"
-              />
+
               <AnimatedStatCard
                 icon={Zap}
                 label="AI Forecast (+30m)"

@@ -1,0 +1,157 @@
+<mxfile host="app.diagrams.net" modified="2026-09-08T12:00:00.000Z" agent="SmartFlood Capstone" version="24.7.5">
+  <diagram id="smartflood-site-directory" name="Smart Flood Site Directory">
+    <mxGraphModel dx="1600" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1300" background="#ffffff" math="0" shadow="0">
+      <root>
+                <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="card_home" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#f8fafc;strokeColor=#123a54;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="540" y="40" width="340" height="566" as="geometry" />
+    </mxCell>
+        <mxCell id="hdr_home" value="&lt;table style=&quot;width:100%;color:#ffffff;font-family:Helvetica;font-size:12px;font-weight:bold;&quot;&gt;&lt;tr&gt;&lt;td align=&quot;left&quot;&gt;🏠 Home (Public Citizen Portal - /)&lt;/td&gt;&lt;td align=&quot;right&quot; style=&quot;opacity:0.7;&quot;&gt;•••&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#123a54;fontColor=#ffffff;strokeColor=none;spacingLeft=6;spacingRight=6;" vertex="1" parent="card_home">
+      <mxGeometry x="8" y="8" width="324" height="32" as="geometry" />
+    </mxCell>
+        <mxCell id="sec_home_0" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10.5px;color:#123a54;&quot;&gt;Navbar / Header&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9px;color:#475569;line-height:1.2;&quot;&gt;System branding logo, live Philippine Standard Time (PST), and real-time WebSocket connectivity status.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_home">
+      <mxGeometry x="8" y="46" width="324" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="sec_home_1" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10.5px;color:#123a54;&quot;&gt;Hero Flood Status Section&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9px;color:#475569;line-height:1.2;&quot;&gt;Color-coded advisory card (Normal/Watch/Alarm/Danger), plain-language safety alert, and dynamic rain overlay.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_home">
+      <mxGeometry x="8" y="110" width="324" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="sec_home_2" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10.5px;color:#123a54;&quot;&gt;Sensor Stage &amp; AI Projection&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9px;color:#475569;line-height:1.2;&quot;&gt;Current water level (m), 30-min forecast, 60-min LSTM horizon, confidence score (%), and flood risk meter.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_home">
+      <mxGeometry x="8" y="174" width="324" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="sec_home_3" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10.5px;color:#123a54;&quot;&gt;Virtual Water Tank Gauge&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9px;color:#475569;line-height:1.2;&quot;&gt;SVG cutaway tank twin with wave animation, bubbles, physical cantilever height, and crest threshold limits.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_home">
+      <mxGeometry x="8" y="238" width="324" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="sec_home_4" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10.5px;color:#123a54;&quot;&gt;24-Hour Telemetry Graphs&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9px;color:#475569;line-height:1.2;&quot;&gt;Interactive sparkline trend plots tracking water level fluctuations and rainfall precipitation rate (mm/h).&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_home">
+      <mxGeometry x="8" y="302" width="324" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="sec_home_5" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10.5px;color:#123a54;&quot;&gt;Community Activity Feed&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9px;color:#475569;line-height:1.2;&quot;&gt;Chronological audit-logged stream of automated events, siren activations, and threshold triggers.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_home">
+      <mxGeometry x="8" y="366" width="324" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="sec_home_6" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10.5px;color:#123a54;&quot;&gt;Doppler Radar Weather Map&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9px;color:#475569;line-height:1.2;&quot;&gt;Dynamic Leaflet map featuring RainViewer Doppler radar loop overlay, sensor coordinates, and severity beacon.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_home">
+      <mxGeometry x="8" y="430" width="324" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="sec_home_7" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10.5px;color:#123a54;&quot;&gt;System Footer Section&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9px;color:#475569;line-height:1.2;&quot;&gt;Attribution to Capstone 2026, data disclaimer modal launcher, and discreet EOC operator portal link.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_home">
+      <mxGeometry x="8" y="494" width="324" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_login" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=1.5;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="55" y="660" width="310" height="310" as="geometry" />
+    </mxCell>
+        <mxCell id="card_login_hdr" value="&lt;table style=&quot;width:100%;color:#ffffff;font-family:Helvetica;font-size:11px;font-weight:bold;&quot;&gt;&lt;tr&gt;&lt;td align=&quot;left&quot;&gt;🔐 Operator Access Guard (/admin)&lt;/td&gt;&lt;td align=&quot;right&quot; style=&quot;opacity:0.7;&quot;&gt;•••&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#1f6f94;fontColor=#ffffff;strokeColor=none;spacingLeft=6;spacingRight=6;" vertex="1" parent="card_login">
+      <mxGeometry x="8" y="8" width="294" height="32" as="geometry" />
+    </mxCell>
+        <mxCell id="card_login_sec_0" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Modal Header Section&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Restricted EOC branding badge, official capstone logo, and access shield icon.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_login">
+      <mxGeometry x="8" y="46" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_login_sec_1" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Credential Input Form&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Operator username and password inputs with reveal toggle and shake feedback on error.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_login">
+      <mxGeometry x="8" y="110" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_login_sec_2" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Action &amp; Navigation Controls&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Access EOC Command Center login button and Return to Public Portal link.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_login">
+      <mxGeometry x="8" y="174" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_login_sec_3" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Security Notice Footer&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Formal restricted session warning for authorized barangay disaster officers.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_login">
+      <mxGeometry x="8" y="238" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_admin" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=1.5;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="390" y="660" width="310" height="502" as="geometry" />
+    </mxCell>
+        <mxCell id="card_admin_hdr" value="&lt;table style=&quot;width:100%;color:#ffffff;font-family:Helvetica;font-size:11px;font-weight:bold;&quot;&gt;&lt;tr&gt;&lt;td align=&quot;left&quot;&gt;⚙️ EOC Admin Command Center (/admin)&lt;/td&gt;&lt;td align=&quot;right&quot; style=&quot;opacity:0.7;&quot;&gt;•••&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#1f6f94;fontColor=#ffffff;strokeColor=none;spacingLeft=6;spacingRight=6;" vertex="1" parent="card_admin">
+      <mxGeometry x="8" y="8" width="294" height="32" as="geometry" />
+    </mxCell>
+        <mxCell id="card_admin_sec_0" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;EOC Command Header Bar&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Operator identity badge, persistent live WebSocket link, email alerts launcher, and logout.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_admin">
+      <mxGeometry x="8" y="46" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_admin_sec_1" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Administrative Status Banner&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Severity overview card, plain-language emergency advisory, and last-updated timer.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_admin">
+      <mxGeometry x="8" y="110" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_admin_sec_2" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Hardware Diagnostics Panel&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;ESP32 Wi-Fi RSSI, buck converter voltage, uptime, sensor distance, and rain tips.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_admin">
+      <mxGeometry x="8" y="174" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_admin_sec_3" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Alert Threshold Settings&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Interactive range sliders for Level 1, Level 2, and Level 3 with debounced auto-save.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_admin">
+      <mxGeometry x="8" y="238" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_admin_sec_4" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Manual Siren Relay Override&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Single responsive toggle button with automatic 5-second test safety cutoff.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_admin">
+      <mxGeometry x="8" y="302" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_admin_sec_5" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;AI Accuracy &amp; Storm Simulator&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Live ONNX LSTM MAE, RMSE, accuracy metrics, and 20-step synthetic storm cycle test.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_admin">
+      <mxGeometry x="8" y="366" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_admin_sec_6" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Database Telemetry Maintenance&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;One-click CSV log exporter and database purge button to reset sensor baseline.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_admin">
+      <mxGeometry x="8" y="430" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_email" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=1.5;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="725" y="660" width="310" height="310" as="geometry" />
+    </mxCell>
+        <mxCell id="card_email_hdr" value="&lt;table style=&quot;width:100%;color:#ffffff;font-family:Helvetica;font-size:11px;font-weight:bold;&quot;&gt;&lt;tr&gt;&lt;td align=&quot;left&quot;&gt;📧 Community Email Alerts Modal&lt;/td&gt;&lt;td align=&quot;right&quot; style=&quot;opacity:0.7;&quot;&gt;•••&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#2b6e8f;fontColor=#ffffff;strokeColor=none;spacingLeft=6;spacingRight=6;" vertex="1" parent="card_email">
+      <mxGeometry x="8" y="8" width="294" height="32" as="geometry" />
+    </mxCell>
+        <mxCell id="card_email_sec_0" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Modal Header &amp; Statistics&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Active community subscriber counter and broadcast status badge.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_email">
+      <mxGeometry x="8" y="46" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_email_sec_1" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Subscriber Directory Table&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Searchable registered resident email addresses with subscription timestamps.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_email">
+      <mxGeometry x="8" y="110" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_email_sec_2" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Emergency Composer Form&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Alert subject line, severity selector, and custom evacuation announcement body.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_email">
+      <mxGeometry x="8" y="174" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_email_sec_3" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Broadcast Dispatch Controls&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;Batch emergency email broadcast trigger with anti-spam cooldown protection.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_email">
+      <mxGeometry x="8" y="238" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_disclaimer" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=4;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=1.5;shadow=1;" vertex="1" parent="1">
+      <mxGeometry x="1060" y="660" width="310" height="310" as="geometry" />
+    </mxCell>
+        <mxCell id="card_disclaimer_hdr" value="&lt;table style=&quot;width:100%;color:#ffffff;font-family:Helvetica;font-size:11px;font-weight:bold;&quot;&gt;&lt;tr&gt;&lt;td align=&quot;left&quot;&gt;ℹ️ Data Sources &amp; Disclaimers Modal&lt;/td&gt;&lt;td align=&quot;right&quot; style=&quot;opacity:0.7;&quot;&gt;•••&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#2b6e8f;fontColor=#ffffff;strokeColor=none;spacingLeft=6;spacingRight=6;" vertex="1" parent="card_disclaimer">
+      <mxGeometry x="8" y="8" width="294" height="32" as="geometry" />
+    </mxCell>
+        <mxCell id="card_disclaimer_sec_0" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Modal Header Section&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;System transparency statement and Capstone academic disclaimer declaration.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_disclaimer">
+      <mxGeometry x="8" y="46" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_disclaimer_sec_1" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Meteorological Feeds Attribution&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;RainViewer Doppler radar integration and PAGASA weather feed disclosures.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_disclaimer">
+      <mxGeometry x="8" y="110" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_disclaimer_sec_2" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;Hardware Sensor Disclaimers&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;JSN-SR04T ultrasonic limits (25 cm blind spot limit) and cantilever overhang specs.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_disclaimer">
+      <mxGeometry x="8" y="174" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="card_disclaimer_sec_3" value="&lt;div style=&quot;text-align:left;font-family:Helvetica;&quot;&gt;&lt;b style=&quot;font-size:10px;color:#123a54;&quot;&gt;AI Predictive Model Disclosures&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:8.5px;color:#475569;line-height:1.2;&quot;&gt;LSTM 60-minute prediction confidence intervals and automated early warning liability.&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#ffffff;strokeColor=#cbd5e1;strokeWidth=1;align=left;verticalAlign=middle;spacingTop=2;spacingLeft=8;spacingRight=8;spacingBottom=2;" vertex="1" parent="card_disclaimer">
+      <mxGeometry x="8" y="238" width="294" height="56" as="geometry" />
+    </mxCell>
+        <mxCell id="conn_stem" value="" style="endArrow=none;html=1;rounded=0;strokeColor=#64748b;strokeWidth=2;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="710.0" y="606" as="sourcePoint" />
+        <mxPoint x="710.0" y="635" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+        <mxCell id="conn_bus" value="" style="endArrow=none;html=1;rounded=0;strokeColor=#64748b;strokeWidth=2;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="210.0" y="635" as="sourcePoint" />
+        <mxPoint x="1215.0" y="635" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+        <mxCell id="conn_drop_0" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#64748b;strokeWidth=2;endFill=1;endSize=5;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="210.0" y="635" as="sourcePoint" />
+        <mxPoint x="210.0" y="660" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+        <mxCell id="conn_drop_1" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#64748b;strokeWidth=2;endFill=1;endSize=5;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="545.0" y="635" as="sourcePoint" />
+        <mxPoint x="545.0" y="660" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+        <mxCell id="conn_drop_2" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#64748b;strokeWidth=2;endFill=1;endSize=5;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="880.0" y="635" as="sourcePoint" />
+        <mxPoint x="880.0" y="660" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+        <mxCell id="conn_drop_3" value="" style="endArrow=classic;html=1;rounded=0;strokeColor=#64748b;strokeWidth=2;endFill=1;endSize=5;" edge="1" parent="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1215.0" y="635" as="sourcePoint" />
+        <mxPoint x="1215.0" y="660" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

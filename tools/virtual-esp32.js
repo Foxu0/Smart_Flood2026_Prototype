@@ -39,8 +39,36 @@ let TARGET_URL = process.env.TELEMETRY_URL || RENDER_PROD_URL;
 const SENSOR_MOUNT_HEIGHT_CM = 180; // 1.80m above riverbed
 const TIP_VOLUME_MM = 0.2;          // 0.2mm per tip
 
-// System Uptime Tracker
-let systemUptimeSec = 300;
+/**
+ * ESP32 Telemetry Packet Synthesizer
+ * Converts stage height (m) into raw ultrasonic distance (cm)
+ * with Gaussian surface acoustic jitter.
+ */
+function synthesizeTelemetryPacket(waterLevelM) {
+  // Base raw distance in cm (mount height 180cm)
+  const baseDistance = SENSOR_MOUNT_HEIGHT_CM - (waterLevelM * 100);
+
+  // Gaussian surface acoustic chop jitter (±0.8 to 1.5 cm)
+  const acousticJitter = (Math.random() - 0.5) * 2.2;
+  let rawDistance = Math.round(baseDistance + acousticJitter);
+  rawDistance = Math.max(20, Math.min(180, rawDistance));
+
+  // Relay & Battery voltage dynamics (drops 0.3V when siren is energized)
+  const relayActive = waterLevelM >= 1.4;
+  const baseVoltage = 12.4 + (Math.random() * 0.3 - 0.15); // 12.4V ± 0.15V
+  const batteryVoltage = parseFloat((relayActive ? baseVoltage - 0.3 : baseVoltage).toFixed(2));
+  const wifiRssi = -58 + Math.floor(Math.random() * 9 - 4); // -58 ± 4 dBm
+
+  systemUptimeSec += 10;
+
+  return {
+    rawDistance,
+    batteryVoltage,
+    wifiRssi,
+    uptime: systemUptimeSec,
+    relayState: relayActive,
+  };
+}
 
 // ANSI Terminal Colors
 const C = {
@@ -127,7 +155,6 @@ async function sendTelemetry(packet, stepStr = '01/01', comment = '', delaySec =
     const logObj = data.log || data.data || {};
     const stageM = parseFloat(logObj.waterLevelM ?? logObj.water_level_m ?? (180 - packet.rawDistance) / 100).toFixed(2);
     const rawCm = logObj.rawDistanceCm ?? logObj.raw_distance_cm ?? packet.rawDistance;
-    const rainMm = parseFloat(logObj.rainfallRateMmh ?? logObj.rainfall_rate ?? (packet.rainTips * 1.2)).toFixed(1);
 
     const alertStatus = data.event?.event_code || data.eventTriggered?.event_type || data.alertStatus?.eventCode || (stageM >= 1.6 ? 'ALERT_L3' : stageM >= 1.4 ? 'ALERT_L2' : stageM >= 1.0 ? 'ALERT_L1' : 'NORMAL');
     const aiEval = data.aiEvaluation || {};
@@ -145,7 +172,6 @@ async function sendTelemetry(packet, stepStr = '01/01', comment = '', delaySec =
     console.log(
       `[Step ${stepStr}] (${delaySec.toFixed(1)}s tick) POST -> ${isOk ? `${C.green}${statusText}${C.reset}` : `${C.red}${res.status} ${res.statusText}${C.reset}`} | ` +
       `Stage: ${C.bold}${stageM}m${C.reset} (Raw: ${rawCm}cm) | ` +
-      `Rain: ${rainMm}mm/h | ` +
       `Status: ${statusColor}${alertStatus}${C.reset} | ` +
       `AI +30m: ${ai30m} (${aiConf}) | ` +
       `Siren: ${sirenText}` +
@@ -327,7 +353,7 @@ async function main() {
       const descVal = step.desc != null ? step.desc : step.comment;
       const delayMs = step.delay != null ? step.delay : 3000;
 
-      const packet = synthesizeTelemetryPacket(stageVal, step.rain);
+      const packet = synthesizeTelemetryPacket(stageVal);
       const stepStr = `${String(i + 1).padStart(2, '0')}/${String(dataset.length).padStart(2, '0')}`;
 
       await sendTelemetry(packet, stepStr, descVal, delayMs / 1000);
@@ -342,19 +368,13 @@ async function main() {
   if (choice === '4') {
     console.log(`\n🛰️  Starting Continuous Real-Time Stream (1 packet every 5s). Press Ctrl+C to stop.\n`);
     let stepCount = 1;
-    let currentLevel = 0.00;
-    let currentRain = 0;
+    let currentLevel = 0.35;
 
     while (true) {
-      // Small simulated organic fluctuation
-      currentRain = Math.max(0, Math.min(120, currentRain + (Math.random() * 10 - 5)));
-      if (currentRain > 20) {
-        currentLevel = Math.min(1.80, currentLevel + 0.04);
-      } else {
-        currentLevel = Math.max(0.00, currentLevel - 0.02);
-      }
+      // Organic baseflow fluctuation ±0.02m
+      currentLevel = Math.max(0.30, Math.min(1.80, currentLevel + (Math.random() * 0.04 - 0.02)));
 
-      const packet = synthesizeTelemetryPacket(currentLevel, currentRain);
+      const packet = synthesizeTelemetryPacket(currentLevel);
       const stepStr = String(stepCount).padStart(3, '0');
 
       await sendTelemetry(packet, stepStr, 'Live Real-Time Stream');
@@ -366,12 +386,10 @@ async function main() {
   if (choice === '5') {
     console.log(`\n✍️  Interactive Manual Mode\n`);
     const lvlStr = await askQuestion(`Enter Water Level in meters (e.g. 1.25): `);
-    const rainStr = await askQuestion(`Enter Rain Rate in mm/h (e.g. 45.0): `);
 
-    const waterLevelM = parseFloat(lvlStr) || 0.00;
-    const rainRateMmHr = parseFloat(rainStr) || 0.0;
+    const waterLevelM = parseFloat(lvlStr) || 0.35;
 
-    const packet = synthesizeTelemetryPacket(waterLevelM, rainRateMmHr);
+    const packet = synthesizeTelemetryPacket(waterLevelM);
     console.log(`\nSending Manual Telemetry Packet:`, packet);
     await sendTelemetry(packet, 'MANUAL', 'User Input');
 
