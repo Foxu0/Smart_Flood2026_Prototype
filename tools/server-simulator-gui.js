@@ -1,3 +1,22 @@
+/**
+ * SmartFlood 2026 — Virtual ESP32 Simulator Web Dashboard Server
+ *
+ * ⚠️  IMPORTANT DISCLAIMER — FOR DEVELOPMENT & TESTING USE ONLY
+ * ==============================================================================
+ * This file is a SOFTWARE DEVELOPMENT TOOL and is NOT part of the SmartFlood
+ * 2026 capstone project documentation, manuscript, or system submission.
+ *
+ * - It is NOT included in the Technical Specification, Architecture Diagrams,
+ *   or any chapter of the capstone paper.
+ * - It exists solely to serve the esp32-simulator-dashboard.html file locally
+ *   for backend API testing without physical hardware connected.
+ * - The real embedded firmware is written in C++/Arduino IDE and resides
+ *   separately in the microcontroller unit (not in this repository).
+ *
+ * DO NOT cite, reference, or submit this file as part of the project deliverable.
+ * ==============================================================================
+ */
+
 import http from 'http';
 import fs from 'fs';
 import path from 'path';

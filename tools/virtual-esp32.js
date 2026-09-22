@@ -8,6 +8,22 @@
  * (cm) and tipping-bucket pulses, streaming POST /api/v1/telemetry directly to
  * localhost or the Render cloud backend.
  * ==============================================================================
+ *
+ * ⚠️  IMPORTANT DISCLAIMER — FOR DEVELOPMENT & TESTING USE ONLY
+ * ==============================================================================
+ * This file is a SOFTWARE DEVELOPMENT TOOL and is NOT part of the SmartFlood
+ * 2026 capstone project documentation, manuscript, or system submission.
+ *
+ * - It does NOT represent the actual ESP32 microcontroller firmware.
+ * - It is NOT included in the Technical Specification, Architecture Diagrams,
+ *   or any chapter of the capstone paper.
+ * - It exists solely to allow backend API testing and live dashboard
+ *   demonstration without requiring physical hardware to be connected.
+ * - The real embedded firmware is written in C++/Arduino IDE and resides
+ *   separately in the microcontroller unit (not in this repository).
+ *
+ * DO NOT cite, reference, or submit this file as part of the project deliverable.
+ * ==============================================================================
  */
 
 import readline from 'readline';
