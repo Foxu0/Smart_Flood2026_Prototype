@@ -44,8 +44,8 @@ export default function SkeletonDashboard({ publicMode = false }) {
             </div>
 
             {/* STAT CARDS SKELETON */}
-            <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-3">
-              {[1, 2, 3].map(i => (
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2].map(i => (
                 <div key={i} className="bg-white rounded-2xl p-4 border border-[#e4edf0] shadow-sm space-y-3">
                   <div className="flex justify-between items-center">
                     <div className="h-3 w-16 bg-[#eef4f6] rounded shimmer" />

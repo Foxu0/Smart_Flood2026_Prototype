@@ -444,7 +444,7 @@ export default function PublicPortal() {
             </div>
 
             {/* ── STAT CARDS GRID ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <AnimatedStatCard
                 icon={Droplets}
                 label="Water Level"
