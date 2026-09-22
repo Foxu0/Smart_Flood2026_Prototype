@@ -2,8 +2,8 @@ name: Supabase & Services Keep-Alive
 
 on:
   schedule:
-    # Runs every 3 days at 06:00 UTC (14:00 Philippine Standard Time)
-    - cron: '0 6 */3 * *'
+    # Runs every 10 minutes to prevent Render free-tier backend from sleeping
+    - cron: '*/10 * * * *'
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab anytime
 
 jobs:
@@ -20,7 +20,28 @@ jobs:
           echo "Supabase Auth health HTTP status: $STATUS_AUTH"
           echo "✅ Supabase project activity recorded successfully!"
 
+      - name: Ping Backend API Server (Prevent Sleep)
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "⚠️  BACKEND_URL secret not set — skipping backend ping."
+            echo "   Add it in: GitHub → Settings → Secrets → Actions → New secret"
+            echo "   Name: BACKEND_URL"
+            echo "   Value: https://your-smartflood-api.onrender.com"
+            exit 0
+          fi
+          echo "Pinging SmartFlood Backend API: $BACKEND_URL ..."
+          STATUS_API=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$BACKEND_URL/api/v1/telemetry/latest")
+          echo "Backend API HTTP status: $STATUS_API"
+          if [ "$STATUS_API" -ge 200 ] && [ "$STATUS_API" -lt 500 ]; then
+            echo "✅ Backend server is awake and responding!"
+          else
+            echo "⚠️  Backend returned status $STATUS_API — it may be cold-starting. This is normal."
+          fi
+
       - name: Keep-Alive Summary
         run: |
           echo "Timestamp: $(date -u)"
           echo "Supabase Project ID tbxbcmqtghyibzyfnvrm kept active."
+          echo "Backend API pinged to prevent free-tier spin-down."
