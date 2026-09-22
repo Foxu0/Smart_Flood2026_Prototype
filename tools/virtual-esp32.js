@@ -13,15 +13,11 @@
 import readline from 'readline';
 
 // Default Target Endpoints
-let TARGET_URL = process.env.TELEMETRY_URL || 'http://localhost:5000/api/v1/telemetry';
-const RENDER_PROD_URL = 'https://smart-flood2026-prototype.onrender.com/api/v1/telemetry';
+const RENDER_PROD_URL   = 'https://smartflood-backend.onrender.com/api/v1/telemetry';
+const LOCALHOST_URL     = 'http://localhost:3001/api/v1/telemetry';
 
-// Auto-detect fallback port 3001 vs 5000 on startup
-try {
-  fetch('http://localhost:5000/api/v1/health').catch(() => {
-    if (!process.env.TELEMETRY_URL) TARGET_URL = 'http://localhost:3001/api/v1/telemetry';
-  });
-} catch { /* silent */ }
+// Default to Render production; override with env var or toggle option [6]
+let TARGET_URL = process.env.TELEMETRY_URL || RENDER_PROD_URL;
 
 // Physical Hardware Constants (matches SmartFlood_ESP32.ino)
 const SENSOR_MOUNT_HEIGHT_CM = 180; // 1.80m above riverbed
@@ -120,9 +116,10 @@ async function sendTelemetry(packet, stepStr = '01/01', comment = '', delaySec =
     const alertStatus = data.event?.event_code || data.eventTriggered?.event_type || data.alertStatus?.eventCode || (stageM >= 1.6 ? 'ALERT_L3' : stageM >= 1.4 ? 'ALERT_L2' : stageM >= 1.0 ? 'ALERT_L1' : 'NORMAL');
     const aiEval = data.aiEvaluation || {};
     const rawConf = aiEval.avgAccuracy_pct;
+    const ai30m = aiEval.forecast30min != null ? `${parseFloat(aiEval.forecast30min).toFixed(2)}m` : 'Evaluating...';
     const aiConf = typeof rawConf === 'number'
       ? `${rawConf.toFixed(1)}%`
-      : (projObj.confidenceScore ? `${projObj.confidenceScore.toFixed(1)}%` : 'Evaluating...');
+      : (aiEval.confidenceScore ? `${aiEval.confidenceScore.toFixed(1)}%` : 'Evaluating...');
     const sirenText = (packet.relayState || data.sirenActive || stageM >= 1.4) ? `${C.red}${C.bold}ON 🚨${C.reset}` : `${C.dim}OFF${C.reset}`;
 
     let statusColor = C.green;
@@ -278,7 +275,7 @@ async function main() {
   console.log(`[3] Scenario: Calm Dry Baseline with Ultrasonic Surface Ripples`);
   console.log(`[4] Continuous Real-Time Stream (Sends 1 packet every 5s indefinitely)`);
   console.log(`[5] Interactive Manual Mode (Enter custom water level & rain rate)`);
-  console.log(`[6] Toggle Target Server URL (Localhost vs Render Production)`);
+  console.log(`[6] Toggle Target Server URL (currently: ${TARGET_URL.includes('localhost') ? C.yellow + 'Localhost' : C.green + 'Render Production'}${C.reset})`);
   console.log(`[Q] Quit`);
   console.log(`==================================================`);
 
@@ -293,9 +290,12 @@ async function main() {
   if (choice === '6') {
     if (TARGET_URL.includes('localhost')) {
       TARGET_URL = RENDER_PROD_URL;
+      console.log(`\n✅ Switched to ${C.green}Render Production${C.reset}: ${RENDER_PROD_URL}\n`);
     } else {
-      TARGET_URL = 'http://localhost:5000/api/v1/telemetry';
+      TARGET_URL = LOCALHOST_URL;
+      console.log(`\n✅ Switched to ${C.yellow}Localhost${C.reset}: ${LOCALHOST_URL}\n`);
     }
+    await sleep(1500);
     return main();
   }
 
