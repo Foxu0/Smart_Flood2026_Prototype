@@ -328,9 +328,16 @@
           body: JSON.stringify(payload),
         });
 
-        const isOk = res.ok;
         let data = {};
         try { data = await res.json(); } catch {}
+
+        if (!res.ok) {
+          const errMsg = data.detail || data.error || res.statusText || 'Server error';
+          logMessage(`[POST HTTP ${res.status} FAILED] ${errMsg}`, 'text-red-400');
+          document.getElementById('lastHttpStatus').innerText = res.status + ' ERR';
+          document.getElementById('lastHttpStatus').className = 'text-lg font-bold font-mono text-red-400';
+          return;
+        }
 
         const logObj = data.log || data.data || {};
         const stageM = parseFloat(logObj.waterLevelM ?? logObj.water_level_m ?? waterLevelM).toFixed(2);
@@ -346,6 +353,7 @@
 
         // Update Server Response Inspector Card
         document.getElementById('lastHttpStatus').innerText = res.status + ' OK';
+        document.getElementById('lastHttpStatus').className = 'text-lg font-bold font-mono text-emerald-400';
         document.getElementById('respStage').innerText = stageM + ' m';
         document.getElementById('respAi30m').innerText = ai30m + ' m';
         document.getElementById('respAiConf').innerText = aiConf;

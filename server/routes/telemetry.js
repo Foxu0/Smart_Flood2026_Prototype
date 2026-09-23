@@ -83,10 +83,13 @@ router.post('/', async (req, res) => {
       : (body.sensor_status ?? body.sensorStatus ?? 'OK');
 
     // ── 6. Persist telemetry log ───────────────────────────────────────────
+    // Maintain backward-compatibility with DB schemas where rainfall fields were NOT NULL
     const log = await prisma.telemetryLog.create({
       data: {
         waterLevelM: water_level_m,
         rawDistanceCm: raw_distance_cm,
+        rainfallRateMmh: 0,
+        tipCount: 0,
         rssiDbm: rssi_dbm,
         supplyVoltageV: supply_voltage,
         uptimeSec: uptime_sec,

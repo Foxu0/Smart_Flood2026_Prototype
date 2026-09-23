@@ -283,6 +283,7 @@ export async function broadcastEmailAlert({
         title: title || `SmartFlood Alert Level ${level}`,
         message: message || 'Flood advisory issued for Lower Antipolo.',
         waterLevelM: Number(waterLevelM || 0),
+        rainfallRateMmh: 0,
         broadcastSource: source,
         triggerLogId: triggerLogId ? Number(triggerLogId) : null,
       },

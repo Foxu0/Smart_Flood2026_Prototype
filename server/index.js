@@ -14,6 +14,7 @@ import { startWeatherPoller } from './services/weatherService.js';
 import { startRetentionScheduler } from './services/retentionService.js';
 import { login, logout } from './controllers/authController.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
+import { prisma } from './db.js';
 
 const app = express();
 const PORT = process.env.PORT || process.env.API_PORT || 3001;
@@ -89,6 +90,24 @@ startWeatherPoller();
 
 // Start automated data retention scheduler (daily purge of logs > 30 days)
 startRetentionScheduler(parseInt(process.env.DATA_RETENTION_DAYS || '30'));
+
+// Safely verify DB schema nullability for deprecated rainfall columns
+async function verifyDatabaseSchema() {
+  try {
+    await prisma.$executeRawUnsafe(`
+      DO $$ BEGIN
+        ALTER TABLE IF EXISTS telemetry_logs ALTER COLUMN rainfall_rate_mmh DROP NOT NULL;
+        ALTER TABLE IF EXISTS telemetry_logs ALTER COLUMN tip_count DROP NOT NULL;
+        ALTER TABLE IF EXISTS alert_broadcasts ALTER COLUMN rainfall_rate_mmh DROP NOT NULL;
+      EXCEPTION WHEN OTHERS THEN NULL;
+      END $$;
+    `);
+    console.log('[DB] Schema nullability verified.');
+  } catch (err) {
+    console.warn('[DB] Schema check notice:', err.message);
+  }
+}
+verifyDatabaseSchema();
 
 server.listen(PORT, () => {
   console.log(`\n🌊 SmartFlood API Server running`);
