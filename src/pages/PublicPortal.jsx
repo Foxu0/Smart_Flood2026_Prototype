@@ -150,12 +150,13 @@ function AnimatedStatCard({ icon: Icon, label, value, numericValue, decimals = 1
 // ─── Emergency contacts data ──────────────────────────────────────────────────
 const EMERGENCY = {
   hotlines: [
-    { label: 'Antipolo CDRRMO',         number: '(02) 8475-5278', note: '24/7 Emergency Operations' },
-    { label: 'Antipolo City Hall',       number: '(02) 8475-0011', note: 'Main Trunkline' },
-    { label: 'PAGASA Weather Desk',     number: '(02) 8284-0800', note: 'National Forecast Desk' },
-    { label: 'NDRRMC Hotline',           number: '8911',           note: 'National Emergency Line' },
-    { label: 'PNP Antipolo Station',     number: '(02) 8697-0401', note: 'Police Hotline' },
-    { label: 'BFP Antipolo Rescue',      number: '(02) 8697-1240', note: 'Fire & Rescue Unit' },
+    { label: 'Antipolo CDRRMO (EOC)',    number: '(02) 8689-4564', note: '24/7 Operations: 8689-4564 / 0927-755-9911' },
+    { label: 'National Emergency Line',  number: '911',           note: '24/7 National Emergency & Rescue' },
+    { label: 'Antipolo City Hall',       number: '(02) 8689-4500', note: 'Government Center Trunkline' },
+    { label: 'PAGASA Weather Desk',     number: '(02) 8284-0800', note: 'DOST Weather Forecasting Center' },
+    { label: 'Antipolo Police (PNP)',    number: '(02) 8697-2409', note: 'Station Hotline / 0917-157-7627' },
+    { label: 'Antipolo Fire (BFP)',      number: '(02) 8871-2865', note: 'Central Station / 0945-155-6015' },
+    { label: 'Philippine Red Cross',     number: '143',            note: 'National Hotline / (02) 8635-0922' },
   ],
   shelters: [
     { name: 'Antipolo City Covered Court',          brgy: 'Dela Paz',    capacity: '500 Families',  elevation: 'High Ground' },
@@ -538,6 +539,9 @@ export default function PublicPortal() {
                           </a>
                         </div>
                       ))}
+                    </div>
+                    <div className="mt-2.5 pt-2 flex items-center justify-between text-[10px] text-[#6d818d] border-t border-[#f1f5f6]">
+                      <span>Source: City Government of Antipolo Official Emergency Directory (antipolo.ph) &amp; Antipolo CDRRMO EOC</span>
                     </div>
                   </div>
 

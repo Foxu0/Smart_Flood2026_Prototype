@@ -207,9 +207,12 @@ function generateAlertEmailHtml({
                   📞 Antipolo Emergency Assistance Numbers:
                 </div>
                 <div style="font-size:13px; color:#475569; line-height:1.6;">
-                  • <strong>Antipolo CDRRMO Operations Center:</strong> (02) 8696-9911<br>
+                  • <strong>Antipolo CDRRMO Operations Center:</strong> (02) 8689-4564 / 0927-755-9911<br>
                   • <strong>National Emergency Hotline:</strong> 911<br>
-                  • <strong>Philippine Red Cross Rizal:</strong> (02) 8660-8451
+                  • <strong>Philippine Red Cross:</strong> 143 / (02) 8635-0922
+                </div>
+                <div style="font-size:11px; color:#64748b; margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:6px;">
+                  Source: City Government of Antipolo Official Emergency Directory (antipolo.ph) &amp; Philippine Red Cross Rizal
                 </div>
               </div>
 

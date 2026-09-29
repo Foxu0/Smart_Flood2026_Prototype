@@ -141,18 +141,63 @@ export default function DataSourcesDisclaimerModal({ isOpen, onClose }) {
           <div className="space-y-2">
             <h3 className="text-[11px] font-bold text-[#123a54] uppercase tracking-wider flex items-center gap-1.5 border-b border-[#e2e8f0] pb-1.5">
               <Phone size={13} className="text-[#2b6e8f]" />
-              Emergency Contact Hotline Sources
+              Emergency Contact Hotline Sources &amp; Directory
             </h3>
-            <div className="bg-white p-2.5 rounded-xl border border-[#e2e8f0] shadow-xs space-y-1 text-[10px] text-[#506370]">
+            <div className="bg-white p-2.5 rounded-xl border border-[#e2e8f0] shadow-xs space-y-2 text-[10px] text-[#506370]">
               <p className="leading-relaxed">
-                Emergency telephone numbers and helpline contacts listed across the platform are compiled directly from public emergency directories issued by:
+                Emergency hotlines displayed on the portal and broadcast alert emails are verified against official government public safety directories:
               </p>
-              <ul className="list-disc list-inside space-y-0.5 font-mono text-[#123a54]">
-                <li><strong>Antipolo City CDRRMO</strong> (City Disaster Risk Reduction and Management Office)</li>
-                <li><strong>Rizal Provincial DRRMO</strong> &amp; Regional Disaster Risk Reduction Council</li>
-                <li><strong>Bureau of Fire Protection (BFP)</strong> &amp; PNP Antipolo Station</li>
-                <li><strong>Philippine Red Cross (PRC)</strong> Rizal Chapter</li>
-              </ul>
+              <div className="space-y-1.5 divide-y divide-gray-100 font-mono text-[#123a54]">
+                <div className="pt-1 flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-bold">Antipolo CDRRMO Operations Center</span>
+                    <p className="text-[9px] text-[#64748b] font-sans">EOC: (02) 8689-4564 / Mobile: 0927-755-9911</p>
+                  </div>
+                  <span className="text-[9px] text-[#2b6e8f] font-sans font-semibold">antipolo.ph</span>
+                </div>
+                <div className="pt-1.5 flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-bold">National Emergency Hotline</span>
+                    <p className="text-[9px] text-[#64748b] font-sans">Emergency Line: 911</p>
+                  </div>
+                  <span className="text-[9px] text-[#2b6e8f] font-sans font-semibold">EO No. 56</span>
+                </div>
+                <div className="pt-1.5 flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-bold">Antipolo City Hall Trunkline</span>
+                    <p className="text-[9px] text-[#64748b] font-sans">Trunk: (02) 8689-4500</p>
+                  </div>
+                  <span className="text-[9px] text-[#2b6e8f] font-sans font-semibold">antipolo.ph</span>
+                </div>
+                <div className="pt-1.5 flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-bold">DOST-PAGASA Weather Desk</span>
+                    <p className="text-[9px] text-[#64748b] font-sans">Forecast: (02) 8284-0800</p>
+                  </div>
+                  <span className="text-[9px] text-[#2b6e8f] font-sans font-semibold">pagasa.dost.gov.ph</span>
+                </div>
+                <div className="pt-1.5 flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-bold">Antipolo Central Fire Station (BFP)</span>
+                    <p className="text-[9px] text-[#64748b] font-sans">Rescue: (02) 8871-2865 / 0945-155-6015</p>
+                  </div>
+                  <span className="text-[9px] text-[#2b6e8f] font-sans font-semibold">BFP R4A</span>
+                </div>
+                <div className="pt-1.5 flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-bold">Antipolo Police Station (PNP)</span>
+                    <p className="text-[9px] text-[#64748b] font-sans">Desk: (02) 8697-2409 / 0917-157-7627</p>
+                  </div>
+                  <span className="text-[9px] text-[#2b6e8f] font-sans font-semibold">PNP Rizal</span>
+                </div>
+                <div className="pt-1.5 flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-bold">Philippine Red Cross</span>
+                    <p className="text-[9px] text-[#64748b] font-sans">Helpline: 143 / Rizal: (02) 8635-0922</p>
+                  </div>
+                  <span className="text-[9px] text-[#2b6e8f] font-sans font-semibold">redcross.org.ph</span>
+                </div>
+              </div>
             </div>
           </div>
 
