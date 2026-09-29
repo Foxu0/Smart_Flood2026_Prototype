@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Flood — Email Templates Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0c1724;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: rgba(18, 58, 84, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 12px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #ffffff;
+      padding: 2px;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+    }
+    .brand h1 {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.2px;
+    }
+    .brand p {
+      font-size: 11px;
+      color: #bae6fd;
+    }
+
+    /* Tabs */
+    .tabs-container {
+      display: flex;
+      background: rgba(10, 25, 40, 0.6);
+      padding: 4px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .tab-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+    .tab-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .tab-btn.active {
+      color: #ffffff;
+      background: #0284c7;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+    }
+    .tab-btn.tab-welcome.active {
+      background: #2f9463;
+      box-shadow: 0 2px 8px rgba(47, 148, 99, 0.4);
+    }
+    .tab-btn.tab-l1.active {
+      background: #2b6e8f;
+      box-shadow: 0 2px 8px rgba(43, 110, 143, 0.4);
+    }
+    .tab-btn.tab-l2.active {
+      background: #e69138;
+      box-shadow: 0 2px 8px rgba(230, 145, 56, 0.4);
+    }
+    .tab-btn.tab-l3.active {
+      background: #e0522f;
+      box-shadow: 0 2px 8px rgba(224, 82, 47, 0.4);
+    }
+
+    /* Controls */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .viewport-btn, .action-link {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .viewport-btn:hover, .viewport-btn.active, .action-link:hover {
+      color: #ffffff;
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.18);
+    }
+
+    /* Email Metadata Bar */
+    .meta-bar {
+      background: rgba(14, 30, 48, 0.9);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 10px 24px;
+      font-size: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .meta-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .meta-label {
+      color: #64748b;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+    }
+    .meta-val {
+      color: #f1f5f9;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+    .meta-subject {
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    /* Preview Arena */
+    .preview-stage {
+      flex: 1;
+      padding: 28px 16px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      background: #08111c;
+      overflow-y: auto;
+    }
+    .frame-wrapper {
+      width: 100%;
+      max-width: 640px;
+      background: #ffffff;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 48px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .frame-wrapper.mobile {
+      max-width: 375px;
+      border-radius: 28px;
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.9), 0 0 0 8px #1e293b, 0 0 0 9px rgba(255, 255, 255, 0.1);
+    }
+
+    iframe {
+      width: 100%;
+      min-height: 840px;
+      border: none;
+      display: block;
+      background: #f4f7f9;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Showcase Navigation -->
+  <header>
+    <div class="brand">
+      <img src="/PUBMAT3.png" alt="Smart Flood" class="brand-logo">
+      <div>
+        <h1>Smart Flood Email Showcase</h1>
+        <p>Official Early Warning System responsive email templates</p>
+      </div>
+    </div>
+
+    <!-- Template Selector Tabs (Zero emojis, SVG icons only) -->
+    <div class="tabs-container">
+      <button class="tab-btn tab-welcome active" onclick="switchTemplate('welcome')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        Subscription Confirmed
+      </button>
+      <button class="tab-btn tab-l1" onclick="switchTemplate('l1')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        Level 1: Advisory (1.35m)
+      </button>
+      <button class="tab-btn tab-l2" onclick="switchTemplate('l2')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x2="12.01" y1="17" x2="12.01" y2="17"/></svg>
+        Level 2: Warning (1.75m)
+      </button>
+      <button class="tab-btn tab-l3" onclick="switchTemplate('l3')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Level 3: Danger (2.15m)
+      </button>
+    </div>
+
+    <!-- Viewport Size Toggles -->
+    <div class="controls">
+      <button class="viewport-btn active" id="btn-desktop" onclick="setViewport('desktop')">
+        Desktop (640px)
+      </button>
+      <button class="viewport-btn" id="btn-mobile" onclick="setViewport('mobile')">
+        Mobile (375px)
+      </button>
+      <a href="/email-sample-welcome.html" target="_blank" class="action-link" id="btn-standalone" title="Open full HTML template in a new tab">
+        Open Standalone
+      </a>
+    </div>
+  </header>
+
+  <!-- Email Header Metadata Bar -->
+  <div class="meta-bar">
+    <div class="meta-field">
+      <span class="meta-label">From:</span>
+      <span class="meta-val">Smart Flood Antipolo &lt;celluckminecwap@gmail.com&gt;</span>
+    </div>
+    <div class="meta-field">
+      <span class="meta-label">Subject:</span>
+      <span class="meta-val meta-subject" id="subject-text">[Smart Flood] Subscription Confirmed - Early Flood Warning System</span>
+    </div>
+    <div class="meta-field">
+      <span class="meta-label">Status:</span>
+      <span class="meta-val" style="color:#2f9463;">• Active Web-Styled Template</span>
+    </div>
+  </div>
+
+  <!-- Preview Area -->
+  <main class="preview-stage">
+    <div class="frame-wrapper" id="frameWrapper">
+      <iframe id="emailFrame" src="/email-sample-welcome.html" title="Email Template Preview"></iframe>
+    </div>
+  </main>
+
+  <script>
+    const TEMPLATES = {
+      welcome: {
+        file: '/email-sample-welcome.html',
+        subject: '[Smart Flood] Subscription Confirmed - Early Flood Warning System'
+      },
+      l1: {
+        file: '/email-sample-level1.html',
+        subject: '[Smart Flood] Level 1 Advisory: River Stage Rising'
+      },
+      l2: {
+        file: '/email-sample-level2.html',
+        subject: '[Smart Flood] Level 2 Warning: Flood Alert Active'
+      },
+      l3: {
+        file: '/email-sample-level3.html',
+        subject: '[Smart Flood] Level 3: Danger - Critical Flood Alert'
+      }
+    };
+
+    let currentKey = 'welcome';
+
+    function switchTemplate(key) {
+      currentKey = key;
+      const t = TEMPLATES[key];
+      if (!t) return;
+
+      // Update active tab button
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.querySelector(`.tab-${key}`);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      // Update metadata bar
+      document.getElementById('subject-text').textContent = t.subject;
+      document.getElementById('btn-standalone').href = t.file;
+
+      // Update iframe source
+      const frame = document.getElementById('emailFrame');
+      frame.src = t.file;
+    }
+
+    function setViewport(size) {
+      const wrapper = document.getElementById('frameWrapper');
+      const btnDesktop = document.getElementById('btn-desktop');
+      const btnMobile = document.getElementById('btn-mobile');
+
+      if (size === 'mobile') {
+        wrapper.className = 'frame-wrapper mobile';
+        btnMobile.classList.add('active');
+        btnDesktop.classList.remove('active');
+      } else {
+        wrapper.className = 'frame-wrapper';
+        btnDesktop.classList.add('active');
+        btnMobile.classList.remove('active');
+      }
+    }
+  </script>
+</body>
+</html>

@@ -8,7 +8,6 @@ import {
 import RainOverlay from './RainOverlay.jsx';
 import WeatherMapCard from './WeatherMapCard.jsx';
 import WaterTankGauge from './components/WaterTankGauge.jsx';
-import SparklineBar from './components/SparklineBar.jsx';
 import ToastContainer, { useToast } from './components/ToastNotification.jsx';
 import DataSourcesDisclaimerModal from './components/DataSourcesDisclaimerModal.jsx';
 import useCountUp from './hooks/useCountUp.js';
@@ -58,49 +57,49 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
     case 0:
       return {
         badge: 'All Clear', icon: CheckCircle2,
-        heroTitle: 'Everything looks calm',
-        heroMsg: "Water near your area is well within the normal range, and no heavy rain is expected soon. Nothing for you to do right now — we're still keeping watch.",
-        adviceTitle: "You're all set",
+        heroTitle: 'Normal Conditions',
+        heroMsg: 'Water levels at the monitoring station remain normal and well within safe operational limits. No immediate flood threat detected.',
+        adviceTitle: 'Station Status',
         advice: [
-          'No action needed today.',
-          "We're still checking water levels and weather conditions continuously.",
-          'Come back any time to see the latest reading.',
+          'Station telemetry operating normally within baseline thresholds.',
+          'Continuous automated monitoring of water stage and rainfall active.',
+          'No emergency alerts or manual overrides required at this time.',
         ],
       };
     case 1:
       return {
         badge: 'Keep an Eye Out', icon: Info,
-        heroTitle: 'Water is a little higher than usual',
-        heroMsg: 'Levels have gone up a bit after recent rain. Nothing urgent yet — just a good time to double-check system readiness.',
-        adviceTitle: 'A few things to prepare',
+        heroTitle: 'Water Level Rising',
+        heroMsg: 'Rainfall has increased upstream water levels. The river channel is slightly elevated but remains within monitored advisory limits.',
+        adviceTitle: 'Operational Readiness',
         advice: [
-          'Check that emergency equipment is ready.',
-          'Keep half an eye on the weather over the next hour.',
-          "We'll let you know the moment anything changes.",
+          'Verify telemetry stream continuity and battery supply voltages.',
+          'Keep active surveillance on upstream rainfall accumulation trends.',
+          'Notify duty operators to maintain standby alert readiness.',
         ],
       };
     case 2:
       return {
         badge: 'Watch Closely', icon: AlertTriangle,
-        heroTitle: 'Water is rising steadily',
-        heroMsg: `Our station is seeing a faster rise than normal. System model expects it could reach about ${aiPrediction.predicted60m} m within the hour. Please stay alert.`,
-        adviceTitle: "Here's what to do right now",
+        heroTitle: 'Flood Warning Active',
+        heroMsg: `Telemetry detects accelerated water accumulation. Projected to approach ${aiPrediction.predicted60m.toFixed(2)} m within 60 minutes. Warning protocol active.`,
+        adviceTitle: 'Active Warning Protocols',
         advice: [
-          'Keep monitoring equipment ready.',
-          'Keep clear of drainage channels and low-lying areas.',
-          "We'll send an alert the moment threshold is reached.",
+          'Alert CDRRMO and barangay disaster response teams.',
+          'Prepare automated siren broadcast triggers if warning levels persist.',
+          'Dispatch situational advisories to registered email subscribers.',
         ],
       };
     default:
       return {
-        badge: 'Danger', icon: AlertTriangle,
-        heroTitle: 'Water is close to the danger mark',
-        heroMsg: 'Water level is rising fast and closing in on the danger threshold line. Please move to higher ground immediately.',
-        adviceTitle: 'Please act now',
+        badge: 'EVACUATE NOW', icon: AlertTriangle,
+        heroTitle: 'Critical Danger Threshold Exceeded',
+        heroMsg: `Station water level has reached critical danger stage (${telemetry.waterLevelM.toFixed(2)} m). Immediate disaster evacuation protocols in effect.`,
+        adviceTitle: 'Immediate Emergency Directives',
         advice: [
-          'Move to higher ground immediately.',
-          "Turn off electrical equipment if safe to do so.",
-          'Follow emergency safety protocols.',
+          'Sound emergency siren if not already activated.',
+          'Coordinate emergency evacuation routes with Antipolo CDRRMO EOC.',
+          'Issue mandatory high-ground evacuation broadcast.',
         ],
       };
   }
@@ -686,7 +685,8 @@ export default function FloodMonitoringDashboard() {
   const AdviceIcon = friendly.icon;
   const rainKey = rainIntensityKey(telemetry.rainRateMmHr);
 
-  const surgeRate = Math.max(0.04, +(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2));
+  const surgeDelta = +(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2);
+  const surgeRateText = surgeDelta > 0.01 ? `+${surgeDelta.toFixed(2)} m/h` : '0.00 m/h (Steady)';
   const displayRainRate = useCountUp(telemetry.rainRateMmHr, 900, 1);
   const displayRiskScore = useCountUp(aiPrediction.riskScore, 900, 0);
 
@@ -738,7 +738,7 @@ export default function FloodMonitoringDashboard() {
               style={{ background: `linear-gradient(135deg, ${floodLevel.soft}, #ffffff 70%)`, borderColor: floodLevel.border }}>
               <RainOverlay intensity={rainKey} />
               <div className="relative z-[1]">
-                <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide mb-2 float-badge" style={{ color: floodLevel.color }}>
+                <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: floodLevel.color }}>
                   <MapPin size={13} /> Current status
                 </div>
                 <h2 className="font-display text-2xl sm:text-3xl font-semibold text-[#123a54] mb-2 leading-tight">{friendly.heroTitle}</h2>
@@ -755,13 +755,8 @@ export default function FloodMonitoringDashboard() {
 
                 <div className="flex flex-wrap gap-4 sm:gap-5 mt-4">
                   <div className="flex items-center gap-1.5 text-xs text-[#6d818d]">
-                    <CloudRain size={15} className="text-[#2b6e8f]" />
-                    <span><b className="text-[#123a54]">{rainDescription(telemetry.rainRateMmHr)}</b> right now</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-[#6d818d]">
                     <Zap size={15} className="text-[#e69138]" />
-                    <span>Surge Rate: <b className="text-[#123a54] font-mono">+{surgeRate} m/h</b></span>
-                    <SparklineBar currentLevel={telemetry.waterLevelM} />
+                    <span>Surge Rate: <b className="text-[#123a54] font-mono">{surgeRateText}</b></span>
                   </div>
                 </div>
               </div>
@@ -993,12 +988,17 @@ export default function FloodMonitoringDashboard() {
                 </h2>
                 <div className="space-y-2.5">
                   {[
-                    { label: '30-Minute AI Horizon', value: `${aiPrediction.predicted30m.toFixed(2)} m`, delta: `+${(aiPrediction.predicted30m - telemetry.waterLevelM).toFixed(2)}m`, level: getFloodLevel(aiPrediction.predicted30m) },
-                    { label: '60-Minute AI Horizon', value: `${aiPrediction.predicted60m.toFixed(2)} m`, delta: `+${(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2)}m`, level: getFloodLevel(aiPrediction.predicted60m) },
-                  ].map(({ label, value, delta, level }) => (
+                    { label: '30-Minute AI Horizon', value: `${aiPrediction.predicted30m.toFixed(2)} m`, delta: `+${(aiPrediction.predicted30m - telemetry.waterLevelM).toFixed(2)}m`, margin: 'MAE ±1.5 cm', r2: '82.6%', level: getFloodLevel(aiPrediction.predicted30m) },
+                    { label: '60-Minute AI Horizon', value: `${aiPrediction.predicted60m.toFixed(2)} m`, delta: `+${(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2)}m`, margin: 'MAE ±2.2 cm', r2: '62.9%', level: getFloodLevel(aiPrediction.predicted60m) },
+                  ].map(({ label, value, delta, margin, r2, level }) => (
                     <div key={label} className="flex items-center justify-between p-3 rounded-xl border" style={{ background: level.soft, borderColor: level.border }}>
                       <div>
-                        <p className="text-[11px] font-bold text-[#6d818d]">{label}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[11px] font-bold text-[#6d818d]">{label}</p>
+                          <span className="text-[9px] font-mono font-medium text-[#2b6e8f] bg-white/80 px-1.5 py-0.5 rounded border border-[#2b6e8f]/20 shadow-2xs">
+                            {margin}
+                          </span>
+                        </div>
                         <div className="flex items-baseline gap-2 mt-0.5">
                           <p className="font-display text-lg font-bold" style={{ color: level.color }}>{value}</p>
                           <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-white/90 border border-black/5 shadow-2xs" style={{ color: level.color }}>
@@ -1006,16 +1006,20 @@ export default function FloodMonitoringDashboard() {
                           </span>
                         </div>
                       </div>
-                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: `${level.color}20`, color: level.color }}>
-                        {level.label}
-                      </span>
+                      <div className="text-right">
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: `${level.color}20`, color: level.color }}>
+                          {level.label}
+                        </span>
+                        <p className="text-[9px] text-[#6d818d] font-mono mt-1">R²: {r2}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-              <p className="text-[11px] text-[#6d818d] text-center pt-2">
-                LSTM Model Confidence Score: <b className="text-[#123a54]">{aiPrediction.modelConfidence}%</b>
-              </p>
+              <div className="pt-2 border-t border-[#f1f5f6] flex items-center justify-between text-[11px] text-[#6d818d] flex-wrap gap-1">
+                <span>Model Test Validation:</span>
+                <span>MAE <b className="text-[#123a54]">±1.5 cm</b> (+30m) / <b className="text-[#123a54]">±2.2 cm</b> (+60m) · R² <b className="text-[#123a54]">82.6%</b></span>
+              </div>
             </div>
 
             {/* Activity feed */}

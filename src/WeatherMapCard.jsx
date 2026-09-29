@@ -298,20 +298,12 @@ export default function WeatherMapCard({ severity = 0 }) {
         </div>
       </div>
 
-      {/* Inset Satellite / Radar Viewport Frame (Dynamic Height: 640px for PAGASA Satellite, 460px for Rain Radar) */}
+      {/* Inset Satellite / Radar Viewport Frame (Adaptive Aspect Ratio for Satellite, Fixed Height for Interactive Radar) */}
       <div className={`relative w-full overflow-hidden rounded-xl border border-[#e4edf0] transition-all duration-300 ${
         mapViewMode === 'pagasa' 
-          ? 'h-[440px] sm:h-[640px] bg-white' 
+          ? 'w-full aspect-[748/750] bg-black' 
           : 'h-[340px] sm:h-[460px] bg-[#05131e]'
       }`}>
-        {/* Severity Status Badge */}
-        <div
-          className="absolute top-3 right-3 z-[1000] px-3 py-1 rounded-full text-xs font-bold shadow-sm border backdrop-blur-md flex items-center gap-1.5"
-          style={{ background: `${b.color}15`, borderColor: `${b.color}44`, color: b.color }}
-        >
-          ● {b.label.toUpperCase()}
-        </div>
-
         {/* Bottom Floating Legend Badge (Only for Rain Radar Doppler) */}
         {mapViewMode === 'doppler' && (
           <div className="absolute bottom-3 right-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-2 rounded-xl shadow-lg border border-white/20 text-[10px] space-y-1.5">
@@ -329,13 +321,13 @@ export default function WeatherMapCard({ severity = 0 }) {
           </div>
         )}
 
-        {/* 🛰️ MODE 1: PAGASA Satellite Viewport (Expanded Height for Full Aspect Fill) */}
+        {/* 🛰️ MODE 1: PAGASA Satellite Viewport (Adaptive Aspect Ratio Fill) */}
         {mapViewMode === 'pagasa' ? (
-          <div className="w-full h-full bg-white relative flex items-center justify-center overflow-hidden p-0.5">
+          <div className="w-full h-full bg-black relative flex items-center justify-center overflow-hidden">
             <img
               src={currentSatUrl}
               alt="DOST-PAGASA Himawari Satellite IR Scan"
-              className="w-full h-full max-w-full max-h-full object-contain transition-all duration-300 rounded-lg shadow-sm"
+              className="w-full h-full object-contain block transition-opacity duration-300"
             />
           </div>
         ) : (

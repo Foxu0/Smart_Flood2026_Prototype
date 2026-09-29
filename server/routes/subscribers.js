@@ -1,6 +1,6 @@
 import express from 'express';
 import { prisma } from '../db.js';
-import { broadcastEmailAlert, sendTestEmail } from '../services/emailService.js';
+import { broadcastEmailAlert, sendTestEmail, sendWelcomeConfirmationEmail } from '../services/emailService.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -21,7 +21,7 @@ router.post('/', async (req, res) => {
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = fullName ? fullName.trim().slice(0, 100) : null;
-    const cleanBarangay = barangay ? barangay.trim().slice(0, 80) : 'Mayamot';
+    const cleanBarangay = barangay ? barangay.trim().slice(0, 80) : 'Antipolo';
     const alertLevel = [1, 2, 3].includes(Number(minAlertLevel)) ? Number(minAlertLevel) : 1;
     const role = ['RESIDENT', 'OFFICIAL', 'RESPONDER'].includes(subscriberRole) ? subscriberRole : 'RESIDENT';
 
@@ -55,10 +55,16 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Send a welcome / test confirmation email in background
-    sendTestEmail({ toEmail: cleanEmail, level: alertLevel }).catch((err) =>
-      console.warn(`[Subscribers] Welcome email trigger notice:`, err.message)
-    );
+    // Send a real welcome confirmation email immediately upon subscription
+    let dispatchResult = null;
+    try {
+      dispatchResult = await sendWelcomeConfirmationEmail({
+        toEmail: cleanEmail,
+        unsubscribeToken: subscriber.unsubscribeToken,
+      });
+    } catch (err) {
+      console.warn(`[Subscribers] Welcome email trigger notice:`, err.message);
+    }
 
     return res.status(201).json({
       success: true,
@@ -84,11 +90,16 @@ router.get('/unsubscribe/:token', async (req, res) => {
       return res.status(404).send(`
         <!DOCTYPE html>
         <html>
-        <head><title>Invalid Request</title><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-        <body style="font-family:sans-serif; text-align:center; padding:50px 20px; background:#f8fafc; color:#1e293b;">
-          <h2>⚠️ Invalid or Expired Link</h2>
-          <p>We could not find an active subscription associated with this link.</p>
-          <a href="/" style="display:inline-block; margin-top:16px; padding:10px 20px; background:#0284c7; color:#fff; text-decoration:none; border-radius:6px;">Return to SmartFlood Portal</a>
+        <head><title>Invalid Request — Smart Flood</title><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+        <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; text-align:center; padding:60px 20px; background:#f4f7f9; color:#123a54;">
+          <div style="max-width:480px; margin:0 auto; background:#fff; padding:36px 24px; border-radius:20px; box-shadow:0 8px 24px rgba(18,58,84,0.06); border:1px solid #e4edf0;">
+            <div style="display:inline-block; width:44px; height:44px; border-radius:50%; background:#fce7e0; color:#e0522f; line-height:44px; text-align:center; margin-bottom:12px;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e0522f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </div>
+            <h2 style="margin:0 0 8px 0; color:#123a54; font-size:20px;">Invalid or Expired Link</h2>
+            <p style="color:#6d818d; font-size:14px; line-height:1.5; margin:0 0 20px 0;">We could not find an active subscription associated with this security token.</p>
+            <a href="/" style="display:inline-block; padding:10px 22px; background:#123a54; color:#fff; text-decoration:none; border-radius:10px; font-weight:600; font-size:13px;">Return to Smart Flood Portal</a>
+          </div>
         </body>
         </html>
       `);
@@ -103,17 +114,19 @@ router.get('/unsubscribe/:token', async (req, res) => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Unsubscribed — SmartFlood</title>
+        <title>Unsubscribed — Smart Flood</title>
         <meta name="viewport" content="width=device-width,initial-scale=1">
       </head>
-      <body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif; text-align:center; padding:60px 20px; background:#f8fafc; color:#1e293b;">
-        <div style="max-width:500px; margin:0 auto; background:#fff; padding:36px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.06); border:1px solid #e2e8f0;">
-          <div style="font-size:40px; margin-bottom:12px;">✅</div>
-          <h2 style="margin:0 0 8px 0; color:#0f172a;">You have been unsubscribed</h2>
-          <p style="color:#64748b; font-size:15px; line-height:1.5;">
-            <strong>${subscriber.email}</strong> will no longer receive flood warning emails from the SmartFlood Antipolo Early Warning Network.
+      <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; text-align:center; padding:60px 20px; background:#f4f7f9; color:#123a54;">
+        <div style="max-width:500px; margin:0 auto; background:#fff; padding:36px 24px; border-radius:20px; box-shadow:0 8px 24px rgba(18,58,84,0.06); border:1px solid #e4edf0;">
+          <div style="display:inline-block; width:44px; height:44px; border-radius:50%; background:#e5f6ec; color:#2f9463; line-height:44px; text-align:center; margin-bottom:12px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f9463" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+          <h2 style="margin:0 0 8px 0; color:#123a54; font-size:20px;">You Have Been Unsubscribed</h2>
+          <p style="color:#6d818d; font-size:14px; line-height:1.5; margin:0 0 20px 0;">
+            <strong style="color:#123a54;">${subscriber.email}</strong> will no longer receive emergency flood notifications from the Smart Flood Early Warning System.
           </p>
-          <a href="/" style="display:inline-block; margin-top:20px; padding:10px 24px; background:#0f172a; color:#fff; text-decoration:none; border-radius:6px; font-weight:600; font-size:14px;">Return to Live Portal</a>
+          <a href="/" style="display:inline-block; padding:10px 22px; background:#123a54; color:#fff; text-decoration:none; border-radius:10px; font-weight:600; font-size:13px;">Return to Smart Flood Portal</a>
         </div>
       </body>
       </html>

@@ -162,27 +162,6 @@ export default function WaterTankGauge({ levelM, maxM = 2.4, dangerM = 2.0, colo
         <div className="text-[10px] text-[#6d818d] mt-1 leading-snug">
           Water Level · Danger at {dangerVal.toFixed(2)} m
         </div>
-        {/* Pct bar relative to Danger Level */}
-        {(() => {
-          const dangerPct = Math.min(100, Math.max(0, (levelM / dangerVal) * 100));
-          return (
-            <>
-              <div className="mt-2 w-32 h-1.5 bg-[#eef4f6] rounded-full overflow-hidden mx-auto">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${dangerPct}%`,
-                    background: color,
-                    transition: 'width 1s ease-out',
-                  }}
-                />
-              </div>
-              <div className="text-[9px] text-[#6d818d] mt-0.5">
-                {dangerPct.toFixed(0)}% of danger capacity
-              </div>
-            </>
-          );
-        })()}
       </div>
     </div>
   );

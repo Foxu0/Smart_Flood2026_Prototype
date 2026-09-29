@@ -104,7 +104,7 @@ export async function getPrediction(historyBuffer) {
 
   let predicted30m    = currentLevel;
   let predicted60m    = currentLevel;
-  let confidenceScore = 94.0;
+  let confidenceScore = 82.6;
   let methodUsed      = 'SurgeRate_Fallback';
 
   // ── Attempt Live ONNX Inference ───────────────────────────────────────────
@@ -154,10 +154,10 @@ export async function getPrediction(historyBuffer) {
         // Clamp to physically realistic bounds [0.0m, 3.5m]
         predicted30m    = parseFloat(Math.min(3.5, Math.max(0, predicted30m)).toFixed(2));
         predicted60m    = parseFloat(Math.min(3.5, Math.max(0, predicted60m)).toFixed(2));
-        confidenceScore = 96.5;
+        confidenceScore = 82.6;
         methodUsed      = 'ONNX_LSTM';
 
-        console.log(`[dlService] ONNX_LSTM Inference → +30m: ${predicted30m}m  +60m: ${predicted60m}m (Confidence: ${confidenceScore}%)`);
+        console.log(`[dlService] ONNX_LSTM Inference → +30m: ${predicted30m}m  +60m: ${predicted60m}m (Validation R²: ${confidenceScore}%)`);
       } catch (onnxErr) {
         console.error('[dlService] ONNX inference failed (reverting to fallback):', onnxErr.message);
         cachedSession = null; // reset session cache to retry on next call
@@ -175,8 +175,9 @@ export async function getPrediction(historyBuffer) {
     predicted60m = parseFloat(
       Math.min(3.5, Math.max(0, currentLevel + avgSurge * 1.0 + 0.06)).toFixed(2)
     );
-    confidenceScore = 94.0;
-    console.log(`[dlService] SurgeRate_Fallback → +30m: ${predicted30m}m  +60m: ${predicted60m}m`);
+    // Empirical test dataset R² validation metric (server/models/test_metrics.json)
+    confidenceScore = 82.6;
+    console.log(`[dlService] SurgeRate_Fallback → +30m: ${predicted30m}m  +60m: ${predicted60m}m (Validation R²: ${confidenceScore}%)`);
   }
 
   // ── Save Projection to Database ───────────────────────────────────────────

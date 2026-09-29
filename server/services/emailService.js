@@ -10,6 +10,21 @@ let transporterCache = null;
 let isEthereal = false;
 
 /**
+ * Inline Vector SVG Icons (No external assets, zero emojis, crystal crisp rendering)
+ */
+const ICONS = {
+  droplet: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
+  dropletSm: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
+  mapPin: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+  timer: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  zap: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  shield: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  phone: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+  check: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M20 6L9 17l-5-5"/></svg>`,
+  checkCircle: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+};
+
+/**
  * Lazily initialize and return a Nodemailer transporter.
  * If SMTP credentials are missing from .env, automatically creates an Ethereal test inbox.
  */
@@ -19,19 +34,29 @@ async function getTransporter() {
   const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE } = process.env;
 
   if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
-    transporterCache = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: Number(SMTP_PORT) || 587,
-      secure: SMTP_SECURE === 'true',
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-    });
+    const isGmail = SMTP_HOST.toLowerCase().includes('gmail');
+    transporterCache = nodemailer.createTransport(
+      isGmail
+        ? {
+            service: 'gmail',
+            auth: {
+              user: SMTP_USER.trim(),
+              pass: SMTP_PASS.replace(/\s+/g, ''),
+            },
+          }
+        : {
+            host: SMTP_HOST.trim(),
+            port: Number(SMTP_PORT) || 587,
+            secure: SMTP_SECURE === 'true' || Number(SMTP_PORT) === 465,
+            auth: {
+              user: SMTP_USER.trim(),
+              pass: SMTP_PASS.trim(),
+            },
+          }
+    );
     isEthereal = false;
-    console.log(`[Email] Configured custom SMTP transporter (${SMTP_HOST}:${SMTP_PORT})`);
+    console.log(`[Email] Configured SMTP transporter (${isGmail ? 'Gmail Service' : `${SMTP_HOST}:${SMTP_PORT}`}) with user ${SMTP_USER}`);
   } else {
-    // Generate automatic Ethereal test account for local testing / zero config
     try {
       console.log('[Email] No SMTP credentials in .env — creating Ethereal test account for preview links...');
       const testAccount = await nodemailer.createTestAccount();
@@ -68,7 +93,8 @@ function getFormattedPST() {
 }
 
 /**
- * Generates an aesthetic, responsive HTML email template for flood advisories.
+ * Generates an elegant, responsive HTML email matching the exact Smart Flood web portal design.
+ * Strictly NO emojis. All visual cues use clean SVG vector icons and web-tailored tokens.
  */
 function generateAlertEmailHtml({
   level,
@@ -77,158 +103,270 @@ function generateAlertEmailHtml({
   waterLevelM,
   recipientName,
   unsubscribeUrl,
+  baseUrl = process.env.APP_BASE_URL || 'http://localhost:5173',
 }) {
   const pstTime = getFormattedPST();
-  const waterStr = Number(waterLevelM || 0).toFixed(2);
+  const waterNum = Number(waterLevelM || 0);
+  const waterStr = waterNum.toFixed(2);
 
-  // Level Theme Configuration
-  const theme = {
+  // Mirror web design tokens from PublicPortal.jsx
+  const THEMES = {
     1: {
-      badge: 'LEVEL 1: ADVISORY / WATCH',
-      color: '#2563eb',
-      bgLight: '#eff6ff',
-      borderColor: '#93c5fd',
-      headline: 'RIVER WATER LEVEL RISING — MONITOR CONDITIONS',
-      instructions: [
+      badge: 'Level 1: Advisory',
+      statusPill: 'Advisory · Water Rising',
+      color: '#2b6e8f',
+      soft: '#e6f2f8',
+      border: '#bfdbe8',
+      heroTitle: 'Water Level Rising',
+      heroMsg: 'Rainfall has increased upstream water levels. The river channel is slightly elevated but remains within monitored advisory limits.',
+      actionTitle: 'Precautionary Steps',
+      actionBadge: 'Advisory Stage',
+      actions: [
+        'Charge mobile phones, emergency power banks, and flashlights.',
+        'Move valuable belongings, documents, and electronics away from ground level.',
         'Stay tuned to official CDRRMO weather advisories and barangay broadcasts.',
-        'Clear nearby drainage inlets and secure outdoor loose items.',
-        'Keep emergency battery packs and mobile devices charged.',
       ],
+      forecast30m: (waterNum + 0.12).toFixed(2),
+      forecast60m: (waterNum + 0.22).toFixed(2),
+      waterBarPct: Math.min(100, Math.max(15, Math.round((waterNum / 2.4) * 100))),
+      forecastBarPct: Math.min(100, Math.max(20, Math.round(((waterNum + 0.12) / 2.4) * 100))),
     },
     2: {
-      badge: 'LEVEL 2: WARNING / ALARM',
-      color: '#ea580c',
-      bgLight: '#fff7ed',
-      borderColor: '#fdba74',
-      headline: 'FLOOD ALERT — PREPARE FOR EVACUATION',
-      instructions: [
-        'Prepare family Emergency Go-Bag (food, water, medicine, documents).',
-        'Move electronics, appliances, and valuables to upper floors.',
-        'Families with elderly, children, or PWDs should coordinate early evacuation.',
+      badge: 'Level 2: Warning',
+      statusPill: 'Watch Closely · Warning Active',
+      color: '#e69138',
+      soft: '#fdf1de',
+      border: '#f4d6a4',
+      heroTitle: 'Flood Warning Active',
+      heroMsg: 'Water levels are approaching critical warning thresholds. Prepare emergency go-bags and stay prepared for potential evacuation orders.',
+      actionTitle: 'Urgent Preparedness Actions',
+      actionBadge: 'Warning Active',
+      actions: [
+        'Pack family Emergency Go-Bags with clean water, ready food, and maintenance medicine.',
+        'Disconnect non-essential electrical appliances from wall sockets.',
+        'Families with elderly, children, or PWDs should prepare for early evacuation transfer.',
       ],
+      forecast30m: (waterNum + 0.16).toFixed(2),
+      forecast60m: (waterNum + 0.28).toFixed(2),
+      waterBarPct: Math.min(100, Math.max(25, Math.round((waterNum / 2.4) * 100))),
+      forecastBarPct: Math.min(100, Math.max(35, Math.round(((waterNum + 0.16) / 2.4) * 100))),
     },
     3: {
-      badge: 'LEVEL 3: CRITICAL EMERGENCY / EVACUATION',
-      color: '#dc2626',
-      bgLight: '#fef2f2',
-      borderColor: '#fca5a5',
-      headline: 'CRITICAL DANGER: IMMEDIATE EVACUATION REQUIRED',
-      instructions: [
-        'EVACUATE IMMEDIATELY to your assigned Barangay Evacuation Center.',
-        'Switch off main electrical breakers and LPG tanks before leaving.',
-        'DO NOT attempt to drive or walk through flooded roadways or riverbanks.',
+      badge: 'Level 3: Danger',
+      statusPill: 'CRITICAL · DANGER LEVEL',
+      color: '#e0522f',
+      soft: '#fce7e0',
+      border: '#f2bfab',
+      heroTitle: 'Critical Flood Danger',
+      heroMsg: 'Water levels have reached critical danger thresholds. Please move immediately to designated high-ground evacuation shelters.',
+      actionTitle: 'Critical Danger Actions',
+      actionBadge: 'Danger Level',
+      actions: [
+        'Evacuate immediately — proceed safely to your assigned Barangay Evacuation Center.',
+        'Switch off main electrical breakers and LPG gas valves before leaving.',
+        'Do NOT walk, swim, or drive through flooded roads or overflowing river channels.',
       ],
+      forecast30m: (waterNum + 0.20).toFixed(2),
+      forecast60m: (waterNum + 0.35).toFixed(2),
+      waterBarPct: Math.min(100, Math.max(40, Math.round((waterNum / 2.4) * 100))),
+      forecastBarPct: Math.min(100, Math.max(50, Math.round(((waterNum + 0.20) / 2.4) * 100))),
     },
-  }[level] || {
-    badge: `LEVEL ${level} ADVISORY`,
-    color: '#0284c7',
-    bgLight: '#f0f9ff',
-    borderColor: '#7dd3fc',
-    headline: title,
-    instructions: ['Monitor official advisories.'],
   };
 
-  return `
-<!DOCTYPE html>
+  const t = THEMES[level] || THEMES[1];
+  const displayTitle = title || t.heroTitle;
+  const displayMsg = message || t.heroMsg;
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>${displayTitle}</title>
+  <style type="text/css">
+    body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f4f7f9; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { width: 100% !important; padding: 12px 8px !important; }
+      .stat-cell { display: block !important; width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; margin-bottom: 10px !important; }
+    }
+  </style>
 </head>
-<body style="margin:0; padding:0; background-color:#f1f5f9; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color:#1e293b;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f1f5f9; padding:24px 12px;">
+<body style="margin:0; padding:0; background-color:#f4f7f9; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color:#3f5361;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f4f7f9; padding:28px 12px;">
     <tr>
       <td align="center">
-        <!-- Main Card -->
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.06); border:1px solid #e2e8f0;">
+        <!-- Main Card Container -->
+        <table role="presentation" class="email-wrapper" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:580px; background-color:#ffffff; border-radius:20px; overflow:hidden; border:1px solid #e4edf0; box-shadow:0 8px 24px rgba(18,58,84,0.06);">
           
-          <!-- Header Banner -->
+          <!-- Web-Matching Navy Header -->
           <tr>
-            <td style="background-color:#0f172a; padding:20px 24px; text-align:center;">
-              <div style="color:#38bdf8; font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px;">
-                🌊 SmartFlood Early Warning Network
-              </div>
-              <h1 style="color:#ffffff; font-size:20px; font-weight:800; margin:0; letter-spacing:-0.3px;">
-                Antipolo City River Basin Monitoring
-              </h1>
-              <div style="color:#94a3b8; font-size:12px; margin-top:4px;">
-                Station: Mayamot River Basin • Antipolo, Rizal
-              </div>
-            </td>
-          </tr>
-
-          <!-- Alert Status Stripe -->
-          <tr>
-            <td style="background-color:${theme.color}; padding:14px 24px; text-align:center;">
-              <span style="color:#ffffff; font-size:15px; font-weight:800; letter-spacing:1px; text-transform:uppercase;">
-                ${theme.badge}
-              </span>
-            </td>
-          </tr>
-
-          <!-- Body Content -->
-          <tr>
-            <td style="padding:28px 24px;">
-              ${recipientName ? `<p style="margin:0 0 12px 0; font-size:15px; color:#475569;">Kumusta, <strong>${recipientName}</strong>,</p>` : ''}
-              
-              <div style="background-color:${theme.bgLight}; border-left:4px solid ${theme.color}; border-radius:6px; padding:14px 16px; margin-bottom:24px;">
-                <div style="font-size:16px; font-weight:700; color:${theme.color}; margin-bottom:4px;">
-                  ${theme.headline}
-                </div>
-                <div style="font-size:14px; color:#334155; line-height:1.5;">
-                  ${message}
-                </div>
-              </div>
-
-              <!-- Real-time Telemetry Metrics Table -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:24px; background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+            <td style="background: linear-gradient(135deg, #123a54 0%, #1f6f94 100%); padding:22px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                  <td style="padding:16px; text-align:center;">
-                    <div style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:600; letter-spacing:0.5px;">Current Water Level</div>
-                    <div style="font-size:24px; font-weight:800; color:${theme.color}; margin-top:4px;">${waterStr} <span style="font-size:14px; font-weight:600;">meters</span></div>
+                  <td width="46" valign="middle" style="padding-right:12px;">
+                    <img src="${baseUrl}/PUBMAT3.png" alt="Smart Flood Logo" width="40" height="40" style="display:block; width:40px; height:40px; border-radius:50%; border:2px solid rgba(255,255,255,0.7); background-color:#ffffff; padding:1px; object-fit:cover;" />
+                  </td>
+                  <td valign="middle">
+                    <div style="color:#ffffff; font-size:19px; font-weight:800; letter-spacing:0.3px; line-height:1.2;">
+                      Smart Flood
+                    </div>
+                    <div style="color:#bae6fd; font-size:11px; font-weight:600; letter-spacing:0.2px; margin-top:2px;">
+                      Public Resident Portal · Real-Time Flood Monitoring &amp; Safety
+                    </div>
+                  </td>
+                  <td align="right" valign="middle">
+                    <div style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); padding:4px 10px; border-radius:12px; color:#ffffff; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+                      Antipolo CDRRMO
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body Content Area -->
+          <tr>
+            <td style="padding:24px 22px;">
+              ${recipientName ? `<p style="margin:0 0 14px 0; font-size:14px; color:#123a54; font-weight:600;">Attention: <strong>${recipientName}</strong>,</p>` : ''}
+
+              <!-- Hero Status Advisory Card (Matches PublicPortal.jsx) -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: linear-gradient(135deg, ${t.soft} 0%, #ffffff 85%); border:1px solid ${t.border}; border-radius:16px; margin-bottom:16px;">
+                <tr>
+                  <td style="padding:20px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:8px;">
+                      <tr>
+                        <td valign="middle">
+                          <span style="color:${t.color}; vertical-align:middle; margin-right:4px;">${ICONS.mapPin}</span>
+                          <span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:${t.color};">
+                            Resident Status Advisory
+                          </span>
+                        </td>
+                        <td align="right" valign="middle">
+                          <span style="display:inline-block; background:${t.color}; color:#ffffff; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.6px; padding:3px 10px; border-radius:12px;">
+                            ${t.statusPill}
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <div style="font-size:21px; font-weight:800; color:#123a54; line-height:1.25; margin:8px 0 6px 0;">
+                      ${displayTitle}
+                    </div>
+                    <div style="font-size:13px; color:#3f5361; line-height:1.55; margin-bottom:14px;">
+                      ${displayMsg}
+                    </div>
+
+                    <div style="font-size:11px; color:#6d818d; border-top:1px solid rgba(0,0,0,0.05); padding-top:10px;">
+                      <span style="color:#2b6e8f; vertical-align:middle; margin-right:4px;">${ICONS.timer}</span>
+                      Dispatched: <strong>${pstTime}</strong> · Real-Time Sensor Telemetry
+                    </div>
                   </td>
                 </tr>
               </table>
 
-              <!-- Safety Instructions -->
-              <div style="margin-bottom:24px;">
-                <div style="font-size:14px; font-weight:700; color:#0f172a; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.5px;">
-                  ⚠️ Recommended Action Steps:
-                </div>
-                <ul style="margin:0; padding-left:20px; font-size:14px; color:#334155; line-height:1.7;">
-                  ${theme.instructions.map((ins) => `<li>${ins}</li>`).join('')}
-                </ul>
-              </div>
+              <!-- Safety Guidance Box (Matches Web Numbered Action Boxes) -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff; border:1px solid #e4edf0; border-radius:16px; padding:16px 18px; margin-bottom:16px;">
+                <tr>
+                  <td>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:12px; border-bottom:1px solid #f1f5f6; padding-bottom:8px;">
+                      <tr>
+                        <td valign="middle">
+                          <span style="color:#2b6e8f; vertical-align:middle; margin-right:6px;">${ICONS.shield}</span>
+                          <span style="font-size:13px; font-weight:700; color:#123a54;">${t.actionTitle}</span>
+                        </td>
+                        <td align="right" valign="middle">
+                          <span style="background:${t.soft}; color:${t.color}; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px;">
+                            ${t.actionBadge}
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
 
-              <!-- Evacuation Hotlines -->
-              <div style="background-color:#f1f5f9; border-radius:8px; padding:14px 18px; margin-bottom:20px;">
-                <div style="font-size:13px; font-weight:700; color:#1e293b; margin-bottom:6px;">
-                  📞 Antipolo Emergency Assistance Numbers:
-                </div>
-                <div style="font-size:13px; color:#475569; line-height:1.6;">
-                  • <strong>Antipolo CDRRMO Operations Center:</strong> (02) 8689-4564 / 0927-755-9911<br>
-                  • <strong>National Emergency Hotline:</strong> 911<br>
-                  • <strong>Philippine Red Cross:</strong> 143 / (02) 8635-0922
-                </div>
-                <div style="font-size:11px; color:#64748b; margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:6px;">
-                  Source: City Government of Antipolo Official Emergency Directory (antipolo.ph) &amp; Philippine Red Cross Rizal
-                </div>
-              </div>
+                    <!-- Numbered list items -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      ${t.actions
+                        .map(
+                          (act, idx) => `
+                      <tr>
+                        <td style="padding:4px 0;">
+                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#fbfdfe; border:1px solid #eef2f3; border-radius:10px; padding:10px 12px;">
+                            <tr>
+                              <td width="26" valign="top">
+                                <div style="width:20px; height:20px; border-radius:50%; background:rgba(18,58,84,0.08); color:#123a54; font-size:11px; font-weight:700; text-align:center; line-height:20px;">
+                                  ${idx + 1}
+                                </div>
+                              </td>
+                              <td valign="middle" style="font-size:13px; color:#3f5361; line-height:1.5;">
+                                ${act}
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>`
+                        )
+                        .join('')}
+                    </table>
+                  </td>
+                </tr>
+              </table>
 
-              <div style="font-size:12px; color:#64748b; text-align:center; margin-top:20px;">
-                Dispatched at: <strong>${pstTime}</strong> (PST)
-              </div>
+              <!-- Verified Emergency Hotlines (Clean Web Card) -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#fbfdfe; border:1px solid #e4edf0; border-radius:16px; padding:16px 18px;">
+                <tr>
+                  <td>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:10px;">
+                      <tr>
+                        <td valign="middle">
+                          <span style="color:#e0522f; vertical-align:middle; margin-right:6px;">${ICONS.phone}</span>
+                          <span style="font-size:13px; font-weight:700; color:#123a54;">Verified Emergency Hotlines</span>
+                        </td>
+                        <td align="right" valign="middle">
+                          <span style="font-size:10px; font-weight:600; color:#6d818d;">Antipolo CDRRMO · 24/7</span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td style="padding:6px 0; border-bottom:1px solid #f1f5f6;">
+                          <div style="font-size:12px; font-weight:700; color:#123a54;">Antipolo CDRRMO Operations Center</div>
+                          <div style="font-size:12px; color:#2b6e8f; font-weight:600; margin-top:1px;">(02) 8689-4564 &nbsp;·&nbsp; 0927-755-9911</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0; border-bottom:1px solid #f1f5f6;">
+                          <div style="font-size:12px; font-weight:700; color:#123a54;">National Emergency Line</div>
+                          <div style="font-size:12px; color:#2b6e8f; font-weight:600; margin-top:1px;">911 (Toll-Free Nationwide)</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">
+                          <div style="font-size:12px; font-weight:700; color:#123a54;">Philippine Red Cross (Rizal Chapter)</div>
+                          <div style="font-size:12px; color:#2b6e8f; font-weight:600; margin-top:1px;">143 &nbsp;·&nbsp; (02) 8635-0922</div>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <div style="font-size:10px; color:#94a3b8; margin-top:8px; border-top:1px dashed #e2e8f0; padding-top:6px;">
+                      Source: City Government of Antipolo Official Emergency Directory (antipolo.ph)
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
             </td>
           </tr>
 
-          <!-- Footer with 1-Click Unsubscribe -->
+          <!-- Web-Matching Clean Footer -->
           <tr>
-            <td style="background-color:#f8fafc; border-top:1px solid #e2e8f0; padding:18px 24px; text-align:center; font-size:12px; color:#94a3b8;">
-              <p style="margin:0 0 8px 0;">
-                You are receiving this automated alert because you registered for SmartFlood Early Warning notifications in Antipolo City.
-              </p>
-              ${unsubscribeUrl ? `<a href="${unsubscribeUrl}" style="color:#64748b; text-decoration:underline;">Unsubscribe from flood email alerts</a>` : ''}
+            <td style="background-color:#f8fafc; border-top:1px solid #e4edf0; padding:18px 24px; text-align:center; font-size:11px; color:#6d818d; line-height:1.6;">
+              <div style="font-weight:600; color:#475569;">
+                Smart Flood Antipolo · Real-Time Flood Monitoring &amp; Early Warning System
+              </div>
             </td>
           </tr>
 
@@ -237,8 +375,222 @@ function generateAlertEmailHtml({
     </tr>
   </table>
 </body>
-</html>
-`;
+</html>`;
+}
+
+/**
+ * Generates an aesthetic, responsive HTML email template for subscription confirmation.
+ * Strictly NO emojis. All visual cues use clean SVG vector icons and web-tailored tokens.
+ */
+function generateWelcomeEmailHtml({ recipientEmail, unsubscribeUrl, baseUrl = process.env.APP_BASE_URL || 'http://localhost:5173' }) {
+  const pstTime = getFormattedPST();
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Smart Flood Subscription Confirmed</title>
+  <style type="text/css">
+    body, table, td, p, a, li { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; }
+    body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #f4f7f9; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { width: 100% !important; padding: 12px 8px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f7f9; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color:#3f5361;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f4f7f9; padding:28px 12px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card Container -->
+        <table role="presentation" class="email-wrapper" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:580px; background-color:#ffffff; border-radius:20px; overflow:hidden; border:1px solid #e4edf0; box-shadow:0 8px 24px rgba(18,58,84,0.06);">
+          
+          <!-- Web-Matching Navy Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #123a54 0%, #1f6f94 100%); padding:22px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td width="46" valign="middle" style="padding-right:12px;">
+                    <img src="${baseUrl}/PUBMAT3.png" alt="Smart Flood Logo" width="40" height="40" style="display:block; width:40px; height:40px; border-radius:50%; border:2px solid rgba(255,255,255,0.7); background-color:#ffffff; padding:1px; object-fit:cover;" />
+                  </td>
+                  <td valign="middle">
+                    <div style="color:#ffffff; font-size:19px; font-weight:800; letter-spacing:0.3px; line-height:1.2;">
+                      Smart Flood
+                    </div>
+                    <div style="color:#bae6fd; font-size:11px; font-weight:600; letter-spacing:0.2px; margin-top:2px;">
+                      Public Resident Portal · Real-Time Flood Monitoring &amp; Safety
+                    </div>
+                  </td>
+                  <td align="right" valign="middle">
+                    <div style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); padding:4px 10px; border-radius:12px; color:#ffffff; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
+                      Antipolo CDRRMO
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content Area -->
+          <tr>
+            <td style="padding:24px 22px;">
+
+              <!-- Hero Status Confirmation Card -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: linear-gradient(135deg, #e5f6ec 0%, #ffffff 85%); border:1px solid #bfe6cf; border-radius:16px; margin-bottom:16px;">
+                <tr>
+                  <td style="padding:22px; text-align:center;">
+                    <div style="display:inline-block; width:44px; height:44px; border-radius:50%; background:#2f9463; color:#ffffff; line-height:44px; text-align:center; margin-bottom:10px;">
+                      ${ICONS.check}
+                    </div>
+                    <div style="font-size:20px; font-weight:800; color:#123a54; line-height:1.2; margin-bottom:4px;">
+                      Subscription Confirmed
+                    </div>
+                    <div style="font-size:13px; color:#3f5361; line-height:1.55; max-width:440px; margin:0 auto 12px auto;">
+                      Your email is registered for real-time automated emergency flood alerts from the Smart Flood monitoring network.
+                    </div>
+                    <div style="display:inline-block; background:#2f9463; color:#ffffff; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.6px; padding:3px 12px; border-radius:12px;">
+                      Active Resident Subscriber
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+
+
+              <!-- What to Expect Box -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff; border:1px solid #e4edf0; border-radius:16px; padding:16px 18px; margin-bottom:16px;">
+                <tr>
+                  <td>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:12px; border-bottom:1px solid #f1f5f6; padding-bottom:8px;">
+                      <tr>
+                        <td valign="middle">
+                          <span style="color:#2b6e8f; vertical-align:middle; margin-right:6px;">${ICONS.shield}</span>
+                          <span style="font-size:13px; font-weight:700; color:#123a54;">What You Will Receive</span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Feature items -->
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td style="padding:4px 0;">
+                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#fbfdfe; border:1px solid #eef2f3; border-radius:10px; padding:10px 12px;">
+                            <tr>
+                              <td width="26" valign="top">
+                                <div style="width:20px; height:20px; border-radius:50%; background:rgba(47,148,99,0.15); color:#2f9463; font-size:11px; font-weight:700; text-align:center; line-height:20px;">
+                                  ${ICONS.checkCircle}
+                                </div>
+                              </td>
+                              <td valign="middle" style="font-size:12px; color:#3f5361; line-height:1.5;">
+                                <strong>Early Stage Warnings:</strong> Instant alert notification when water levels exceed safe riverbank limits.
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;">
+                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#fbfdfe; border:1px solid #eef2f3; border-radius:10px; padding:10px 12px;">
+                            <tr>
+                              <td width="26" valign="top">
+                                <div style="width:20px; height:20px; border-radius:50%; background:rgba(230,145,56,0.15); color:#e69138; font-size:11px; font-weight:700; text-align:center; line-height:20px;">
+                                  ${ICONS.zap}
+                                </div>
+                              </td>
+                              <td valign="middle" style="font-size:12px; color:#3f5361; line-height:1.5;">
+                                <strong>AI Trend Projections:</strong> Forecasted stage height (+30m &amp; +60m) powered by the SmartFlood LSTM model.
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;">
+                          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#fbfdfe; border:1px solid #eef2f3; border-radius:10px; padding:10px 12px;">
+                            <tr>
+                              <td width="26" valign="top">
+                                <div style="width:20px; height:20px; border-radius:50%; background:rgba(43,110,143,0.15); color:#2b6e8f; font-size:11px; font-weight:700; text-align:center; line-height:20px;">
+                                  ${ICONS.shield}
+                                </div>
+                              </td>
+                              <td valign="middle" style="font-size:12px; color:#3f5361; line-height:1.5;">
+                                <strong>Evacuation Guidance:</strong> Verified evacuation center locations and 24/7 official CDRRMO hotlines.
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Verified Emergency Hotlines -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#fbfdfe; border:1px solid #e4edf0; border-radius:16px; padding:16px 18px;">
+                <tr>
+                  <td>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:10px;">
+                      <tr>
+                        <td valign="middle">
+                          <span style="color:#e0522f; vertical-align:middle; margin-right:6px;">${ICONS.phone}</span>
+                          <span style="font-size:13px; font-weight:700; color:#123a54;">24/7 Emergency Hotlines</span>
+                        </td>
+                        <td align="right" valign="middle">
+                          <span style="font-size:10px; font-weight:600; color:#6d818d;">Antipolo CDRRMO</span>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td style="padding:6px 0; border-bottom:1px solid #f1f5f6;">
+                          <div style="font-size:12px; font-weight:700; color:#123a54;">Antipolo CDRRMO Operations Center</div>
+                          <div style="font-size:12px; color:#2b6e8f; font-weight:600; margin-top:1px;">(02) 8689-4564 &nbsp;·&nbsp; 0927-755-9911</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0; border-bottom:1px solid #f1f5f6;">
+                          <div style="font-size:12px; font-weight:700; color:#123a54;">National Emergency Line</div>
+                          <div style="font-size:12px; color:#2b6e8f; font-weight:600; margin-top:1px;">911 (Toll-Free Nationwide)</div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">
+                          <div style="font-size:12px; font-weight:700; color:#123a54;">Philippine Red Cross (Rizal Chapter)</div>
+                          <div style="font-size:12px; color:#2b6e8f; font-weight:600; margin-top:1px;">143 &nbsp;·&nbsp; (02) 8635-0922</div>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <div style="font-size:10px; color:#94a3b8; margin-top:8px; border-top:1px dashed #e2e8f0; padding-top:6px;">
+                      Registered: <strong>${pstTime}</strong> (PST)
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Web-Matching Clean Footer -->
+          <tr>
+            <td style="background-color:#f8fafc; border-top:1px solid #e4edf0; padding:18px 24px; text-align:center; font-size:11px; color:#6d818d; line-height:1.6;">
+              <div style="font-weight:600; color:#475569;">
+                Smart Flood Antipolo · Real-Time Flood Monitoring &amp; Early Warning System
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 /**
@@ -279,12 +631,19 @@ export async function broadcastEmailAlert({
       return { success: true, count: 0, sent: 0, failed: 0 };
     }
 
+    const defaultTitle =
+      level === 1
+        ? 'Level 1 Advisory: River Stage Rising'
+        : level === 2
+        ? 'Level 2 Warning: Flood Alert Active'
+        : 'Level 3 Danger: Critical Flood Alert';
+
     // 2. Record the AlertBroadcast entry in DB (linking to triggerLog if available)
     const broadcast = await prisma.alertBroadcast.create({
       data: {
         alertLevel: level,
-        title: title || `SmartFlood Alert Level ${level}`,
-        message: message || 'Flood advisory issued for Lower Antipolo.',
+        title: title || defaultTitle,
+        message: message || 'Flood advisory issued for monitored river basin.',
         waterLevelM: Number(waterLevelM || 0),
         rainfallRateMmh: 0,
         broadcastSource: source,
@@ -301,6 +660,9 @@ export async function broadcastEmailAlert({
 
     console.log(`[Email] Dispatching Alert (Broadcast ID #${broadcast.id}, Level ${level}) to ${subscribers.length} subscriber(s)...`);
 
+    // Clean, emoji-free subject line matching our web portal
+    const cleanSubject = `[Smart Flood] ${title || defaultTitle}`;
+
     // 3. Dispatch concurrently to all matching subscribers
     let sentCount = 0;
     let failedCount = 0;
@@ -310,7 +672,7 @@ export async function broadcastEmailAlert({
         const unsubscribeUrl = `${appBaseUrl}/api/v1/subscribers/unsubscribe/${sub.unsubscribeToken}`;
         const emailHtml = generateAlertEmailHtml({
           level,
-          title,
+          title: title || defaultTitle,
           message,
           waterLevelM,
           recipientName: sub.fullName,
@@ -320,7 +682,7 @@ export async function broadcastEmailAlert({
         const mailOptions = {
           from: sender,
           to: sub.email,
-          subject: `⚠️ [SMARTFLOOD ALERT L${level}] ${title}`,
+          subject: cleanSubject,
           html: emailHtml,
         };
 
@@ -377,7 +739,7 @@ export async function broadcastEmailAlert({
 }
 
 /**
- * Sends a single test email to the specified address.
+ * Sends a single test email to the specified address with clean formatting.
  */
 export async function sendTestEmail({ toEmail, level = 2 }) {
   if (!toEmail) throw new Error('Recipient email is required.');
@@ -386,19 +748,26 @@ export async function sendTestEmail({ toEmail, level = 2 }) {
   const sender = process.env.SMTP_FROM || 'SmartFlood Alerts <alerts@smartflood.local>';
   const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:5173';
 
+  const testLevelTitles = {
+    1: 'Level 1 Advisory: River Stage Rising',
+    2: 'Level 2 Warning: Flood Alert Active',
+    3: 'Level 3 Evacuation: Immediate Evacuation Order',
+  };
+
   const emailHtml = generateAlertEmailHtml({
     level,
-    title: '🔔 SmartFlood System Test Alert',
-    message: 'This is a test broadcast from the SmartFlood Early Warning System in Antipolo City. If you received this, your email notifications are properly configured.',
-    waterLevelM: 1.48,
-    recipientName: 'Valued Subscriber',
+    title: testLevelTitles[level] || `Level ${level} System Advisory`,
+    message:
+      'This is an official verification broadcast from the Smart Flood Early Warning System in Antipolo City. River telemetry and email delivery services are operational.',
+    waterLevelM: level === 1 ? 1.35 : level === 2 ? 1.75 : 2.15,
+    recipientName: 'Valued Resident',
     unsubscribeUrl: `${appBaseUrl}/#email-alerts`,
   });
 
   const info = await transporter.sendMail({
     from: sender,
     to: toEmail,
-    subject: `🔔 [SMARTFLOOD TEST L${level}] Test Early Warning Alert`,
+    subject: `[Smart Flood] System Verification Alert - Level ${level}`,
     html: emailHtml,
   });
 
@@ -414,3 +783,45 @@ export async function sendTestEmail({ toEmail, level = 2 }) {
     isEthereal,
   };
 }
+
+/**
+ * Sends a welcome confirmation email immediately upon registration with clean formatting.
+ */
+export async function sendWelcomeConfirmationEmail({ toEmail, unsubscribeToken }) {
+  if (!toEmail) throw new Error('Recipient email is required.');
+
+  const transporter = await getTransporter();
+  const sender = process.env.SMTP_FROM || 'SmartFlood Alerts <alerts@smartflood.local>';
+  const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:5173';
+  const unsubscribeUrl = unsubscribeToken
+    ? `${appBaseUrl}/api/v1/subscribers/unsubscribe/${unsubscribeToken}`
+    : `${appBaseUrl}/#email-alerts`;
+
+  const emailHtml = generateWelcomeEmailHtml({
+    recipientEmail: toEmail,
+    unsubscribeUrl,
+  });
+
+  const info = await transporter.sendMail({
+    from: sender,
+    to: toEmail,
+    subject: '[Smart Flood] Subscription Confirmed - Early Flood Warning System',
+    html: emailHtml,
+  });
+
+  const previewUrl = isEthereal ? nodemailer.getTestMessageUrl(info) : null;
+  if (previewUrl) {
+    console.log(`[Email][Welcome Preview URL (Ethereal)]: ${previewUrl}`);
+  } else {
+    console.log(`[Email] Successfully dispatched welcome email to ${toEmail} (Message ID: ${info.messageId})`);
+  }
+
+  return {
+    success: true,
+    messageId: info.messageId,
+    previewUrl,
+    isEthereal,
+  };
+}
+
+export { generateAlertEmailHtml, generateWelcomeEmailHtml };

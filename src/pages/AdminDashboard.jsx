@@ -10,7 +10,6 @@ import {
 import RainOverlay from '../RainOverlay.jsx';
 import WeatherMapCard from '../WeatherMapCard.jsx';
 import WaterTankGauge from '../components/WaterTankGauge.jsx';
-import SparklineBar from '../components/SparklineBar.jsx';
 import ToastContainer, { useToast } from '../components/ToastNotification.jsx';
 import DataSourcesDisclaimerModal from '../components/DataSourcesDisclaimerModal.jsx';
 import EmailSubscribersModal from '../components/EmailSubscribersModal.jsx';
@@ -63,49 +62,49 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
     case 0:
       return {
         badge: 'All Clear', icon: CheckCircle2,
-        heroTitle: 'Everything looks calm',
-        heroMsg: "Water near your area is well within the normal range, and no heavy rain is expected soon. Nothing for you to do right now — we're still keeping watch.",
-        adviceTitle: "You're all set",
+        heroTitle: 'Normal Conditions',
+        heroMsg: 'Water levels at the monitoring station remain normal and well within safe operational limits. No immediate flood threat detected.',
+        adviceTitle: 'Station Status',
         advice: [
-          'No action needed today.',
-          "We're still checking water levels and weather conditions continuously.",
-          'Come back any time to see the latest reading.',
+          'Station telemetry operating normally within baseline thresholds.',
+          'Continuous automated monitoring of water stage and rainfall active.',
+          'No emergency alerts or manual overrides required at this time.',
         ],
       };
     case 1:
       return {
         badge: 'Keep an Eye Out', icon: Info,
-        heroTitle: 'Water is a little higher than usual',
-        heroMsg: 'Levels have gone up a bit after recent rain. Nothing urgent yet — just a good time to double-check system readiness.',
-        adviceTitle: 'A few things to prepare',
+        heroTitle: 'Water Level Rising',
+        heroMsg: 'Rainfall has increased upstream water levels. The river channel is slightly elevated but remains within monitored advisory limits.',
+        adviceTitle: 'Operational Readiness',
         advice: [
-          'Check that emergency equipment is ready.',
-          'Keep half an eye on the weather over the next hour.',
-          "We'll let you know the moment anything changes.",
+          'Verify telemetry stream continuity and battery supply voltages.',
+          'Keep active surveillance on upstream rainfall accumulation trends.',
+          'Notify duty operators to maintain standby alert readiness.',
         ],
       };
     case 2:
       return {
         badge: 'Watch Closely', icon: AlertTriangle,
-        heroTitle: 'Water is rising steadily',
-        heroMsg: `Our station is seeing a faster rise than normal. System model expects it could reach about ${aiPrediction.predicted60m} m within the hour. Please stay alert.`,
-        adviceTitle: "Here's what to do right now",
+        heroTitle: 'Flood Warning Active',
+        heroMsg: `Telemetry detects accelerated water accumulation. Projected to approach ${aiPrediction.predicted60m.toFixed(2)} m within 60 minutes. Warning protocol active.`,
+        adviceTitle: 'Active Warning Protocols',
         advice: [
-          'Keep monitoring equipment ready.',
-          'Keep clear of drainage channels and low-lying areas.',
-          "We'll send an alert the moment threshold is reached.",
+          'Alert CDRRMO and barangay disaster response teams.',
+          'Prepare automated siren broadcast triggers if warning levels persist.',
+          'Dispatch situational advisories to registered email subscribers.',
         ],
       };
     default:
       return {
-        badge: 'Danger', icon: AlertTriangle,
-        heroTitle: 'Water is close to the danger mark',
-        heroMsg: 'Water level is rising fast and closing in on the danger threshold line. Please move to higher ground immediately.',
-        adviceTitle: 'Please act now',
+        badge: 'EVACUATE NOW', icon: AlertTriangle,
+        heroTitle: 'Critical Danger Threshold Exceeded',
+        heroMsg: `Station water level has reached critical danger stage (${telemetry.waterLevelM.toFixed(2)} m). Immediate disaster evacuation protocols in effect.`,
+        adviceTitle: 'Immediate Emergency Directives',
         advice: [
-          'Move to higher ground immediately.',
-          "Turn off electrical equipment if safe to do so.",
-          'Follow emergency safety protocols.',
+          'Sound emergency siren if not already activated.',
+          'Coordinate emergency evacuation routes with Antipolo CDRRMO EOC.',
+          'Issue mandatory high-ground evacuation broadcast.',
         ],
       };
   }
@@ -127,33 +126,391 @@ function rainIntensityKey(mmHr) {
 // ─── JarGauge replaced by WaterTankGauge (imported above) ───────────────────
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ─── Stat card with animated counter ────────────────────────────────────────
-function AnimatedStatCard({ icon: Icon, label, value, numericValue, decimals = 1, sub, bar, color, tooltip, delay = 0 }) {
+// ─── Time Offset Helper ──────────────────────────────────────────────────────
+function formatTimeOffset(minutesOffset = 0) {
+  const d = new Date(Date.now() + minutesOffset * 60000);
+  return new Intl.DateTimeFormat('en-PH', {
+    timeZone: 'Asia/Manila',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(d);
+}
+
+// ─── Water Level Sparkline with Real-Time Nodes & Operator Details ─────────────
+function WaterLevelSparkline({ history = [], currentLevel = 0.35, color = '#2f9463' }) {
+  const width = 560;
+  const height = 82;
+  const padY = 18;
+  const padX = 14;
+  const drawW = width - padX * 2;
+  const drawH = height - padY * 2;
+
+  const pts = Array.isArray(history) && history.length >= 2
+    ? history
+    : [+(currentLevel * 0.96).toFixed(2), +(currentLevel * 0.98).toFixed(2), +(currentLevel * 0.97).toFixed(2), +(currentLevel * 0.99).toFixed(2), +(currentLevel * 1.0).toFixed(2), +currentLevel.toFixed(2)];
+
+  const minVal = Math.min(...pts) - 0.04;
+  const maxVal = Math.max(...pts) + 0.04;
+  const range = (maxVal - minVal) || 0.1;
+
+  const coords = pts.map((val, idx) => {
+    const x = padX + (idx / Math.max(1, pts.length - 1)) * drawW;
+    const y = padY + drawH - ((val - minVal) / range) * drawH;
+    return { x, y, val };
+  });
+
+  let pathD = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i];
+    const p1 = coords[i + 1];
+    const mx = (p0.x + p1.x) / 2;
+    pathD += ` C ${mx.toFixed(1)} ${p0.y.toFixed(1)}, ${mx.toFixed(1)} ${p1.y.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+  }
+
+  const last = coords[coords.length - 1];
+  const first = coords[0];
+  const areaD = `${pathD} L ${last.x.toFixed(1)} ${height - 14} L ${first.x.toFixed(1)} ${height - 14} Z`;
+  const gradId = `adminWaterSparkGrad_${color.replace(/[^a-zA-Z0-9]/g, '')}`;
+
+  const startVal = Number(pts[0] || (currentLevel * 0.96)).toFixed(2);
+  const liveVal = Number(currentLevel || 0).toFixed(2);
+  const deltaVal = +(liveVal - startVal).toFixed(2);
+  const deltaText = deltaVal > 0 ? `+${deltaVal.toFixed(2)}m` : deltaVal < 0 ? `${deltaVal.toFixed(2)}m` : '0.00m';
+
+  const timeNow = formatTimeOffset(0);
+  const time30mAgo = formatTimeOffset(-30);
+
+  return (
+    <div className="relative w-full my-auto select-none">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible block" style={{ minHeight: '80px', maxHeight: '110px' }}>
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.32" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {/* Subtle horizontal reference grid guides */}
+        <line x1={padX} y1={padY + drawH * 0.3} x2={width - padX} y2={padY + drawH * 0.3} stroke="#eef4f6" strokeWidth="1" strokeDasharray="3 3" />
+        <line x1={padX} y1={padY + drawH * 0.7} x2={width - padX} y2={padY + drawH * 0.7} stroke="#eef4f6" strokeWidth="1" strokeDasharray="3 3" />
+
+        {/* Top Meter Values & Delta */}
+        <text x={padX} y={13} textAnchor="start" fontSize="11" fill="#6d818d" fontWeight="600">
+          {startVal} m
+        </text>
+        <text x={width * 0.5} y={13} textAnchor="middle" fontSize="10.5" fill="#6d818d" fontWeight="600" className="font-mono">
+          Δ {deltaText}
+        </text>
+        <text x={width - padX} y={13} textAnchor="end" fontSize="11.5" fill={color} fontWeight="700">
+          {liveVal} m Live ●
+        </text>
+
+        {/* Gradient fill under curve */}
+        <path d={areaD} fill={`url(#${gradId})`} />
+        
+        {/* Bold curve stroke */}
+        <path d={pathD} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        
+        {/* Live endpoint marker */}
+        <circle cx={last.x} cy={last.y} r="4" fill={color} stroke="#ffffff" strokeWidth="2" />
+
+        {/* Bottom Actual Timestamps */}
+        <text x={padX} y={height - 2} textAnchor="start" fontSize="10" fill="#6d818d" fontWeight="500">
+          {time30mAgo}
+        </text>
+        <text x={width - padX} y={height - 2} textAnchor="end" fontSize="10" fill="#6d818d" fontWeight="600">
+          {timeNow} (Now)
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+// ─── AI Forecast Trajectory Mini-Graph with Confidence Cone ──────────────────
+function AiForecastSparkline({ currentM = 0.35, p30M = 0.38, p60M = 0.41, color = '#e69138' }) {
+  const width = 560;
+  const height = 82;
+  const padY = 18;
+  const padX = 36;
+  const drawW = width - padX * 2;
+  const drawH = height - padY * 2;
+
+  const vals = [currentM, p30M, p60M];
+  const minV = Math.min(...vals) - 0.05;
+  const maxV = Math.max(...vals) + 0.05;
+  const range = (maxV - minV) || 0.1;
+
+  const getY = (val) => padY + drawH - ((val - minV) / range) * drawH;
+
+  const pt0 = { x: padX, y: getY(currentM) };
+  const pt30 = { x: width * 0.5, y: getY(p30M) };
+  const pt60 = { x: width - padX, y: getY(p60M) };
+
+  // Confidence error margins (±1.5cm at 30m, ±2.2cm at 60m)
+  const offset30 = Math.max(5, (0.015 / range) * drawH);
+  const offset60 = Math.max(6, (0.022 / range) * drawH);
+
+  const coneD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} ` +
+    `L ${pt30.x.toFixed(1)} ${(pt30.y - offset30).toFixed(1)} ` +
+    `L ${pt60.x.toFixed(1)} ${(pt60.y - offset60).toFixed(1)} ` +
+    `L ${pt60.x.toFixed(1)} ${(pt60.y + offset60).toFixed(1)} ` +
+    `L ${pt30.x.toFixed(1)} ${(pt30.y + offset30).toFixed(1)} Z`;
+
+  const lineD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} L ${pt30.x.toFixed(1)} ${pt30.y.toFixed(1)} L ${pt60.x.toFixed(1)} ${pt60.y.toFixed(1)}`;
+  const areaD = `${lineD} L ${pt60.x.toFixed(1)} ${height - 14} L ${pt0.x.toFixed(1)} ${height - 14} Z`;
+
+  const timeNow = formatTimeOffset(0);
+  const time30m = formatTimeOffset(30);
+  const time60m = formatTimeOffset(60);
+
+  return (
+    <div className="relative w-full my-auto select-none">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible block" style={{ minHeight: '80px', maxHeight: '110px' }}>
+        <defs>
+          <linearGradient id="adminAiForecastArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+          </linearGradient>
+          <linearGradient id="adminAiConfidenceCone" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor={color} stopOpacity="0.08" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.24" />
+          </linearGradient>
+        </defs>
+
+        {/* Subtle horizontal reference grid guides */}
+        <line x1={padX} y1={padY + drawH * 0.3} x2={width - padX} y2={padY + drawH * 0.3} stroke="#fdf4eb" strokeWidth="1" strokeDasharray="3 3" />
+        <line x1={padX} y1={padY + drawH * 0.7} x2={width - padX} y2={padY + drawH * 0.7} stroke="#fdf4eb" strokeWidth="1" strokeDasharray="3 3" />
+
+        {/* Top Meter Values */}
+        <text x={pt0.x} y={13} textAnchor="start" fontSize="11" fill="#123a54" fontWeight="700">
+          {Number(currentM).toFixed(2)}m (Now)
+        </text>
+        <text x={pt30.x} y={13} textAnchor="middle" fontSize="12" fill={color} fontWeight="800">
+          {Number(p30M).toFixed(2)}m (+30m)
+        </text>
+        <text x={pt60.x} y={13} textAnchor="end" fontSize="11" fill="#6d818d" fontWeight="700">
+          {Number(p60M).toFixed(2)}m (+60m)
+        </text>
+
+        {/* Shaded Confidence Cone */}
+        <path d={coneD} fill="url(#adminAiConfidenceCone)" />
+
+        {/* Under-line gradient */}
+        <path d={areaD} fill="url(#adminAiForecastArea)" />
+
+        {/* Forecast Trajectory Line */}
+        <path
+          d={lineD}
+          fill="none"
+          stroke={color}
+          strokeWidth="3"
+          strokeDasharray="6 4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+
+        {/* Point: Now */}
+        <circle cx={pt0.x} cy={pt0.y} r="3.5" fill="#123a54" stroke="#ffffff" strokeWidth="1.5" />
+
+        {/* Point: +30m */}
+        <circle cx={pt30.x} cy={pt30.y} r="4.2" fill={color} stroke="#ffffff" strokeWidth="2" />
+
+        {/* Point: +60m */}
+        <circle cx={pt60.x} cy={pt60.y} r="4.2" fill="#ffffff" stroke={color} strokeWidth="2.5" />
+
+        {/* Bottom Actual Timestamps */}
+        <text x={pt0.x} y={height - 2} textAnchor="start" fontSize="10" fill="#6d818d" fontWeight="500">
+          {timeNow}
+        </text>
+        <text x={pt30.x} y={height - 2} textAnchor="middle" fontSize="10.5" fill={color} fontWeight="700">
+          {time30m}
+        </text>
+        <text x={pt60.x} y={height - 2} textAnchor="end" fontSize="10" fill="#6d818d" fontWeight="500">
+          {time60m}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+// ─── Station Vitals Mini-Readout (for health card) ────────────────────────────
+function StationVitalsReadout({ rssi, voltage, wsConnected }) {
+  const rssiPct = Math.max(0, Math.min(100, ((rssi + 100) / 50) * 100));
+  const voltPct = Math.max(0, Math.min(100, ((voltage - 10) / 4) * 100));
+
+  const rssiColor = rssi > -60 ? '#2f9463' : rssi > -75 ? '#e69138' : '#e0522f';
+  const voltColor = voltage >= 12.0 ? '#2f9463' : voltage >= 11.0 ? '#e69138' : '#e0522f';
+
+  const rows = [
+    { label: 'Wi-Fi RSSI', val: `${rssi} dBm`, pct: rssiPct, color: rssiColor },
+    { label: 'Supply V', val: `${voltage.toFixed(1)} V`, pct: voltPct, color: voltColor },
+    { label: 'WS Link', val: wsConnected ? 'LIVE' : 'RECONNECT', pct: wsConnected ? 100 : 0, color: wsConnected ? '#2f9463' : '#e69138' },
+  ];
+
+  return (
+    <div className="flex flex-col gap-2 w-full">
+      {rows.map(({ label, val, pct, color }) => (
+        <div key={label}>
+          <div className="flex justify-between items-center mb-0.5">
+            <span className="text-[9.5px] font-bold text-[#6d818d] uppercase tracking-wide">{label}</span>
+            <span className="text-[10px] font-mono font-bold" style={{ color }}>{val}</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-[#eef4f6] overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${pct}%`, background: color }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Rain Rate Sparkline (bar-chart style) ─────────────────────────────────────
+function RainRateSparkline({ history = [], currentRate = 0, color = '#2b6e8f' }) {
+  const width = 280;
+  const height = 82;
+  const padY = 18;
+  const padX = 10;
+  const drawW = width - padX * 2;
+  const drawH = height - padY * 2;
+
+  // use history waterLevel as proxy for rain intensity, or fallback
+  const pts = Array.isArray(history) && history.length >= 2
+    ? history.slice(-8).map(h => h.waterLevel * 12)
+    : [currentRate * 0.7, currentRate * 0.8, currentRate * 0.9, currentRate * 0.95, currentRate];
+
+  const maxV = Math.max(...pts, 1);
+  const barW = Math.max(4, (drawW / pts.length) - 2);
+
+  return (
+    <div className="relative w-full my-auto select-none">
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-20 sm:h-24 overflow-visible">
+        <defs>
+          <linearGradient id="rainBarGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.35" />
+          </linearGradient>
+        </defs>
+
+        <text x={padX} y={13} textAnchor="start" fontSize="10" fill="#6d818d" fontWeight="600">mm/hr</text>
+        <text x={width - padX} y={13} textAnchor="end" fontSize="11" fill={color} fontWeight="700">
+          {currentRate.toFixed(1)} mm/hr ●
+        </text>
+
+        {pts.map((v, i) => {
+          const bh = Math.max(2, (v / maxV) * drawH);
+          const x = padX + (i / pts.length) * drawW + 1;
+          const y = padY + drawH - bh;
+          const isLast = i === pts.length - 1;
+          return (
+            <rect
+              key={i}
+              x={x} y={y}
+              width={barW} height={bh}
+              fill={isLast ? color : `url(#rainBarGrad)`}
+              fillOpacity={isLast ? 1 : 0.6}
+              rx="2"
+            />
+          );
+        })}
+
+        <text x={padX} y={height - 2} textAnchor="start" fontSize="9.5" fill="#6d818d" fontWeight="500">30m ago</text>
+        <text x={width - padX} y={height - 2} textAnchor="end" fontSize="9.5" fill="#6d818d" fontWeight="600">Now</text>
+      </svg>
+    </div>
+  );
+}
+
+// ─── Stat Card component (Detailed Admin Version) ──────────────────────────────
+function AnimatedStatCard({
+  icon: Icon,
+  label,
+  badge,
+  value,
+  numericValue,
+  decimals = 1,
+  trendText,
+  sub,
+  detailLine1,
+  detailLine2,
+  color,
+  tooltip,
+  delay = 0,
+  variant = 'water',
+  history = [],
+  currentLevel = 0,
+  predicted30m = 0,
+  predicted60m = 0,
+  // for health card
+  rssi = -65,
+  voltage = 12.2,
+  wsConnected = false,
+  // for rain card
+  rainRate = 0,
+}) {
   const validNum = (numericValue != null && !Number.isNaN(Number(numericValue))) ? Number(numericValue) : 0;
   const displayed = useCountUp(validNum, 900, decimals);
   const cleanVal = (value || '').replace(/NaN/g, '').trim();
 
   return (
     <div
-      className={`bg-white rounded-2xl p-3.5 sm:p-4 border border-[#e4edf0] shadow-sm flex flex-col justify-between card-enter card-enter-d${delay} hover:shadow-md transition-shadow duration-300`}
+      className={`bg-white rounded-2xl p-4 sm:p-5 border border-[#e4edf0] shadow-sm flex flex-col justify-between card-enter card-enter-d${delay} hover:shadow-md transition-shadow duration-300 min-h-[176px]`}
       title={tooltip}
     >
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold uppercase tracking-wide text-[#6d818d]">{label}</span>
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center transition-transform hover:scale-110" style={{ background: `${color}18`, color }}>
-            <Icon size={14} />
+      {/* Top Header */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <div className="w-6 h-6 rounded-md flex items-center justify-center transition-transform hover:scale-110 flex-shrink-0" style={{ background: `${color}18`, color }}>
+            <Icon size={13} />
           </div>
+          <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#6d818d]">{label}</span>
         </div>
-        <p className="font-display text-lg sm:text-xl font-semibold text-[#123a54] mb-0.5">
-          {numericValue != null && !Number.isNaN(Number(numericValue))
-            ? `${displayed}${cleanVal.replace(/^[\d.\s-]+/, ' ')}`
-            : (cleanVal || '0.00 m')}
-        </p>
-        <p className="text-[10px] text-[#6d818d] mb-2 leading-tight">{sub}</p>
+        {badge && (
+          <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#123a54]/5 text-[#123a54] border border-[#123a54]/10">
+            {badge}
+          </span>
+        )}
       </div>
-      <div className="h-1.5 rounded-full bg-[#eef4f6] overflow-hidden">
-        <div className="h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, bar || 0))}%`, background: color, transition: 'width 1s ease-out' }} />
+
+      {/* Main Content */}
+      <div className="grid grid-cols-[200px_1fr] gap-4 items-center my-auto">
+        {/* Left: Big number + metadata */}
+        <div className="flex flex-col justify-center flex-shrink-0">
+          <div className="mb-1">
+            <span className="font-display text-3xl font-bold text-[#123a54] tracking-tight leading-none inline-block">
+              {numericValue != null && !Number.isNaN(Number(numericValue))
+                ? `${displayed}${cleanVal.replace(/^[\d.\s-]+/, ' ')}`
+                : (cleanVal || '—')}
+            </span>
+            {trendText && (
+              <span className="block text-[10.5px] font-semibold mt-0.5" style={{ color }}>
+                {trendText}
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] font-bold text-[#123a54] leading-tight mb-1">{sub}</p>
+          {detailLine1 && <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight">{detailLine1}</p>}
+          {detailLine2 && <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight mt-0.5">{detailLine2}</p>}
+        </div>
+
+        {/* Right: Chart or Vitals */}
+        <div className="min-w-0 flex-1">
+          {variant === 'water' && (
+            <WaterLevelSparkline history={history} currentLevel={validNum} color={color} />
+          )}
+          {variant === 'ai' && (
+            <AiForecastSparkline currentM={currentLevel} p30M={predicted30m} p60M={predicted60m} color={color} />
+          )}
+          {variant === 'rain' && (
+            <RainRateSparkline history={history} currentRate={rainRate} color={color} />
+          )}
+          {variant === 'health' && (
+            <StationVitalsReadout rssi={rssi} voltage={voltage} wsConnected={wsConnected} />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -887,7 +1244,8 @@ export default function FloodMonitoringDashboard() {
   const AdviceIcon = friendly.icon;
   const rainKey = rainIntensityKey(telemetry.rainRateMmHr);
 
-  const surgeRate = Math.max(0.04, +(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2));
+  const surgeDelta = +(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2);
+  const surgeRateText = surgeDelta > 0.01 ? `+${surgeDelta.toFixed(2)} m/h` : '0.00 m/h (Steady)';
   const displayRainRate = useCountUp(telemetry.rainRateMmHr, 900, 1);
   const displayRiskScore = useCountUp(aiPrediction.riskScore, 900, 0);
 
@@ -960,7 +1318,7 @@ export default function FloodMonitoringDashboard() {
               style={{ background: `linear-gradient(135deg, ${floodLevel.soft}, #ffffff 70%)`, borderColor: floodLevel.border }}>
               <RainOverlay intensity={rainKey} />
               <div className="relative z-[1]">
-                <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide mb-2 float-badge" style={{ color: floodLevel.color }}>
+                <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: floodLevel.color }}>
                   <MapPin size={13} /> Current status
                 </div>
                 <h2 className="font-display text-2xl sm:text-3xl font-semibold text-[#123a54] mb-2 leading-tight">{friendly.heroTitle}</h2>
@@ -977,13 +1335,8 @@ export default function FloodMonitoringDashboard() {
 
                 <div className="flex flex-wrap gap-4 sm:gap-5 mt-4">
                   <div className="flex items-center gap-1.5 text-xs text-[#6d818d]">
-                    <CloudRain size={15} className="text-[#2b6e8f]" />
-                    <span><b className="text-[#123a54]">{rainDescription(telemetry.rainRateMmHr)}</b> right now</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-[#6d818d]">
                     <Zap size={15} className="text-[#e69138]" />
-                    <span>Surge Rate: <b className="text-[#123a54] font-mono">+{surgeRate} m/h</b></span>
-                    <SparklineBar currentLevel={telemetry.waterLevelM} />
+                    <span>Surge Rate: <b className="text-[#123a54] font-mono">{surgeRateText}</b></span>
                   </div>
                 </div>
               </div>
@@ -993,229 +1346,117 @@ export default function FloodMonitoringDashboard() {
               </div>
             </div>
 
-            {/* ── STAT CARDS GRID ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-3">
-              <AnimatedStatCard
-                icon={Droplets}
-                label="Water Level"
-                value={`${telemetry.waterLevelM.toFixed(2)} m`}
-                numericValue={telemetry.waterLevelM}
-                decimals={2}
-                sub={telemetry.waterDistanceCm <= 25 ? '⚠️ Transducer Limit (25cm blind spot)' : `${telemetry.waterDistanceCm} cm to sensor transducer`}
-                bar={Math.min(100, (telemetry.waterLevelM / 1.8) * 100)}
-                color={floodLevel.color}
-                tooltip="JSN-SR04T ultrasonic sensor measured water column height"
-                delay={2}
-                variant="water"
-              />
+            {/* ─── STAT CARDS GRID (2-card stacked: Water Level + AI Forecast) ── */}
+            <div className="grid grid-cols-1 gap-3">
 
-              <AnimatedStatCard
-                icon={Cpu}
-                label="Station Health"
-                value="Working fine"
-                sub={`Online · RSSI ${telemetry.wifiRssi} dBm`}
-                bar={92}
-                color="#2f9463"
-                tooltip="ESP32 Wi-Fi signal strength and uptime status"
-                delay={4}
-                variant="ai"
-              />
-            </div>
+              {/* Card 1: Water Level — side-by-side layout with timeframe + export */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#e4edf0] shadow-sm flex flex-col gap-3 card-enter card-enter-d2 hover:shadow-md transition-shadow duration-300">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${floodLevel.color}18`, color: floodLevel.color }}>
+                      <Droplets size={13} />
+                    </div>
+                    <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#6d818d]">Water Level</span>
+                  </div>
+                  <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#123a54]/5 text-[#123a54] border border-[#123a54]/10">JSN-SR04T</span>
+                </div>
 
-            {/* Trend / Water Level History */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5">
-              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Activity size={16} className="text-[#2b6e8f]" />
-                  <h2 className="text-sm font-semibold text-[#123a54]">
-                    Water level ({timeFrame === '30m' ? '30 Mins' : timeFrame === '1h' ? '1 Hour' : timeFrame === '6h' ? '6 Hours' : timeFrame === '24h' ? '24 Hours' : `Custom (${customRangeText})`})
-                  </h2>
-                  {/* Time Frame Selector Pills */}
-                  <div className="relative flex items-center gap-1 bg-[#eef4f6] p-0.5 rounded-lg border border-[#e4edf0] ml-1">
-                    {[
-                      { id: '30m', label: '30m' },
-                      { id: '1h', label: '1h' },
-                      { id: '6h', label: '6h' },
-                      { id: '24h', label: '24h' },
-                    ].map(({ id, label }) => (
-                      <button
-                        key={id}
+                {/* Side-by-side: metric left, sparkline right */}
+                <div className="grid grid-cols-[200px_1fr] gap-4 items-center">
+                  <div className="flex flex-col justify-center">
+                    <span className="font-display text-3xl font-bold text-[#123a54] tracking-tight leading-none">
+                      {telemetry.waterLevelM.toFixed(2)} m
+                    </span>
+                    <span className="block text-[10.5px] font-semibold mt-0.5" style={{ color: floodLevel.color }}>
+                      {floodLevel.id === 0 ? '▼ Normal' : floodLevel.id === 1 ? '▲ Watch' : floodLevel.id === 2 ? '▲▲ Warning' : '▲▲▲ DANGER'}
+                    </span>
+                    <p className="text-[11px] font-bold text-[#123a54] leading-tight mt-1">
+                      {telemetry.waterDistanceCm <= 25 ? '⚠ Transducer Limit' : `${telemetry.waterDistanceCm} cm to transducer`}
+                    </p>
+                    <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight mt-0.5">L1: {thresholds.level1_watch}m · L2: {thresholds.level2_alarm}m</p>
+                    <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight">L3 Danger: {thresholds.level3_danger}m</p>
+                  </div>
+                  <div className="min-w-0">
+                    <WaterLevelSparkline history={activeHistory.map(h => h.waterLevel)} currentLevel={telemetry.waterLevelM} color={floodLevel.color} />
+                  </div>
+                </div>
+
+                {/* Footer: timeframe + export */}
+                <div className="flex items-center justify-between pt-2 border-t border-[#f1f5f6] gap-2 flex-wrap">
+                  <div className="relative flex items-center gap-0.5 bg-[#eef4f6] p-0.5 rounded-lg border border-[#e4edf0]">
+                    {[{ id: '30m', label: '30m' }, { id: '1h', label: '1h' }, { id: '6h', label: '6h' }, { id: '24h', label: '24h' }].map(({ id, label }) => (
+                      <button key={id}
                         onClick={() => { setTimeFrame(id); setShowCustomModal(false); }}
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${
-                          timeFrame === id
-                            ? 'bg-white text-[#2b6e8f] shadow-sm'
-                            : 'text-[#6d818d] hover:text-[#123a54]'
-                        }`}
-                      >
+                        className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
+                          timeFrame === id ? 'bg-white text-[#2b6e8f] shadow-sm' : 'text-[#6d818d] hover:text-[#123a54]'
+                        }`}>
                         {label}
                       </button>
                     ))}
-                    
-                    {/* Custom Pill */}
                     <button
                       onClick={() => { setTimeFrame('custom'); setShowCustomModal(!showCustomModal); }}
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all flex items-center gap-1 ${
-                        timeFrame === 'custom'
-                          ? 'bg-[#2b6e8f] text-white shadow-sm'
-                          : 'text-[#6d818d] hover:text-[#123a54]'
-                      }`}
-                    >
-                      <Sliders size={10} />
-                      Custom
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all flex items-center gap-1 ${
+                        timeFrame === 'custom' ? 'bg-[#2b6e8f] text-white shadow-sm' : 'text-[#6d818d] hover:text-[#123a54]'
+                      }`}>
+                      <Sliders size={9} /> Custom
                     </button>
-
-                    {/* Custom Popover Form */}
                     {showCustomModal && (
-                      <div className="absolute top-full left-0 mt-2 z-30 bg-white rounded-xl shadow-xl border border-[#e4edf0] p-3 w-56 space-y-2 text-xs">
+                      <div className="absolute bottom-full left-0 mb-2 z-30 bg-white rounded-xl shadow-xl border border-[#e4edf0] p-3 w-52 space-y-2 text-xs">
                         <div className="flex items-center justify-between font-bold text-[#123a54] pb-1 border-b border-[#f1f5f6]">
-                          <span>Custom Time Range</span>
-                          <button onClick={() => setShowCustomModal(false)} className="text-[#6d818d] hover:text-red-500 text-sm">×</button>
+                          <span>Custom Range</span>
+                          <button onClick={() => setShowCustomModal(false)} className="text-[#6d818d] hover:text-red-500">×</button>
                         </div>
                         <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="1"
-                            max="100"
-                            value={customValue}
+                          <input type="number" min="1" max="100" value={customValue}
                             onChange={(e) => setCustomValue(e.target.value)}
-                            className="w-16 px-2 py-1 border border-[#d1e0e8] rounded-lg text-center font-bold text-[#123a54]"
-                          />
-                          <select
-                            value={customUnit}
-                            onChange={(e) => setCustomUnit(e.target.value)}
-                            className="flex-1 px-2 py-1 border border-[#d1e0e8] rounded-lg font-semibold text-[#123a54] bg-white cursor-pointer"
-                          >
+                            className="w-14 px-2 py-1 border border-[#d1e0e8] rounded-lg text-center font-bold text-[#123a54]" />
+                          <select value={customUnit} onChange={(e) => setCustomUnit(e.target.value)}
+                            className="flex-1 px-2 py-1 border border-[#d1e0e8] rounded-lg font-semibold text-[#123a54] bg-white cursor-pointer">
                             <option value="minutes">Minutes</option>
                             <option value="hours">Hours</option>
                             <option value="days">Days</option>
                           </select>
                         </div>
                         <button
-                          onClick={() => {
-                            const unitText = customUnit.charAt(0).toUpperCase() + customUnit.slice(1);
-                            setCustomRangeText(`${customValue} ${unitText}`);
-                            setTimeFrame('custom');
-                            setShowCustomModal(false);
-                          }}
-                          className="w-full py-1.5 rounded-lg bg-[#2b6e8f] text-white font-bold hover:bg-[#1f6f94] transition text-center shadow-sm"
-                        >
+                          onClick={() => { setCustomRangeText(`${customValue} ${customUnit.charAt(0).toUpperCase()}${customUnit.slice(1)}`); setTimeFrame('custom'); setShowCustomModal(false); }}
+                          className="w-full py-1.5 rounded-lg bg-[#2b6e8f] text-white font-bold hover:bg-[#1f6f94] transition text-center">
                           Apply Range
                         </button>
                       </div>
                     )}
                   </div>
-                </div>
-                <div className="flex items-center gap-2.5 text-[10px] sm:text-[11px] text-[#6d818d] flex-wrap">
-                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#2b6e8f] inline-block rounded" /> Ultrasonic Telemetry</span>
-                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#e69138] inline-block rounded" /> ML Projection</span>
-                  <button
-                    onClick={exportTelemetryCsv}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#2b6e8f]/10 text-[#2b6e8f] font-bold text-[10px] hover:bg-[#2b6e8f]/20 transition border border-[#2b6e8f]/30 shadow-xs ml-1"
-                    title="Export telemetry log to CSV"
-                  >
-                    <Download size={11} />
-                    Export CSV
+                  <button onClick={exportTelemetryCsv}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2b6e8f]/10 text-[#2b6e8f] font-bold text-[10px] hover:bg-[#2b6e8f]/20 transition border border-[#2b6e8f]/30"
+                    title="Export telemetry log to CSV">
+                    <Download size={11} /> Export CSV
                   </button>
                 </div>
               </div>
-              <div className="overflow-x-auto w-full">
-                <svg viewBox={`0 0 ${chartW} ${chartH + 22}`} className="w-full min-w-[280px]" style={{ height: 150 }}>
-                  <defs>
-                    <linearGradient id="floodAreaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#2b6e8f" stopOpacity="0.32">
-                        <animate attributeName="stop-opacity" values="0.25;0.40;0.25" dur="4s" repeatCount="indefinite" />
-                      </stop>
-                      <stop offset="100%" stopColor="#1f6f94" stopOpacity="0.04" />
-                    </linearGradient>
-                    <filter id="lineGlow">
-                      <feDropShadow dx="0" dy="1.5" stdDeviation="2" floodColor="#123a54" floodOpacity="0.35" />
-                    </filter>
-                  </defs>
 
-                  {/* Danger Line (Dynamic Level 3 Threshold) */}
-                  {(() => {
-                    const dangerVal = thresholds.level3_danger || 2.0;
-                    const dangerY = chartH - Math.min(1, Math.max(0, dangerVal / maxLevel)) * chartH;
-                    return (
-                      <>
-                        <line x1="0" y1={dangerY} x2={chartW} y2={dangerY}
-                          stroke="#e0522f" strokeWidth="1" strokeDasharray="6,4" opacity="0.6" />
-                        <text x="8" y={dangerY - 5} textAnchor="start" fontSize="9" fill="#e0522f" fontWeight="bold">
-                          Danger line ({dangerVal.toFixed(1)} m)
-                        </text>
-                      </>
-                    );
-                  })()}
+              {/* Card 2: AI 30 & 60 Minute Forecast */}
+              <AnimatedStatCard
+                icon={TrendingUp}
+                label="AI 30 and 60 Minute Forecast"
+                badge="ONNX LSTM"
+                value={`${aiPrediction.predicted30m.toFixed(2)} m`}
+                numericValue={aiPrediction.predicted30m}
+                decimals={2}
+                trendText={`+${(aiPrediction.predicted30m - telemetry.waterLevelM).toFixed(2)} m delta`}
+                sub={`Risk Score: ${aiPrediction.riskScore}%`}
+                detailLine1={`Conf: ${aiPrediction.modelConfidence}% · MAE ±1.5cm · R² 82.6%`}
+                detailLine2={`+60m: ${aiPrediction.predicted60m.toFixed(2)} m · ±2.2 cm`}
+                color="#e69138"
+                tooltip="ONNX LSTM 30 & 60-minute forecast with confidence cone"
+                delay={3}
+                variant="ai"
+                currentLevel={telemetry.waterLevelM}
+                predicted30m={aiPrediction.predicted30m}
+                predicted60m={aiPrediction.predicted60m}
+              />
 
-                  {/* Subtle Animated Flood Area Fill */}
-                  <path d={areaPath} fill="url(#floodAreaGrad)" />
-                  <path d={areaPath} fill="#2b6e8f15" className="animate-pulse" />
-
-                  {/* Measured Telemetry Line */}
-                  <path d={buildPath(histLevels)} fill="none" stroke="#2b6e8f" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#lineGlow)" />
-
-                  {/* Forecast Dashed Connection Trajectory Line (+30m and +60m ML) */}
-                  {(() => {
-                    const p30Val = aiPrediction?.predicted30m ?? telemetry.waterLevelM;
-                    const p60Val = aiPrediction?.predicted60m ?? telemetry.waterLevelM;
-                    const p30X = lastMeasuredPt.x + (chartW - 10 - lastMeasuredPt.x) * 0.5;
-                    const p30Y = chartH - (Math.min(maxLevel, Math.max(0, p30Val)) / maxLevel) * chartH;
-                    const p60X = chartW - 10;
-                    const p60Y = chartH - (Math.min(maxLevel, Math.max(0, p60Val)) / maxLevel) * chartH;
-
-                    return (
-                      <g>
-                        <path
-                          d={`M ${lastMeasuredPt.x},${lastMeasuredPt.y} L ${p30X},${p30Y} L ${p60X},${p60Y}`}
-                          fill="none"
-                          stroke="#e69138"
-                          strokeWidth="2.5"
-                          strokeDasharray="4,4"
-                        />
-                        {/* +30m Node */}
-                        <circle cx={p30X} cy={p30Y} r="4.5" fill="#e69138" stroke="white" strokeWidth="2" />
-                        <text x={p30X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+30m AI</text>
-                        {/* +60m Node */}
-                        <circle cx={p60X} cy={p60Y} r="5" fill="#e69138" stroke="white" strokeWidth="2" />
-                        <text x={p60X} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#e69138" fontWeight="bold">+60m AI</text>
-                      </g>
-                    );
-                  })()}
-
-                  {/* Measured Telemetry Nodes */}
-                  {histLevels.map((v, i, a) => {
-                    const total = a.length;
-                    const isLast = i === total - 1;
-                    const shouldDrawNode = total <= 12 || i === 0 || isLast || i % Math.ceil(total / 8) === 0;
-                    if (!shouldDrawNode && !isLast) return null;
-
-                    const { x, y } = toChartPt(v, i, a);
-                    return (
-                      <g key={i}>
-                        <circle cx={x} cy={y} r="4" fill="#2b6e8f" stroke="white" strokeWidth="2"
-                          className={isLast ? 'glow-tail' : ''} />
-                        {isLast && (
-                          <>
-                            <circle cx={x} cy={y} r="9" fill="#2b6e8f" opacity="0.15" className="animate-pulse" />
-                            <circle cx={x} cy={y} r="14" fill="#2b6e8f" opacity="0.07" className="animate-pulse" style={{ animationDelay: '0.3s' }} />
-                          </>
-                        )}
-                        {!isLast && <circle cx={x} cy={y} r="5" fill="#2b6e8f" opacity="0.10" className="animate-pulse" />}
-                      </g>
-                    );
-                  })}
-                  {activeHistory.map((h, i, a) => {
-                    const total = a.length;
-                    const isLast = i === total - 1;
-                    const shouldDrawLabel = total <= 6 || i === 0 || isLast || i % Math.ceil(total / 5) === 0;
-                    if (!shouldDrawLabel) return null;
-
-                    const { x } = toChartPt(h.waterLevel, i, a);
-                    return <text key={i} x={x} y={chartH + 16} textAnchor="middle" fontSize="9" fill="#6d818d" fontWeight="600">{h.time}</text>;
-                  })}
-                </svg>
-              </div>
             </div>
+
 
             {/* Predictive AI Flood Projection */}
             <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 flex flex-col justify-between">
@@ -1225,12 +1466,17 @@ export default function FloodMonitoringDashboard() {
                 </h2>
                 <div className="space-y-2.5">
                   {[
-                    { label: '30-Minute AI Horizon', value: `${aiPrediction.predicted30m.toFixed(2)} m`, delta: `+${(aiPrediction.predicted30m - telemetry.waterLevelM).toFixed(2)}m`, level: getFloodLevel(aiPrediction.predicted30m) },
-                    { label: '60-Minute AI Horizon', value: `${aiPrediction.predicted60m.toFixed(2)} m`, delta: `+${(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2)}m`, level: getFloodLevel(aiPrediction.predicted60m) },
-                  ].map(({ label, value, delta, level }) => (
+                    { label: '30-Minute AI Horizon', value: `${aiPrediction.predicted30m.toFixed(2)} m`, delta: `+${(aiPrediction.predicted30m - telemetry.waterLevelM).toFixed(2)}m`, margin: 'MAE ±1.5 cm', r2: '82.6%', level: getFloodLevel(aiPrediction.predicted30m) },
+                    { label: '60-Minute AI Horizon', value: `${aiPrediction.predicted60m.toFixed(2)} m`, delta: `+${(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2)}m`, margin: 'MAE ±2.2 cm', r2: '62.9%', level: getFloodLevel(aiPrediction.predicted60m) },
+                  ].map(({ label, value, delta, margin, r2, level }) => (
                     <div key={label} className="flex items-center justify-between p-3 rounded-xl border" style={{ background: level.soft, borderColor: level.border }}>
                       <div>
-                        <p className="text-[11px] font-bold text-[#6d818d]">{label}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[11px] font-bold text-[#6d818d]">{label}</p>
+                          <span className="text-[9px] font-mono font-medium text-[#2b6e8f] bg-white/80 px-1.5 py-0.5 rounded border border-[#2b6e8f]/20 shadow-2xs">
+                            {margin}
+                          </span>
+                        </div>
                         <div className="flex items-baseline gap-2 mt-0.5">
                           <p className="font-display text-lg font-bold" style={{ color: level.color }}>{value}</p>
                           <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-white/90 border border-black/5 shadow-2xs" style={{ color: level.color }}>
@@ -1238,16 +1484,20 @@ export default function FloodMonitoringDashboard() {
                           </span>
                         </div>
                       </div>
-                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: `${level.color}20`, color: level.color }}>
-                        {level.label}
-                      </span>
+                      <div className="text-right">
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: `${level.color}20`, color: level.color }}>
+                          {level.label}
+                        </span>
+                        <p className="text-[9px] text-[#6d818d] font-mono mt-1">R²: {r2}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-              <p className="text-[11px] text-[#6d818d] text-center pt-2">
-                LSTM Model Confidence Score: <b className="text-[#123a54]">{aiPrediction.modelConfidence}%</b>
-              </p>
+              <div className="pt-2 border-t border-[#f1f5f6] flex items-center justify-between text-[11px] text-[#6d818d] flex-wrap gap-1">
+                <span>Model Test Validation:</span>
+                <span>MAE <b className="text-[#123a54]">±1.5 cm</b> (+30m) / <b className="text-[#123a54]">±2.2 cm</b> (+60m) · R² <b className="text-[#123a54]">82.6%</b></span>
+              </div>
             </div>
 
             {/* Activity feed */}
