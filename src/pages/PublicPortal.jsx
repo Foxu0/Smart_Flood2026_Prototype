@@ -174,7 +174,7 @@ export default function PublicPortal() {
 
   const [telemetry, setTelemetry] = useState({
     waterLevelM: 0.00,
-    waterDistanceCm: 180,
+    waterDistanceCm: 240,
     rainRateMmHr: 0.0,
   });
 
@@ -221,7 +221,7 @@ export default function PublicPortal() {
           // Empty database — reset to 0.00m / 0 mm/h
           setTelemetry({
             waterLevelM: 0.00,
-            waterDistanceCm: 180,
+            waterDistanceCm: 240,
           });
           setAiPrediction(prev => ({
             ...prev,
@@ -271,7 +271,7 @@ export default function PublicPortal() {
           } else if (msg.type === 'TEST_RESET' || msg.type === 'TELEMETRY_RESET') {
             setTelemetry({
               waterLevelM: 0.00,
-              waterDistanceCm: 180,
+              waterDistanceCm: 240,
             });
             setAiPrediction({
               riskScore: 0,
@@ -317,7 +317,7 @@ export default function PublicPortal() {
           setTelemetry(prev => ({
             ...prev,
             waterLevelM: parseFloat(j.data.waterLevelM ?? j.data.water_level_m ?? 0.00),
-            waterDistanceCm: parseInt(j.data.rawDistanceCm ?? j.data.water_distance_cm ?? 180),
+            waterDistanceCm: parseInt(j.data.rawDistanceCm ?? j.data.water_distance_cm ?? 240),
           }));
         }
       }).catch(() => {});

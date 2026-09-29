@@ -168,7 +168,7 @@ export default function FloodMonitoringDashboard() {
 
   const [telemetry, setTelemetry] = useState({
     waterLevelM: 0.00,
-    waterDistanceCm: 180,
+    waterDistanceCm: 240,
     rainRateMmHr: 0.0,
     rainTips: 0,
     wifiRssi: -65,
@@ -365,7 +365,7 @@ export default function FloodMonitoringDashboard() {
           // Empty database — reset to 0.00m / 0 mm/h
           setTelemetry({
             waterLevelM: 0.00,
-            waterDistanceCm: 180,
+            waterDistanceCm: 240,
             wifiRssi: -65,
             gridVoltage: 12.2,
             espUptime: '00:00:00',
@@ -437,7 +437,7 @@ export default function FloodMonitoringDashboard() {
           if (message.type === 'TELEMETRY' && message.data) {
             const d = message.data;
             const level = d.waterLevelM ?? d.water_level_m ?? d.waterLevel ?? 0.00;
-            const dist = d.rawDistanceCm ?? d.raw_distance_cm ?? Math.round((1.8 - level) * 100);
+            const dist = d.rawDistanceCm ?? d.raw_distance_cm ?? Math.round((2.4 - level) * 100);
             const rssi = d.rssiDbm ?? d.rssi_dbm ?? -65;
             const voltage = d.supplyVoltageV ?? d.supply_voltage ?? d.batteryVoltage ?? 12.0;
 
@@ -450,15 +450,15 @@ export default function FloodMonitoringDashboard() {
             }));
 
             setAiPrediction(prev => {
-              const p30 = Math.min(1.8, level + 0.10);
-              const p60 = Math.min(1.8, level + 0.20);
-              const risk = Math.round((p60 / 1.8) * 100);
+              const p30 = Math.min(2.4, level + 0.10);
+              const p60 = Math.min(2.4, level + 0.20);
+              const risk = Math.round((p60 / 2.4) * 100);
               return { ...prev, riskScore: risk, predicted30m: +p30.toFixed(2), predicted60m: +p60.toFixed(2) };
             });
           } else if (message.type === 'TEST_RESET' || message.type === 'TELEMETRY_RESET') {
             setTelemetry({
               waterLevelM: 0.00,
-              waterDistanceCm: 180,
+              waterDistanceCm: 240,
               rainRateMmHr: 0.0,
               rainTips: 0,
               wifiRssi: -65,

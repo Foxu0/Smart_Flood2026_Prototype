@@ -36,7 +36,7 @@ async function runSimulation() {
 
   for (let i = 0; i < STEPS.length; i++) {
     const step = STEPS[i];
-    const rawDistance = Math.max(15, Math.round(180 - step.stage * 100));
+    const rawDistance = Math.max(20, Math.round(240 - step.stage * 100));
 
     const payload = {
       rawDistance,

@@ -196,7 +196,7 @@ export default function FloodMonitoringDashboard() {
 
   const [telemetry, setTelemetry] = useState({
     waterLevelM: 0.00,
-    waterDistanceCm: 180,
+    waterDistanceCm: 240,
     rainRateMmHr: 0.0,
     rainTips: 0,
     wifiRssi: -65,
@@ -340,7 +340,7 @@ export default function FloodMonitoringDashboard() {
         pushToast('success', '🔄 Baseline Reset', 'Database truncated & evaluation metrics reset.');
         setTelemetry({
           waterLevelM: 0.00,
-          waterDistanceCm: 180,
+          waterDistanceCm: 240,
           rainRateMmHr: 0.0,
           rainTips: 0,
           wifiRssi: -65,
@@ -384,7 +384,7 @@ export default function FloodMonitoringDashboard() {
         if (json.success && json.data) {
           const d = json.data;
           const level = parseFloat(d.water_level_m ?? 0.00);
-          const dist = parseFloat(d.raw_distance_cm ?? Math.round((1.8 - level) * 100));
+          const dist = parseFloat(d.raw_distance_cm ?? Math.round((2.4 - level) * 100));
           setTelemetry(prev => ({
             ...prev,
             waterLevelM: level,
@@ -397,7 +397,7 @@ export default function FloodMonitoringDashboard() {
           // Empty database — reset to 0.00m / 0 mm/h
           setTelemetry({
             waterLevelM: 0.00,
-            waterDistanceCm: 180,
+            waterDistanceCm: 240,
             rainRateMmHr: 0.0,
             rainTips: 0,
             wifiRssi: -65,
