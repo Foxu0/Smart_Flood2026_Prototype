@@ -22,7 +22,7 @@ router.post('/', async (req, res) => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = fullName ? fullName.trim().slice(0, 100) : null;
     const cleanBarangay = barangay ? barangay.trim().slice(0, 80) : 'Mayamot';
-    const alertLevel = [1, 2, 3].includes(Number(minAlertLevel)) ? Number(minAlertLevel) : 2;
+    const alertLevel = [1, 2, 3].includes(Number(minAlertLevel)) ? Number(minAlertLevel) : 1;
     const role = ['RESIDENT', 'OFFICIAL', 'RESPONDER'].includes(subscriberRole) ? subscriberRole : 'RESIDENT';
 
     // Upsert to handle reactivations or updates
@@ -194,7 +194,7 @@ router.post('/test-email', async (req, res) => {
 
     const result = await sendTestEmail({
       toEmail: toEmail.trim(),
-      level: Number(level) || 2,
+      level: Number(level) || 1,
     });
 
     return res.json({

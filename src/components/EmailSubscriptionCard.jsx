@@ -43,7 +43,7 @@ export default function EmailSubscriptionCard({ onNotification }) {
         body: JSON.stringify({
           email,
           fullName,
-          minAlertLevel: 2,
+          minAlertLevel: 1,
           subscriberRole: 'RESIDENT',
         }),
       });
@@ -57,7 +57,6 @@ export default function EmailSubscriptionCard({ onNotification }) {
       const userRecord = {
         email: data.data.email,
         fullName: data.data.fullName,
-        barangay: data.data.barangay,
         minAlertLevel: data.data.minAlertLevel,
       };
 
@@ -89,7 +88,7 @@ export default function EmailSubscriptionCard({ onNotification }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           toEmail: subscribedUser.email,
-          level: subscribedUser.minAlertLevel || 2,
+          level: subscribedUser.minAlertLevel || 1,
         }),
       });
 
@@ -148,7 +147,7 @@ export default function EmailSubscriptionCard({ onNotification }) {
                 {subscribedUser.fullName ? `${subscribedUser.fullName} (${subscribedUser.email})` : subscribedUser.email}
               </p>
               <p className="text-[10px] text-[#6d818d] mt-0.5">
-                Subscribed for Warning & Danger alerts (Level 2+)
+                Subscribed for Advisory, Warning &amp; Danger alerts (Level 1+)
               </p>
             </div>
           </div>
