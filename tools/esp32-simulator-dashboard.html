@@ -1,17 +1,15 @@
 <!--
-  SmartFlood 2026 — Virtual ESP32 Hardware Simulator Dashboard
+  SmartFlood 2026 — Virtual ESP32 Hardware Simulator & Circuit Flow Dashboard
 
   ⚠️  IMPORTANT DISCLAIMER — FOR DEVELOPMENT & TESTING USE ONLY
   ============================================================================
   This file is a SOFTWARE DEVELOPMENT TOOL and is NOT part of the SmartFlood
   2026 capstone project documentation, manuscript, or system submission.
 
-  - It is NOT included in the Technical Specification, Architecture Diagrams,
-    or any chapter of the capstone paper.
-  - It exists solely to provide a browser-based GUI for simulating ESP32
-    telemetry packets for backend API testing without physical hardware.
-  - The real embedded firmware is written in C++/Arduino IDE and resides
-    separately in the microcontroller unit (not in this repository).
+  - It exists solely to provide a browser-based GUI visualizing physical ESP32
+    hardware components, circuit communication links, and telemetry streaming.
+  - The actual embedded firmware is written in C++/Arduino IDE and resides
+    separately in the physical ESP32 microcontroller unit.
 
   DO NOT cite, reference, or submit this file as part of the project deliverable.
   ============================================================================
@@ -21,233 +19,606 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SmartFlood 2026 — Virtual ESP32 Hardware Simulator</title>
+  <title>SmartFlood 2026 — Virtual ESP32 Hardware Architecture & Telemetry Simulator</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     body {
       font-family: 'Outfit', sans-serif;
-      background: #081622;
+      background: #06111c;
       color: #e2eef7;
+      overflow-x: hidden;
     }
     .font-mono {
       font-family: 'JetBrains Mono', monospace;
     }
+
+    /* Glass Panels */
     .glass-card {
-      background: rgba(14, 38, 56, 0.85);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(10, 25, 38, 0.85);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
     }
-    .terminal-box {
-      background: #050c13;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+    .glass-card-hover:hover {
+      border-color: rgba(56, 189, 248, 0.35);
+      box-shadow: 0 12px 35px -8px rgba(14, 165, 233, 0.15);
     }
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #081622; }
-    ::-webkit-scrollbar-thumb { background: #1f4f70; border-radius: 3px; }
+
+    /* PCB Circuit Board Aesthetic */
+    .pcb-board {
+      background: #09202a;
+      border: 2px solid #164e63;
+      box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+    .pcb-chip {
+      background: #111827;
+      border: 1px solid #374151;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.6);
+    }
+    .copper-trace {
+      stroke: #d97706;
+      stroke-dasharray: 4, 4;
+      animation: traceFlow 1.2s linear infinite;
+    }
+    .copper-trace-active {
+      stroke: #38bdf8;
+      stroke-dasharray: 6, 4;
+      animation: traceFlow 0.8s linear infinite;
+    }
+    .siren-trace-active {
+      stroke: #ef4444;
+      stroke-dasharray: 6, 4;
+      animation: traceFlow 0.6s linear infinite;
+    }
+
+    @keyframes traceFlow {
+      from { stroke-dashoffset: 20; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* Ultrasonic Sound Wave Echo Animation */
+    @keyframes soundwavePing {
+      0% { transform: translateY(0) scaleX(0.4); opacity: 0.9; }
+      50% { opacity: 0.7; }
+      100% { transform: translateY(110px) scaleX(1.1); opacity: 0; }
+    }
+    .sound-pulse {
+      animation: soundwavePing 1.4s ease-out infinite;
+    }
+    .sound-pulse-delayed {
+      animation: soundwavePing 1.4s ease-out infinite 0.7s;
+    }
+
+    /* Siren Flashing Strobe Effect */
+    @keyframes sirenStrobe {
+      0%, 100% { opacity: 0.2; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.03); filter: drop-shadow(0 0 25px rgba(239, 68, 68, 0.9)); }
+    }
+    .siren-flashing {
+      animation: sirenStrobe 0.45s infinite ease-in-out;
+    }
+
+    /* Water Wave Ripple */
+    @keyframes waveFlow {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .wave-surface {
+      animation: waveFlow 4s linear infinite;
+    }
+
+    /* Pulse Glow Dots */
+    @keyframes ledGlow {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; filter: drop-shadow(0 0 6px currentColor); }
+    }
+    .led-blink {
+      animation: ledGlow 1s infinite;
+    }
+    .led-fast {
+      animation: ledGlow 0.3s infinite;
+    }
+
+    /* Custom Terminal Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #04090e; }
+    ::-webkit-scrollbar-thumb { background: #154260; border-radius: 3px; }
   </style>
 </head>
-<body class="min-h-screen p-4 md:p-8 flex flex-col justify-start items-center">
+<body class="min-h-screen p-3 sm:p-5 md:p-8 flex flex-col justify-start items-center">
 
-  <div class="w-full max-w-6xl space-y-6">
+  <div class="w-full max-w-7xl space-y-5">
 
-    <!-- ── HEADER ───────────────────────────────────────────────────────────── -->
-    <header class="glass-card rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xl">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-sky-500 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 font-bold text-xl">
-          📡
+    <!-- ── TOP NAVIGATION BAR ───────────────────────────────────────────────── -->
+    <header class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4 border border-sky-500/20 shadow-xl">
+      <div class="flex items-center gap-3.5 w-full md:w-auto">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-sky-500 to-emerald-400 flex items-center justify-center text-white shadow-lg shadow-sky-500/30 text-xl font-bold">
+          ⚡
         </div>
         <div>
-          <h1 class="text-xl md:text-2xl font-bold text-white tracking-wide flex items-center gap-2">
-            SmartFlood <span class="text-sky-400 font-light">ESP32 Simulator</span>
-          </h1>
-          <p class="text-xs text-sky-200/80">Standalone Virtual Hardware Edge Node &amp; AI Accuracy Control Panel</p>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg sm:text-xl font-bold text-white tracking-wide">
+              SmartFlood <span class="text-sky-400 font-medium">Virtual ESP32 Edge Node</span>
+            </h1>
+            <span class="px-2 py-0.5 text-[9px] font-bold font-mono rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+              V4 ALIGNED (240cm)
+            </span>
+          </div>
+          <p class="text-xs text-sky-200/70">
+            Interactive Hardware Circuit Architecture &amp; Live Telemetry Communication Pipeline
+          </p>
         </div>
       </div>
 
       <!-- Target Server Endpoint Selector -->
-      <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-        <div class="text-right text-xs text-sky-200/80 hidden lg:block">
-          <span class="block text-[10px] uppercase font-bold text-sky-400">Target Server</span>
-          <span>HTTP POST /api/v1/telemetry</span>
+      <div class="flex items-center gap-2.5 w-full md:w-auto justify-end">
+        <div class="text-right text-xs text-sky-200/80 hidden sm:block">
+          <span class="block text-[9px] uppercase font-bold text-sky-400">Target Ingestion Server</span>
+          <span class="font-mono text-[11px] text-sky-100">POST /api/v1/telemetry</span>
         </div>
-        <select id="targetEndpointSelect" onchange="handleEndpointChange()" className="bg-[#0b2030] text-sky-100 border border-sky-500/30 text-xs rounded-xl px-3 py-2 font-mono outline-none focus:border-sky-400 transition">
-          <option value="https://smart-flood2026-prototype.onrender.com/api/v1/telemetry">☁️ Production Render Cloud</option>
-          <option value="http://localhost:3001/api/v1/telemetry">💻 Local Server (Port 3001)</option>
-          <option value="http://localhost:5000/api/v1/telemetry">💻 Local Server (Port 5000)</option>
+        <select id="targetEndpointSelect" onchange="handleEndpointChange()" class="bg-[#0b2030] text-sky-100 border border-sky-500/30 text-xs rounded-xl px-3 py-2 font-mono outline-none focus:border-sky-400 transition cursor-pointer">
+          <option value="https://smart-flood2026-prototype.onrender.com/api/v1/telemetry">☁️ Render Cloud Production</option>
+          <option value="http://localhost:3001/api/v1/telemetry">💻 Localhost (Port 3001)</option>
+          <option value="http://localhost:5000/api/v1/telemetry">💻 Localhost (Port 5000)</option>
           <option value="custom">✏️ Custom Endpoint URL...</option>
         </select>
-        <input id="customEndpointInput" type="text" placeholder="https://..." class="hidden bg-[#0b2030] text-sky-100 border border-sky-500/30 text-xs rounded-xl px-3 py-2 font-mono outline-none w-64" />
+        <input id="customEndpointInput" type="text" placeholder="https://..." class="hidden bg-[#0b2030] text-sky-100 border border-sky-500/30 text-xs rounded-xl px-3 py-2 font-mono outline-none w-56" />
       </div>
     </header>
 
-    <!-- ── MAIN CONTENT GRID ────────────────────────────────────────────────── -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- ── COMPONENT ARCHITECTURE FLOW CANVAS ───────────────────────────────── -->
+    <div class="glass-card rounded-2xl p-4 sm:p-6 border border-sky-500/25 shadow-2xl space-y-4">
+      
+      <!-- Section Title & Status Indicator -->
+      <div class="flex items-center justify-between border-b border-white/10 pb-3 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="flex h-2.5 w-2.5 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+          <h2 class="text-xs sm:text-sm font-bold text-sky-200 uppercase tracking-wider">
+            Physical Hardware Components &amp; Inter-Module Signal Communication
+          </h2>
+        </div>
+        <div class="flex items-center gap-3 text-[11px] font-mono">
+          <span class="text-sky-300/80">Bus Protocol: <strong class="text-sky-100">GPIO PWM + Wi-Fi 802.11 b/g/n</strong></span>
+          <span id="circuitActiveStateBadge" class="px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30">
+            SYSTEM STANDBY
+          </span>
+        </div>
+      </div>
 
-      <!-- LEFT COLUMN: SENSORS & SCENARIO CONTROLS (7/12) -->
-      <div class="lg:col-span-7 space-y-6">
+      <!-- ── HARDWARE MODULES GRID ─────────────────────────────────────────── -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
-        <!-- 🎛️ Manual Hardware Synthesizer Card -->
-        <div class="glass-card rounded-2xl p-6 space-y-5 shadow-xl">
-          <div class="flex items-center justify-between border-b border-white/10 pb-3">
-            <h2 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2">
-              <span>🎛️</span> Manual Hardware Sensor Controls
-            </h2>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/30">
-              Mount Height: 2.40m (240cm)
+        <!-- ── MODULE 1: JSN-SR04T WATERPROOF TRANSDUCER & RIVERBED CROSS-SECTION ── -->
+        <div class="bg-[#081b29] rounded-xl p-4 border border-cyan-500/30 flex flex-col justify-between shadow-lg relative overflow-hidden group">
+          <div class="flex items-center justify-between border-b border-cyan-500/20 pb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-cyan-400 text-sm">🌊</span>
+              <span class="text-xs font-bold text-cyan-200 tracking-wide uppercase">JSN-SR04T Transducer</span>
+            </div>
+            <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/50">
+              GPIO 5 / 18
             </span>
           </div>
 
-          <!-- Slider 1: Stage Height (Water Level m) -->
-          <div class="space-y-2">
-            <div class="flex justify-between items-center text-xs">
-              <span class="font-semibold text-white">River Stage Height (Water Level)</span>
-              <span id="levelValueDisplay" class="font-mono text-lg font-bold text-sky-400">0.00 m</span>
+          <!-- Dynamic Visual Water Column & Acoustic Beam -->
+          <div class="my-3 bg-[#05111a] rounded-lg p-2.5 border border-cyan-900/60 relative h-48 flex flex-col justify-between overflow-hidden">
+            
+            <!-- Bridge Transducer Mount Beam -->
+            <div class="w-full flex items-center justify-between z-10 bg-slate-800/90 px-2 py-1 rounded border border-slate-700 text-[9px] font-mono">
+              <span class="text-sky-300 font-bold">Mounting Beam: 2.40m</span>
+              <span id="blindSpotBadge" class="text-emerald-400 font-bold">Clear (>25cm)</span>
             </div>
-            <input id="levelSlider" type="range" min="0" max="2.20" step="0.05" value="0.00" oninput="updateManualReadout()" class="w-full h-2 bg-[#0b2030] rounded-lg appearance-none cursor-pointer accent-sky-400" />
-            <div class="flex justify-between text-[10px] text-sky-200/60 font-mono">
-              <span>0.00m (Dry Baseline)</span>
-              <span>1.20m (L1 Watch)</span>
-              <span>1.60m (L2 Siren)</span>
-              <span class="text-amber-400">2.00m (L3 Danger)</span>
+
+            <!-- Ultrasonic Transducer Head Visual -->
+            <div class="absolute top-7 left-1/2 -translate-x-1/2 w-8 h-4 bg-cyan-700 rounded-t border border-cyan-400 z-10 flex items-center justify-center">
+              <div class="w-6 h-2 bg-slate-900 rounded-b"></div>
+            </div>
+
+            <!-- Acoustic Pulse Waves Emitting Downward -->
+            <div class="absolute top-11 left-1/2 -translate-x-1/2 w-20 flex flex-col items-center pointer-events-none z-10">
+              <div class="w-8 h-1.5 border-b-2 border-cyan-400 rounded-full sound-pulse"></div>
+              <div class="w-12 h-1.5 border-b-2 border-cyan-400 rounded-full sound-pulse-delayed mt-1"></div>
+            </div>
+
+            <!-- Distance Meter Overlay Lines -->
+            <div class="absolute right-2 top-11 bottom-1 flex flex-col justify-between text-[9px] font-mono text-cyan-300/70 z-10 pointer-events-none">
+              <span>0.25m (Blind)</span>
+              <span>1.20m (L1)</span>
+              <span>1.60m (L2)</span>
+              <span>2.00m (L3)</span>
+              <span>2.40m (Bed)</span>
+            </div>
+
+            <!-- Live Water Surface Column -->
+            <div 
+              id="waterColumnGraphic" 
+              class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-sky-700 to-cyan-500/80 transition-all duration-300 ease-out border-t-2 border-cyan-200"
+              style="height: 15%;"
+            >
+              <!-- Animated Water Ripples on Surface -->
+              <div class="absolute -top-1 left-0 w-[200%] h-2 opacity-50 wave-surface flex">
+                <div class="w-1/2 h-full bg-cyan-200/40 rounded-full blur-[1px]"></div>
+                <div class="w-1/2 h-full bg-cyan-200/40 rounded-full blur-[1px]"></div>
+              </div>
+            </div>
+
+            <!-- Dry Riverbed Bottom Line -->
+            <div class="w-full text-center z-10 bg-amber-950/80 text-amber-200/80 py-0.5 rounded text-[8px] font-mono border border-amber-900/60 mt-auto">
+              Dry Creek Bed Elevation (Quiling / Antipolo)
             </div>
           </div>
 
-          <!-- Ultrasonic Distance Conversion Box -->
-          <div class="bg-[#0b2030]/80 rounded-xl p-3.5 border border-sky-500/20 grid grid-cols-2 gap-4 text-xs font-mono">
-            <div>
-              <span class="text-[10px] text-sky-300/70 block uppercase">Raw Ultrasonic Distance</span>
-              <span id="rawDistanceDisplay" class="text-base font-bold text-emerald-400">240 cm</span>
+          <!-- Real-Time Acoustic Readouts -->
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div class="bg-[#05111a] p-2 rounded border border-cyan-900/40">
+              <span class="text-[9px] text-cyan-400/70 block uppercase">Raw Echo Distance</span>
+              <span id="rawDistanceDisplay" class="font-bold text-cyan-200 text-sm">240 cm</span>
             </div>
-            <div>
-              <span class="text-[10px] text-sky-300/70 block uppercase">JSN-SR04T Sensor Status</span>
-              <span id="sensorStatusDisplay" class="text-base font-bold text-emerald-400">OK (Normal)</span>
-            </div>
-          </div>
-
-          <!-- Hardware Diagnostics Info -->
-          <div class="grid grid-cols-3 gap-3 text-center text-xs font-mono pt-1">
-            <div class="bg-[#0b2030] p-2 rounded-lg border border-white/5">
-              <span class="text-[9px] text-sky-200/60 block">BATTERY VOLTAGE</span>
-              <span id="batteryDisplay" class="font-bold text-sky-300">12.42 V</span>
-            </div>
-            <div class="bg-[#0b2030] p-2 rounded-lg border border-white/5">
-              <span class="text-[9px] text-sky-200/60 block">WIFI SIGNAL</span>
-              <span id="rssiDisplay" class="font-bold text-sky-300">-56 dBm</span>
-            </div>
-            <div class="bg-[#0b2030] p-2 rounded-lg border border-white/5">
-              <span class="text-[9px] text-sky-200/60 block">SYSTEM UPTIME</span>
-              <span id="uptimeDisplay" class="font-bold text-sky-300">320s</span>
+            <div class="bg-[#05111a] p-2 rounded border border-cyan-900/40">
+              <span class="text-[9px] text-cyan-400/70 block uppercase">Pulse Ping Time</span>
+              <span id="pulseEchoTimeDisplay" class="font-bold text-cyan-200 text-sm">13,968 μs</span>
             </div>
           </div>
 
-          <!-- Transmit Button -->
-          <button onclick="transmitManualPacket()" class="w-full py-3 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-sky-500/25 transition flex items-center justify-center gap-2">
-            <span>📡 Transmit Hardware Telemetry Packet Now</span>
-          </button>
+          <p class="text-[10px] text-cyan-200/60 mt-2 font-sans leading-tight">
+            Transmits 40 kHz ultrasonic burst via TRIG (D5); measures return echo width on ECHO (D18).
+          </p>
         </div>
 
-        <!-- ⚡ Automated Scenario Test Suite Card -->
-        <div class="glass-card rounded-2xl p-6 space-y-4 shadow-xl">
-          <h2 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2 border-b border-white/10 pb-3">
-            <span>⚡</span> Automated Scenario Testing Suite
-          </h2>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button onclick="runScenario('surge')" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-amber-500/30 hover:border-amber-400 rounded-xl text-left transition space-y-1">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-amber-300">🌊 Rapid Flash Flood Surge</span>
-                <span class="text-[10px] font-mono text-amber-400/80">48 Steps</span>
-              </div>
-              <p class="text-[11px] text-sky-200/70 leading-snug">Simulates authentic 48-step typhoon hydrograph rising to 1.62m peak (L3 Danger &amp; Siren) then draining.</p>
-            </button>
-
-            <button onclick="runScenario('moderate')" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-sky-500/30 hover:border-sky-400 rounded-xl text-left transition space-y-1">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-sky-300">💧 Moderate Stream Rise</span>
-                <span class="text-[10px] font-mono text-sky-400/80">24 Steps</span>
-              </div>
-              <p class="text-[11px] text-sky-200/70 leading-snug">Steady water level rising up to 1.15m Level 1 Advisory Watch before smoothly receding.</p>
-            </button>
-
-            <button onclick="runScenario('calm')" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-emerald-500/30 hover:border-emerald-400 rounded-xl text-left transition space-y-1">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-emerald-300">🍃 Calm Dry Baseline</span>
-                <span class="text-[10px] font-mono text-emerald-400/80">12 Steps</span>
-              </div>
-              <p class="text-[11px] text-sky-200/70 leading-snug">Transmits steady 0.35m normal baseflow with realistic ultrasonic surface acoustic ripples.</p>
-            </button>
-
-            <button id="autoStreamBtn" onclick="toggleAutoStream()" class="p-3.5 bg-[#0e2a3e] hover:bg-[#153a54] border border-purple-500/30 hover:border-purple-400 rounded-xl text-left transition space-y-1">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-purple-300">🔄 Auto Stream (5s Loop)</span>
-                <span id="autoStreamBadge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">OFF</span>
-              </div>
-              <p class="text-[11px] text-sky-200/70 leading-snug">Sends real-time telemetry indefinitely every 5 seconds until toggled OFF.</p>
-            </button>
+        <!-- ── MODULE 2: ESP32-WROOM-32 DUAL-CORE MICROCONTROLLER ───────────── -->
+        <div class="pcb-board rounded-xl p-4 flex flex-col justify-between shadow-lg relative group">
+          <div class="flex items-center justify-between border-b border-cyan-700/50 pb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-emerald-400 text-sm">🔲</span>
+              <span class="text-xs font-bold text-emerald-200 tracking-wide uppercase">ESP32-WROOM-32 MCU</span>
+            </div>
+            <div class="flex items-center gap-1 text-[9px] font-mono text-emerald-300">
+              <span id="txRxLed" class="w-2 h-2 rounded-full bg-emerald-500 led-blink"></span>
+              <span>240 MHz</span>
+            </div>
           </div>
+
+          <!-- Realistic ESP32 PCB Visual Layout -->
+          <div class="my-3 p-3 bg-[#0d2a36] rounded-lg border border-cyan-800/80 space-y-2.5 relative">
+            
+            <!-- Wi-Fi PCB Meander Antenna -->
+            <div class="flex items-center justify-between bg-amber-900/40 px-2 py-1 rounded border border-amber-600/40">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] text-amber-300">📡</span>
+                <span class="text-[10px] font-mono text-amber-200 font-bold">2.4 GHz Antenna</span>
+              </div>
+              <span id="wifiRssiBadge" class="text-[10px] font-mono font-bold text-emerald-400">-56 dBm</span>
+            </div>
+
+            <!-- Silver RF Shielding Can -->
+            <div class="pcb-chip p-2.5 rounded text-center border border-gray-600 shadow-inner">
+              <div class="text-[10px] font-bold text-gray-300 uppercase tracking-widest font-mono">ESPRESSIF</div>
+              <div class="text-[11px] font-bold text-sky-400 font-mono">ESP-WROOM-32</div>
+              <div class="text-[8px] text-gray-400 font-mono mt-0.5">Dual-Core Tensilica Xtensa LX6</div>
+            </div>
+
+            <!-- Active Pinouts Status Grid -->
+            <div class="grid grid-cols-2 gap-1.5 text-[9px] font-mono">
+              <div class="bg-[#071922] p-1.5 rounded flex items-center justify-between border border-cyan-900">
+                <span class="text-gray-400">GPIO 5 (TRIG)</span>
+                <span class="text-emerald-400 font-bold">OUTPUT</span>
+              </div>
+              <div class="bg-[#071922] p-1.5 rounded flex items-center justify-between border border-cyan-900">
+                <span class="text-gray-400">GPIO 18 (ECHO)</span>
+                <span class="text-emerald-400 font-bold">INPUT</span>
+              </div>
+              <div class="bg-[#071922] p-1.5 rounded flex items-center justify-between border border-cyan-900">
+                <span class="text-gray-400">GPIO 26 (RELAY)</span>
+                <span id="gpio26State" class="text-gray-400 font-bold">LOW (OFF)</span>
+              </div>
+              <div class="bg-[#071922] p-1.5 rounded flex items-center justify-between border border-cyan-900">
+                <span class="text-gray-400">GPIO 34 (ADC)</span>
+                <span id="gpio34Voltage" class="text-sky-300 font-bold">12.4 V</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ESP32 Telemetry Snapshot -->
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div class="bg-[#05111a] p-2 rounded border border-cyan-900/40">
+              <span class="text-[9px] text-gray-400 block uppercase">Firmware Uptime</span>
+              <span id="uptimeDisplay" class="font-bold text-sky-300 text-sm">320s</span>
+            </div>
+            <div class="bg-[#05111a] p-2 rounded border border-cyan-900/40">
+              <span class="text-[9px] text-gray-400 block uppercase">Calculated Stage</span>
+              <span id="espStageCalc" class="font-bold text-emerald-300 text-sm">0.00 m</span>
+            </div>
+          </div>
+
+          <p class="text-[10px] text-emerald-200/60 mt-2 font-sans leading-tight">
+            Firmware computes <code class="text-cyan-300">H = 2.40 - (d/100)</code>; serializes telemetry packet for Wi-Fi HTTP dispatch.
+          </p>
+        </div>
+
+        <!-- ── MODULE 3: 5V OPTOCOUPLER RELAY & 12V SIREN MODULE ───────────── -->
+        <div id="actuatorCard" class="bg-[#121824] rounded-xl p-4 border border-slate-700 flex flex-col justify-between shadow-lg relative transition-all duration-300">
+          <div class="flex items-center justify-between border-b border-slate-700 pb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-amber-400 text-sm">🚨</span>
+              <span class="text-xs font-bold text-slate-200 tracking-wide uppercase">Relay &amp; Siren Actuator</span>
+            </div>
+            <span id="relayStatusTag" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-gray-400 border border-gray-700">
+              DISARMED (OFF)
+            </span>
+          </div>
+
+          <!-- Relay Visual & 12V Siren Horn Component -->
+          <div class="my-3 p-3 bg-[#0a0f18] rounded-lg border border-slate-800 space-y-3 relative">
+            
+            <!-- Songle Relay Blue Cube Graphic -->
+            <div class="flex items-center justify-between p-2 rounded bg-blue-900/30 border border-blue-600/40">
+              <div class="flex items-center gap-2">
+                <div id="relayCubeLed" class="w-3.5 h-3.5 rounded-sm bg-blue-600 flex items-center justify-center text-[7px] font-bold text-white shadow-xs">
+                  R
+                </div>
+                <div>
+                  <div class="text-[10px] font-bold text-blue-200 font-mono">SONGLE 5V RELAY</div>
+                  <div class="text-[8px] text-blue-300/70 font-mono">10A 250VAC / 30VDC Opto</div>
+                </div>
+              </div>
+              <div id="relayContactState" class="text-[10px] font-mono font-bold text-gray-400">
+                [COM ⚡ NO: OPEN]
+              </div>
+            </div>
+
+            <!-- Industrial Piezo Siren Horn Graphic -->
+            <div id="sirenGraphicBox" class="p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 flex items-center justify-between transition-all duration-200">
+              <div class="flex items-center gap-2.5">
+                <div id="sirenHornIcon" class="w-10 h-10 rounded-full bg-slate-800 text-gray-400 flex items-center justify-center text-xl transition-all">
+                  📢
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">12V High-dB Siren</div>
+                  <div id="sirenDecibel" class="text-[10px] font-mono text-gray-400">0 dB (Silent Standby)</div>
+                </div>
+              </div>
+              <!-- Alarm Beacon Strobe Indicator -->
+              <div id="strobeBeacon" class="w-7 h-7 rounded-full bg-red-950 border border-red-800/60 flex items-center justify-center text-red-500 text-xs">
+                🚨
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Actuator Diagnostics -->
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div class="bg-[#05111a] p-2 rounded border border-slate-800">
+              <span class="text-[9px] text-gray-400 block uppercase">Trigger Threshold</span>
+              <span class="font-bold text-amber-300 text-sm">≥ 1.60 m (L2+)</span>
+            </div>
+            <div class="bg-[#05111a] p-2 rounded border border-slate-800">
+              <span class="text-[9px] text-gray-400 block uppercase">Battery Drain</span>
+              <span id="batteryDrainDisplay" class="font-bold text-slate-300 text-sm">Normal (12.4V)</span>
+            </div>
+          </div>
+
+          <p class="text-[10px] text-slate-400 mt-2 font-sans leading-tight">
+            Physical relay energized strictly from Level 2 Warning ($\ge 1.60\text{ m}$) onward to prevent alarm fatigue.
+          </p>
+        </div>
+
+        <!-- ── MODULE 4: CLOUD NODE.JS SERVER & ONNX LSTM AI ENGINE ─────────── -->
+        <div class="bg-[#0f1d2e] rounded-xl p-4 border border-indigo-500/30 flex flex-col justify-between shadow-lg relative group">
+          <div class="flex items-center justify-between border-b border-indigo-500/20 pb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="text-indigo-400 text-sm">🤖</span>
+              <span class="text-xs font-bold text-indigo-200 tracking-wide uppercase">Node.js &amp; ONNX AI</span>
+            </div>
+            <span id="lastHttpStatusBadge" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
+              HTTP 200 OK
+            </span>
+          </div>
+
+          <!-- Server Processing Highlights -->
+          <div class="my-3 p-3 bg-[#0a1420] rounded-lg border border-indigo-900/60 space-y-2 font-mono text-xs">
+            <div class="flex items-center justify-between border-b border-indigo-900/40 pb-1">
+              <span class="text-[10px] text-indigo-300/70">INGESTED STAGE:</span>
+              <span id="respServerStage" class="font-bold text-white text-sm">0.00 m</span>
+            </div>
+            <div class="flex items-center justify-between border-b border-indigo-900/40 pb-1">
+              <span class="text-[10px] text-indigo-300/70">ONNX +30m FORECAST:</span>
+              <span id="respAi30m" class="font-bold text-sky-400 text-sm">0.00 m</span>
+            </div>
+            <div class="flex items-center justify-between border-b border-indigo-900/40 pb-1">
+              <span class="text-[10px] text-indigo-300/70">LSTM ACCURACY:</span>
+              <span id="respAiConf" class="font-bold text-emerald-400 text-sm">96.5%</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] text-indigo-300/70">ALERT STATUS:</span>
+              <span id="respAlertBadge" class="font-bold text-emerald-400 text-xs">NORMAL (&lt;1.20m)</span>
+            </div>
+          </div>
+
+          <!-- Downstream Dispatches -->
+          <div class="bg-[#050c14] p-2.5 rounded border border-indigo-950 text-[10px] font-mono space-y-1 text-sky-200/80">
+            <div class="flex items-center justify-between">
+              <span>📧 Email Alert:</span>
+              <span id="emailDispatchStatus" class="font-bold text-gray-400">Standby (L1+ req.)</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>📡 WebSocket Stream:</span>
+              <span class="font-bold text-emerald-400">Broadcasting (/ws)</span>
+            </div>
+          </div>
+
+          <p class="text-[10px] text-indigo-200/60 mt-2 font-sans leading-tight">
+            Express API ingests JSON; runs embedded ONNX Runtime LSTM; dispatches email and WebSocket alerts.
+          </p>
         </div>
 
       </div>
 
-      <!-- RIGHT COLUMN: PACKET LOG & SERVER RESPONSE INSPECTOR (5/12) -->
-      <div class="lg:col-span-5 space-y-6">
-
-        <!-- 🤖 Live Server Response Inspector Card -->
-        <div class="glass-card rounded-2xl p-6 space-y-4 shadow-xl">
-          <h2 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center justify-between border-b border-white/10 pb-3">
-            <span class="flex items-center gap-2"><span>🤖</span> AI Accuracy &amp; Server Response</span>
-            <span id="lastHttpStatus" class="text-xs font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">201 OK</span>
-          </h2>
-
-          <div class="grid grid-cols-2 gap-3 text-xs font-mono">
-            <div class="bg-[#0b2030] p-3 rounded-xl border border-white/5 space-y-1">
-              <span class="text-[10px] text-sky-300/70 block uppercase">Server Stage Height</span>
-              <span id="respStage" class="text-lg font-bold text-white">0.00 m</span>
-            </div>
-            <div class="bg-[#0b2030] p-3 rounded-xl border border-white/5 space-y-1">
-              <span class="text-[10px] text-sky-300/70 block uppercase">ONNX +30m Forecast</span>
-              <span id="respAi30m" class="text-lg font-bold text-sky-400">0.00 m</span>
-            </div>
-            <div class="bg-[#0b2030] p-3 rounded-xl border border-white/5 space-y-1">
-              <span class="text-[10px] text-sky-300/70 block uppercase">AI Model Accuracy</span>
-              <span id="respAiConf" class="text-lg font-bold text-emerald-400">96.5%</span>
-            </div>
-            <div class="bg-[#0b2030] p-3 rounded-xl border border-white/5 space-y-1">
-              <span class="text-[10px] text-sky-300/70 block uppercase">Siren Relay State</span>
-              <span id="respSiren" class="text-lg font-bold text-gray-400">OFF</span>
-            </div>
-          </div>
+      <!-- ── INTERACTIVE COMMUNICATION BUS VISUALIZER WIRE ────────────────── -->
+      <div class="bg-[#050f17] rounded-xl p-3 border border-sky-500/20 text-xs font-mono flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-sky-400">⚡</span>
+          <span class="font-bold text-sky-200">Live Communication Pipeline:</span>
+          <span id="pipelineStatusStep" class="text-sky-300 font-sans text-xs">
+            [JSN-SR04T Echo: 240cm] ➔ [ESP32 ADC / GPIO 18] ➔ [Wi-Fi HTTP POST] ➔ [Node.js ONNX Server]
+          </span>
         </div>
-
-        <!-- 📟 Live Terminal Log Console -->
-        <div class="glass-card rounded-2xl p-6 space-y-3 shadow-xl">
-          <div class="flex items-center justify-between border-b border-white/10 pb-3">
-            <h2 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2">
-              <span>📟</span> Live Telemetry Terminal Log
-            </h2>
-            <button onclick="clearLogs()" class="text-[10px] font-mono text-sky-200/60 hover:text-sky-200 underline">
-              Clear Console
-            </button>
-          </div>
-
-          <div id="terminalLog" class="terminal-box rounded-xl p-3.5 h-80 overflow-y-auto font-mono text-[11px] space-y-1.5 leading-relaxed text-sky-100">
-            <div class="text-sky-400/80">[SYSTEM] ESP32 Edge Emulator Dashboard Initialized.</div>
-            <div class="text-sky-400/80">[SYSTEM] Ready to stream POST /api/v1/telemetry packets.</div>
-          </div>
+        <div class="flex items-center gap-2 text-[10px]">
+          <span class="px-2 py-0.5 rounded bg-sky-900/50 text-sky-300">Payload: ~128 bytes JSON</span>
+          <span class="px-2 py-0.5 rounded bg-emerald-900/50 text-emerald-300">Baud: 115200</span>
         </div>
-
       </div>
 
     </div>
 
+    <!-- ── MANUAL CONTROLS & HYDROGRAPH SCENARIO SUITE ───────────────────────── -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+      <!-- LEFT: MANUAL HARDWARE SLIDER & PACKET TRIGGER (6/12) -->
+      <div class="lg:col-span-6 glass-card rounded-2xl p-5 space-y-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <h3 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2">
+            <span>🎛️</span> Manual Hardware Transducer Controls
+          </h3>
+          <span class="text-xs font-mono text-sky-400 font-bold" id="levelSliderDisplay">0.00 m</span>
+        </div>
+
+        <!-- River Stage Level Range Slider -->
+        <div class="space-y-2">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-semibold text-white">Adjust River Stage (Water Level)</span>
+            <span class="text-[11px] font-mono text-cyan-300">Hmount = 2.40m</span>
+          </div>
+          <input 
+            id="levelSlider" 
+            type="range" 
+            min="0" 
+            max="2.20" 
+            step="0.05" 
+            value="0.00" 
+            oninput="handleSliderChange(this.value)" 
+            class="w-full h-2.5 bg-[#091c28] rounded-lg appearance-none cursor-pointer accent-sky-400" 
+          />
+          <div class="flex justify-between text-[10px] text-sky-200/70 font-mono pt-1">
+            <span>0.00m (Dry)</span>
+            <span class="text-sky-300">1.20m (L1 Advisory)</span>
+            <span class="text-amber-400">1.60m (L2 Siren 🚨)</span>
+            <span class="text-red-400">2.00m (L3 Danger 🚨)</span>
+          </div>
+        </div>
+
+        <!-- Transmit Button & Preset Buttons -->
+        <div class="space-y-2 pt-1">
+          <button 
+            onclick="transmitManualPacket()" 
+            class="w-full py-3 bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-sky-500/25 transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+          >
+            <span>📡 Transmit Hardware Telemetry Packet (ESP32 ➔ API)</span>
+          </button>
+
+          <!-- Quick Jump Buttons for Key Calibrated Thresholds -->
+          <div class="grid grid-cols-4 gap-2 text-center text-[10px] font-mono pt-1">
+            <button onclick="setStagePreset(0.00)" class="py-1.5 px-2 rounded-lg bg-[#0b2030] hover:bg-[#123147] border border-cyan-800 text-cyan-200 transition cursor-pointer">
+              0.00m (Dry)
+            </button>
+            <button onclick="setStagePreset(1.20)" class="py-1.5 px-2 rounded-lg bg-[#0b2030] hover:bg-[#123147] border border-sky-600 text-sky-300 transition cursor-pointer">
+              1.20m (L1)
+            </button>
+            <button onclick="setStagePreset(1.60)" class="py-1.5 px-2 rounded-lg bg-[#0b2030] hover:bg-[#123147] border border-amber-600 text-amber-300 transition cursor-pointer">
+              1.60m (L2 🚨)
+            </button>
+            <button onclick="setStagePreset(2.00)" class="py-1.5 px-2 rounded-lg bg-[#0b2030] hover:bg-[#123147] border border-red-600 text-red-300 transition cursor-pointer">
+              2.00m (L3 🚨)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: AUTOMATED HYDROGRAPH SCENARIOS (6/12) -->
+      <div class="lg:col-span-6 glass-card rounded-2xl p-5 space-y-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <h3 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2">
+            <span>⚡</span> Automated Hydrograph Storm Scenarios
+          </h3>
+          <span class="text-[10px] font-mono text-sky-400">Pre-programmed Test Streams</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <button onclick="runScenario('surge')" class="p-3 bg-[#0a1e2d] hover:bg-[#102d42] border border-red-500/30 hover:border-red-400 rounded-xl text-left transition space-y-1 cursor-pointer">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-red-300">🌊 Flash Flood Storm Surge</span>
+              <span class="text-[10px] font-mono text-red-400">48 Steps</span>
+            </div>
+            <p class="text-[11px] text-sky-200/70 leading-snug">Rises through 1.20m (L1) &amp; 1.60m (L2 Siren) up to 2.05m (L3 Danger Crest) then recedes.</p>
+          </button>
+
+          <button onclick="runScenario('moderate')" class="p-3 bg-[#0a1e2d] hover:bg-[#102d42] border border-sky-500/30 hover:border-sky-400 rounded-xl text-left transition space-y-1 cursor-pointer">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-sky-300">💧 Moderate Stream Rise</span>
+              <span class="text-[10px] font-mono text-sky-400">24 Steps</span>
+            </div>
+            <p class="text-[11px] text-sky-200/70 leading-snug">Rises steadily to 1.35m Level 1 Advisory, holding plateau before gradual recession.</p>
+          </button>
+
+          <button onclick="runScenario('calm')" class="p-3 bg-[#0a1e2d] hover:bg-[#102d42] border border-emerald-500/30 hover:border-emerald-400 rounded-xl text-left transition space-y-1 cursor-pointer">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-300">🍃 Calm Dry Baseline</span>
+              <span class="text-[10px] font-mono text-emerald-400">12 Steps</span>
+            </div>
+            <p class="text-[11px] text-sky-200/70 leading-snug">Transmits steady 0.35m normal baseflow with realistic ultrasonic acoustic jitter.</p>
+          </button>
+
+          <button id="autoStreamBtn" onclick="toggleAutoStream()" class="p-3 bg-[#0a1e2d] hover:bg-[#102d42] border border-purple-500/30 hover:border-purple-400 rounded-xl text-left transition space-y-1 cursor-pointer">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-purple-300">🔄 Auto Stream Loop (5s)</span>
+              <span id="autoStreamBadge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">OFF</span>
+            </div>
+            <p class="text-[11px] text-sky-200/70 leading-snug">Continuously streams telemetry packets every 5 seconds until toggled OFF.</p>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── SERIAL MONITOR & REAL-TIME TRANSMISSION LOG ─────────────────────── -->
+    <div class="glass-card rounded-2xl p-5 space-y-3 shadow-xl">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-sky-400">📟</span>
+          <h3 class="text-xs sm:text-sm font-bold text-sky-300 uppercase tracking-wider">
+            ESP32 Virtual Serial Monitor (COM Port 115200 Baud)
+          </h3>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-[10px] font-mono text-sky-200/60">Simulated C++ Serial.print Output</span>
+          <button onclick="clearLogs()" class="text-[10px] font-mono text-sky-300 hover:text-white underline cursor-pointer">
+            Clear Monitor
+          </button>
+        </div>
+      </div>
+
+      <div id="terminalLog" class="bg-[#03090f] border border-sky-900/60 rounded-xl p-3.5 h-64 overflow-y-auto font-mono text-[11px] space-y-1 leading-relaxed text-sky-100 shadow-inner">
+        <div class="text-sky-400/90">[BOOT] SmartFlood Virtual ESP32 Initialized. Clock: 240MHz.</div>
+        <div class="text-sky-400/90">[INIT] JSN-SR04T Waterproof Transducer calibrated to Hmount = 240 cm. Blind spot: 25 cm.</div>
+        <div class="text-emerald-400/90">[WIFI] Connected to AP. Local IP: 192.168.1.108 | RSSI: -56 dBm.</div>
+        <div class="text-gray-400">[READY] Waiting for telemetry packet trigger or automated scenario...</div>
+      </div>
+    </div>
+
   </div>
 
+  <!-- ── JAVASCRIPT SIMULATION LOGIC ────────────────────────────────────────── -->
   <script>
     let uptimeSec = 320;
     let autoStreamInterval = null;
+
+    // Physical Hardware Constant (aligned with Manuscript v4 & .env)
+    const SENSOR_MOUNT_HEIGHT_CM = 240;
 
     function getTargetUrl() {
       const sel = document.getElementById('targetEndpointSelect').value;
@@ -268,17 +639,97 @@
       logMessage(`[SYSTEM] Target Endpoint updated to: ${getTargetUrl()}`, 'text-amber-300');
     }
 
-    function updateManualReadout() {
-      const level = parseFloat(document.getElementById('levelSlider').value);
+    function handleSliderChange(val) {
+      const level = parseFloat(val);
+      updateComponentVisuals(level);
+    }
 
-      document.getElementById('levelValueDisplay').innerText = level.toFixed(2) + ' m';
+    function setStagePreset(presetVal) {
+      document.getElementById('levelSlider').value = presetVal;
+      updateComponentVisuals(presetVal);
+      transmitManualPacket();
+    }
 
-      // Ultrasonic Distance: 240cm - level * 100
-      let distanceCm = 240 - Math.round(level * 100);
-      distanceCm = Math.max(20, Math.min(240, distanceCm));
+    function updateComponentVisuals(level) {
+      document.getElementById('levelSliderDisplay').innerText = level.toFixed(2) + ' m';
+      document.getElementById('espStageCalc').innerText = level.toFixed(2) + ' m';
+
+      // 1. Calculate raw distance in cm
+      let distanceCm = SENSOR_MOUNT_HEIGHT_CM - Math.round(level * 100);
+      distanceCm = Math.max(20, Math.min(SENSOR_MOUNT_HEIGHT_CM, distanceCm));
 
       document.getElementById('rawDistanceDisplay').innerText = distanceCm + ' cm';
-      document.getElementById('sensorStatusDisplay').innerText = distanceCm <= 25 ? '⚠️ BLIND_SPOT (25cm)' : 'OK (Normal)';
+
+      // 2. Pulse ping time (round-trip speed of sound in air ~ 58.2us per cm)
+      const echoTimeUs = Math.round(distanceCm * 58.2);
+      document.getElementById('pulseEchoTimeDisplay').innerText = echoTimeUs.toLocaleString() + ' μs';
+
+      // 3. Blind spot check (<25cm)
+      const blindEl = document.getElementById('blindSpotBadge');
+      if (distanceCm <= 25) {
+        blindEl.innerText = '⚠️ BLIND SPOT (<25cm)';
+        blindEl.className = 'text-amber-400 font-bold';
+      } else {
+        blindEl.innerText = 'Clear (>25cm)';
+        blindEl.className = 'text-emerald-400 font-bold';
+      }
+
+      // 4. Update Water Column Height visually
+      // 0.00m = 10%, 2.20m = 85%
+      const waterPct = Math.min(85, Math.max(10, 10 + (level / 2.40) * 75));
+      document.getElementById('waterColumnGraphic').style.height = `${waterPct}%`;
+
+      // 5. Update Siren & Relay Module states visually (Level 2 Warning >= 1.60m)
+      const sirenActive = level >= 1.60;
+      const relayTag = document.getElementById('relayStatusTag');
+      const relayContact = document.getElementById('relayContactState');
+      const gpio26 = document.getElementById('gpio26State');
+      const sirenBox = document.getElementById('sirenGraphicBox');
+      const sirenDecibel = document.getElementById('sirenDecibel');
+      const sirenHorn = document.getElementById('sirenHornIcon');
+      const strobe = document.getElementById('strobeBeacon');
+      const batteryDrain = document.getElementById('batteryDrainDisplay');
+      const gpio34 = document.getElementById('gpio34Voltage');
+
+      if (sirenActive) {
+        relayTag.innerText = 'ARMED (ENERGIZED 🚨)';
+        relayTag.className = 'text-[9px] font-mono px-2 py-0.5 rounded-full bg-red-950 text-red-300 border border-red-500/50 animate-pulse';
+        relayContact.innerText = '[COM ⚡ NO: CLOSED 🚨]';
+        relayContact.className = 'text-[10px] font-mono font-bold text-red-400';
+        gpio26.innerText = 'HIGH (3.3V ⚡)';
+        gpio26.className = 'text-red-400 font-bold';
+
+        sirenBox.className = 'p-3 rounded-xl bg-red-950/40 border border-red-500/80 flex items-center justify-between siren-flashing';
+        sirenDecibel.innerText = '110 dB (HIGH ALERT 🚨)';
+        sirenDecibel.className = 'text-[10px] font-mono font-bold text-red-300';
+        sirenHorn.className = 'w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center text-xl shadow-lg shadow-red-500/50';
+        strobe.className = 'w-7 h-7 rounded-full bg-red-500 border border-white text-white text-xs flex items-center justify-center animate-ping';
+
+        batteryDrain.innerText = 'High Load (12.1V)';
+        batteryDrain.className = 'font-bold text-amber-400 text-sm';
+        gpio34.innerText = '12.1 V';
+      } else {
+        relayTag.innerText = 'DISARMED (OFF)';
+        relayTag.className = 'text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-gray-400 border border-gray-700';
+        relayContact.innerText = '[COM ⚡ NO: OPEN]';
+        relayContact.className = 'text-[10px] font-mono font-bold text-gray-400';
+        gpio26.innerText = 'LOW (OFF)';
+        gpio26.className = 'text-gray-400 font-bold';
+
+        sirenBox.className = 'p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 flex items-center justify-between';
+        sirenDecibel.innerText = '0 dB (Silent Standby)';
+        sirenDecibel.className = 'text-[10px] font-mono text-gray-400';
+        sirenHorn.className = 'w-10 h-10 rounded-full bg-slate-800 text-gray-400 flex items-center justify-center text-xl';
+        strobe.className = 'w-7 h-7 rounded-full bg-red-950 border border-red-800/60 flex items-center justify-center text-red-500 text-xs';
+
+        batteryDrain.innerText = 'Normal (12.4V)';
+        batteryDrain.className = 'font-bold text-slate-300 text-sm';
+        gpio34.innerText = '12.4 V';
+      }
+
+      // 6. Update pipeline trace text
+      document.getElementById('pipelineStatusStep').innerText = 
+        `[JSN-SR04T: ${distanceCm}cm / ${echoTimeUs}μs] ➔ [GPIO 18 Echo] ➔ [ESP32 Calc: ${level.toFixed(2)}m] ➔ [Relay GPIO 26: ${sirenActive ? 'ON' : 'OFF'}] ➔ [Wi-Fi POST]`;
     }
 
     function logMessage(msg, colorClass = 'text-sky-100') {
@@ -292,7 +743,7 @@
     }
 
     function clearLogs() {
-      document.getElementById('terminalLog').innerHTML = '<div class="text-sky-400/80">[SYSTEM] Terminal logs cleared.</div>';
+      document.getElementById('terminalLog').innerHTML = '<div class="text-sky-400/80">[SYSTEM] Serial Monitor console cleared.</div>';
     }
 
     async function sendPacket(waterLevelM, comment = '') {
@@ -302,31 +753,43 @@
         return;
       }
 
-      let rawDistance = 240 - Math.round(waterLevelM * 100);
-      rawDistance = Math.max(20, Math.min(240, rawDistance));
-      uptimeSec += 5;
+      // Calculate raw ultrasonic distance with slight Gaussian surface jitter (±0.8cm)
+      const baseDistance = SENSOR_MOUNT_HEIGHT_CM - (waterLevelM * 100);
+      const jitter = (Math.random() - 0.5) * 1.6;
+      let rawDistance = Math.round(baseDistance + jitter);
+      rawDistance = Math.max(20, Math.min(SENSOR_MOUNT_HEIGHT_CM, rawDistance));
 
-      const batteryVoltage = parseFloat((12.2 + Math.random() * 0.4).toFixed(2));
+      uptimeSec += 5;
+      const relayActive = waterLevelM >= 1.60;
+      const baseVoltage = 12.4 + (Math.random() * 0.2 - 0.1);
+      const batteryVoltage = parseFloat((relayActive ? baseVoltage - 0.3 : baseVoltage).toFixed(2));
       const wifiRssi = -55 + Math.floor(Math.random() * 7 - 3);
 
-      document.getElementById('batteryDisplay').innerText = batteryVoltage + ' V';
-      document.getElementById('rssiDisplay').innerText = wifiRssi + ' dBm';
       document.getElementById('uptimeDisplay').innerText = uptimeSec + 's';
+      document.getElementById('wifiRssiBadge').innerText = wifiRssi + ' dBm';
+      updateComponentVisuals(waterLevelM);
+
+      // Flash TX LED
+      const txLed = document.getElementById('txRxLed');
+      txLed.className = 'w-2 h-2 rounded-full bg-cyan-400 led-fast';
+      setTimeout(() => { txLed.className = 'w-2 h-2 rounded-full bg-emerald-500 led-blink'; }, 300);
 
       const payload = {
         rawDistance,
         batteryVoltage,
         wifiRssi,
         uptime: uptimeSec,
-        relayState: waterLevelM >= 1.60,
+        relayState: relayActive,
       };
 
       try {
+        const t0 = performance.now();
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
+        const latencyMs = Math.round(performance.now() - t0);
 
         let data = {};
         try { data = await res.json(); } catch {}
@@ -334,8 +797,8 @@
         if (!res.ok) {
           const errMsg = data.detail || data.error || res.statusText || 'Server error';
           logMessage(`[POST HTTP ${res.status} FAILED] ${errMsg}`, 'text-red-400');
-          document.getElementById('lastHttpStatus').innerText = res.status + ' ERR';
-          document.getElementById('lastHttpStatus').className = 'text-lg font-bold font-mono text-red-400';
+          document.getElementById('lastHttpStatusBadge').innerText = res.status + ' ERR';
+          document.getElementById('lastHttpStatusBadge').className = 'text-[9px] font-mono px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/40';
           return;
         }
 
@@ -349,167 +812,118 @@
         const aiConf = typeof rawConf === 'number'
           ? `${rawConf.toFixed(1)}%`
           : (typeof rawConf === 'string' ? rawConf : '96.5%');
-        const sirenState = (payload.relayState || data.sirenActive || stageM >= 1.60);
 
-        // Update Server Response Inspector Card
-        document.getElementById('lastHttpStatus').innerText = res.status + ' OK';
-        document.getElementById('lastHttpStatus').className = 'text-lg font-bold font-mono text-emerald-400';
-        document.getElementById('respStage').innerText = stageM + ' m';
+        // Update Server Node Dashboard Display
+        document.getElementById('lastHttpStatusBadge').innerText = `${res.status} OK (${latencyMs}ms)`;
+        document.getElementById('lastHttpStatusBadge').className = 'text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40';
+        document.getElementById('respServerStage').innerText = stageM + ' m';
         document.getElementById('respAi30m').innerText = ai30m + ' m';
-        document.getElementById('respAiConf').innerText = aiConf;
+        document.getElementById('respAiConf').innerText = aiConf.includes('%') ? aiConf : aiConf + '%';
 
-        const sirenEl = document.getElementById('respSiren');
-        if (sirenState) {
-          sirenEl.innerText = 'ON 🚨';
-          sirenEl.className = 'text-lg font-bold text-red-400 animate-pulse';
+        // Alert Badge Styling
+        const alertEl = document.getElementById('respAlertBadge');
+        const emailEl = document.getElementById('emailDispatchStatus');
+
+        if (alertCode.includes('L3')) {
+          alertEl.innerText = '🚨 L3 DANGER (≥2.00m)';
+          alertEl.className = 'font-bold text-red-400 text-xs';
+          emailEl.innerText = 'Dispatched 🚨 (Level 3)';
+          emailEl.className = 'font-bold text-red-400';
+        } else if (alertCode.includes('L2')) {
+          alertEl.innerText = '⚠️ L2 WARNING (≥1.60m)';
+          alertEl.className = 'font-bold text-amber-300 text-xs';
+          emailEl.innerText = 'Dispatched ⚠️ (Level 2)';
+          emailEl.className = 'font-bold text-amber-300';
+        } else if (alertCode.includes('L1')) {
+          alertEl.innerText = 'ℹ️ L1 ADVISORY (≥1.20m)';
+          alertEl.className = 'font-bold text-yellow-300 text-xs';
+          emailEl.innerText = 'Dispatched ℹ️ (Level 1)';
+          emailEl.className = 'font-bold text-yellow-300';
         } else {
-          sirenEl.innerText = 'OFF';
-          sirenEl.className = 'text-lg font-bold text-gray-400';
+          alertEl.innerText = 'NORMAL (<1.20m)';
+          alertEl.className = 'font-bold text-emerald-400 text-xs';
+          emailEl.innerText = 'Standby (L1+ req.)';
+          emailEl.className = 'font-bold text-gray-400';
         }
 
-        let color = 'text-emerald-400';
-        if (alertCode.includes('L1')) color = 'text-yellow-300';
-        if (alertCode.includes('L2') || alertCode.includes('L3')) color = 'text-red-400 font-bold';
-
+        // Serial Print Log in Monitor
         logMessage(
-          `POST ${res.status} OK | Stage: <b>${stageM}m</b> (${rawDistance}cm) | Status: <span class="${color}">${alertCode}</span> | AI: ${ai30m}m (${aiConf.includes('%') ? aiConf : aiConf + '%'}) | Siren: ${sirenState ? 'ON 🚨' : 'OFF'} ${comment ? `— ${comment}` : ''}`
+          `[HTTP ${res.status}] Echo: ${rawDistance}cm | Stage: <b>${stageM}m</b> | Alert: <span class="${alertCode.includes('L') ? 'text-amber-300 font-bold' : 'text-emerald-400'}">${alertCode}</span> | AI +30m: ${ai30m}m (${aiConf}) | Siren: ${relayActive ? 'ACTIVE 🚨' : 'OFF'} | Latency: ${latencyMs}ms ${comment ? `(${comment})` : ''}`
         );
 
       } catch (err) {
-        logMessage(`[POST FAILED] ${err.message} (${url})`, 'text-red-400');
-        document.getElementById('lastHttpStatus').innerText = 'FAILED';
+        logMessage(`[NETWORK FAILED] ${err.message} (${url})`, 'text-red-400 font-bold');
+        document.getElementById('lastHttpStatusBadge').innerText = 'OFFLINE';
+        document.getElementById('lastHttpStatusBadge').className = 'text-[9px] font-mono px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/40';
       }
     }
 
     function transmitManualPacket() {
       const level = parseFloat(document.getElementById('levelSlider').value);
-      sendPacket(level, 'Manual Transmission');
+      sendPacket(level, 'Manual Web Transmit');
     }
 
+    // Pre-programmed authentic hydrographs calibrated to 2.40m mount height & v4 thresholds
     const scenarios = {
       surge: [
-        // Phase 1: Dry Baseline (Steps 1-8, 5.0s interval)
-        { step: 1,  stage: 0.35, delay: 5000, desc: "Dry Baseline (Calm)" },
-        { step: 2,  stage: 0.35, delay: 5000, desc: "Dry Baseline (Buffer Warmup)" },
-        { step: 3,  stage: 0.35, delay: 5000, desc: "Dry Baseline (Buffer Warmup)" },
-        { step: 4,  stage: 0.35, delay: 5000, desc: "Dry Baseline (Buffer Warmup)" },
-        { step: 5,  stage: 0.35, delay: 5000, desc: "Dry Baseline (Buffer Warmup)" },
-        { step: 6,  stage: 0.35, delay: 5000, desc: "Dry Baseline (Buffer Ready)" },
-        { step: 7,  stage: 0.35, delay: 5000, desc: "Dry Baseline (Stable Buffer)" },
-        { step: 8,  stage: 0.36, delay: 5000, desc: "Pre-storm Inflow" },
-
-        // Phase 2: Soil Saturation & Infiltration (Steps 9-16, 4.5s interval)
-        { step: 9,  stage: 0.37, delay: 4500, desc: "Inflow Onset" },
-        { step: 10, stage: 0.39, delay: 4500, desc: "Catchment Saturation Progressing" },
-        { step: 11, stage: 0.42, delay: 4500, desc: "Moderate Inflow" },
-        { step: 12, stage: 0.46, delay: 4500, desc: "Steady Stream Rise" },
-        { step: 13, stage: 0.50, delay: 4500, desc: "Watershed Infiltration Limit" },
-        { step: 14, stage: 0.55, delay: 4500, desc: "Surface Runoff Beginning" },
-        { step: 15, stage: 0.60, delay: 4500, desc: "Runoff Feeding Tributaries" },
-        { step: 16, stage: 0.66, delay: 4500, desc: "Stream Velocity Rising" },
-
-        // Phase 3: Storm Surge & Threshold Breaches (Steps 17-24, 4.0s interval)
-        { step: 17, stage: 0.74, delay: 4000, desc: "Torrential Inflow Surge" },
-        { step: 18, stage: 0.85, delay: 4000, desc: "Rapid Inflow Surge" },
-        { step: 19, stage: 0.98, delay: 4000, desc: "Approaching Level 1" },
-        { step: 20, stage: 1.08, delay: 4000, desc: "BREACH: ALERT LEVEL 1 (Advisory)" },
-        { step: 21, stage: 1.18, delay: 4000, desc: "Peak Inflow Surge" },
-        { step: 22, stage: 1.28, delay: 4000, desc: "Surge Accelerating" },
-        { step: 23, stage: 1.38, delay: 4000, desc: "Approaching Level 2 Alarm" },
-        { step: 24, stage: 1.48, delay: 4000, desc: "BREACH: ALERT LEVEL 2 (Siren Active 🚨)" },
-
-        // Phase 4: Peak Flash Flood Crest (Steps 25-28, 3.0s interval - Urgent)
-        { step: 25, stage: 1.56, delay: 3000, desc: "Severe Flooding Surge" },
-        { step: 26, stage: 1.62, delay: 3000, desc: "BREACH: ALERT LEVEL 3 (Peak Crest 🚨)" },
-        { step: 27, stage: 1.60, delay: 3000, desc: "Hydrograph Peak Plateau" },
-        { step: 28, stage: 1.55, delay: 3000, desc: "Crest Subsiding" },
-
-        // Phase 5: Catchment Retention Lag (Steps 29-38, 5.0s interval)
-        { step: 29, stage: 1.48, delay: 5000, desc: "Upstream Runoff Sustaining Stage" },
-        { step: 30, stage: 1.42, delay: 5000, desc: "Inflow Ceasing, Channel Full" },
-        { step: 31, stage: 1.35, delay: 5000, desc: "Water Level Dropping Below L2" },
-        { step: 32, stage: 1.28, delay: 5000, desc: "Slow Soil Retention Drainage" },
-        { step: 33, stage: 1.20, delay: 5000, desc: "Watershed Outflow Drain" },
-        { step: 34, stage: 1.12, delay: 5000, desc: "Gradual Channel Drawdown" },
-        { step: 35, stage: 1.05, delay: 5000, desc: "Approaching Level 1 Return" },
-        { step: 36, stage: 0.98, delay: 5000, desc: "Water Level Below L1" },
-        { step: 37, stage: 0.90, delay: 5000, desc: "Persistent Drainage Tail" },
-        { step: 38, stage: 0.82, delay: 5000, desc: "Steady Baseflow Drainage" },
-
-        // Phase 6: Drainage & Baseline Recovery (Steps 39-48, 6.0s interval)
-        { step: 39, stage: 0.74, delay: 6000, desc: "Recession Limb Continuing" },
-        { step: 40, stage: 0.66, delay: 6000, desc: "Low Flow Drainage" },
-        { step: 41, stage: 0.58, delay: 6000, desc: "Recession Limb" },
-        { step: 42, stage: 0.52, delay: 6000, desc: "Return to Near-Normal" },
-        { step: 43, stage: 0.46, delay: 6000, desc: "Stream Settling" },
-        { step: 44, stage: 0.42, delay: 6000, desc: "Channel Cleared" },
-        { step: 45, stage: 0.38, delay: 6000, desc: "Approaching Baseflow" },
-        { step: 46, stage: 0.36, delay: 6000, desc: "Residual Baseflow" },
-        { step: 47, stage: 0.35, delay: 6000, desc: "Dry Channel Restored" },
-        { step: 48, stage: 0.35, delay: 6000, desc: "Normal Baseline Complete" }
+        // Phase 1: Dry Baseline (Normal Flow 0.35m)
+        { stage: 0.35, delay: 3500, desc: "Dry Season Baseflow (Calm)" },
+        { stage: 0.35, delay: 3500, desc: "Dry Baseline (Acoustic Ripple)" },
+        { stage: 0.38, delay: 3500, desc: "Pre-storm Cloudburst Inflow" },
+        // Phase 2: Inflow Rising
+        { stage: 0.50, delay: 3000, desc: "Upstream Catchment Saturation" },
+        { stage: 0.72, delay: 3000, desc: "Runoff Feeding Tributary" },
+        { stage: 0.95, delay: 3000, desc: "Rapid Inflow Surge" },
+        { stage: 1.15, delay: 3000, desc: "Approaching Level 1 Advisory" },
+        // Phase 3: Level 1 Advisory (1.20m+)
+        { stage: 1.25, delay: 3000, desc: "BREACH: LEVEL 1 ADVISORY (Email Alert Dispatched)" },
+        { stage: 1.42, delay: 2800, desc: "Torrential Runoff Accelerating" },
+        // Phase 4: Level 2 Warning & Siren (1.60m+)
+        { stage: 1.62, delay: 2500, desc: "BREACH: LEVEL 2 WARNING (GPIO 26 HIGH -> SIREN ON 🚨)" },
+        { stage: 1.80, delay: 2500, desc: "Severe Storm Surge Rising" },
+        // Phase 5: Level 3 Danger Crest (2.00m+)
+        { stage: 2.05, delay: 3000, desc: "BREACH: LEVEL 3 DANGER (Peak Hydrograph Crest 🚨)" },
+        { stage: 2.02, delay: 3000, desc: "Peak Crest Plateau (Evacuation Active)" },
+        // Phase 6: Drainage & Recession Limb
+        { stage: 1.85, delay: 3500, desc: "Inflow Peaked, Drainage Commencing" },
+        { stage: 1.58, delay: 3500, desc: "Water Drops Below Level 2 (Siren Disengages)" },
+        { stage: 1.35, delay: 3500, desc: "Slow Watershed Retention Drainage" },
+        { stage: 1.15, delay: 4000, desc: "Recedes Below Level 1 Threshold" },
+        { stage: 0.80, delay: 4000, desc: "Channel Drawdown Progressing" },
+        { stage: 0.52, delay: 4000, desc: "Recession Limb Towards Normal" },
+        { stage: 0.35, delay: 4000, desc: "Normal Dry Baseflow Restored" }
       ],
       moderate: [
-        // Phase 1: Buffer Warmup (Steps 1-6)
-        { step: 1,  stage: 0.35, delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
-        { step: 2,  stage: 0.35, delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
-        { step: 3,  stage: 0.35, delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
-        { step: 4,  stage: 0.35, delay: 5000, desc: "Normal Baseflow (Buffer Warmup)" },
-        { step: 5,  stage: 0.35, delay: 5000, desc: "Normal Baseflow (Buffer Ready)" },
-        { step: 6,  stage: 0.36, delay: 5000, desc: "Pre-storm Inflow Onset" },
-
-        // Phase 2: Steady Inflow Onset (Steps 7-12)
-        { step: 7,  stage: 0.38, delay: 4500, desc: "Light Steady Inflow" },
-        { step: 8,  stage: 0.45, delay: 4500, desc: "Moderate Inflow Building" },
-        { step: 9,  stage: 0.55, delay: 4500, desc: "Soil Saturation & Runoff" },
-        { step: 10, stage: 0.68, delay: 4500, desc: "Stream Velocity Rising" },
-        { step: 11, stage: 0.82, delay: 4500, desc: "Continuous Inflow Rise" },
-        { step: 12, stage: 0.95, delay: 4500, desc: "Approaching Level 1 Watch" },
-
-        // Phase 3: Level 1 Advisory Peak (Steps 13-16)
-        { step: 13, stage: 1.05, delay: 4000, desc: "BREACH: ALERT LEVEL 1 (Advisory)" },
-        { step: 14, stage: 1.15, delay: 4000, desc: "Peak Moderate Hydrograph (1.15m)" },
-        { step: 15, stage: 1.12, delay: 4000, desc: "Inflow Easing - Water Plateau" },
-        { step: 16, stage: 1.08, delay: 4000, desc: "Upstream Inflow Sustaining Stage" },
-
-        // Phase 4: Drainage & Recovery (Steps 17-24)
-        { step: 17, stage: 0.98, delay: 5000, desc: "Receding Below Level 1 Threshold" },
-        { step: 18, stage: 0.88, delay: 5000, desc: "Inflow Ceasing, Channel Outflow" },
-        { step: 19, stage: 0.75, delay: 5000, desc: "Steady Baseflow Drawdown" },
-        { step: 20, stage: 0.62, delay: 5000, desc: "Recession Limb Progressing" },
-        { step: 21, stage: 0.50, delay: 5000, desc: "Stream Channel Settling" },
-        { step: 22, stage: 0.42, delay: 5000, desc: "Approaching Normal Baseflow" },
-        { step: 23, stage: 0.36, delay: 5000, desc: "Residual Channel Flow" },
-        { step: 24, stage: 0.35, delay: 5000, desc: "Normal Baseflow Restored (0.35m)" },
+        { stage: 0.35, delay: 3500, desc: "Baseflow Stable" },
+        { stage: 0.55, delay: 3500, desc: "Light Steady Inflow" },
+        { stage: 0.85, delay: 3000, desc: "Moderate Rainfall Runoff" },
+        { stage: 1.10, delay: 3000, desc: "Approaching Level 1 Watch" },
+        { stage: 1.28, delay: 3500, desc: "BREACH: LEVEL 1 ADVISORY (Hold Plateau)" },
+        { stage: 1.32, delay: 3500, desc: "Moderate Peak (Email Sent, No Siren)" },
+        { stage: 1.18, delay: 3500, desc: "Receding Below Level 1" },
+        { stage: 0.75, delay: 4000, desc: "Steady Channel Outflow" },
+        { stage: 0.45, delay: 4000, desc: "Approaching Baseflow" },
+        { stage: 0.35, delay: 4000, desc: "Calm Baseflow Restored" }
       ],
       calm: [
-        { step: 1,  stage: 0.35, delay: 4000, desc: "Calm Baseflow (Normal 0.35m)" },
-        { step: 2,  stage: 0.35, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
-        { step: 3,  stage: 0.36, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
-        { step: 4,  stage: 0.35, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
-        { step: 5,  stage: 0.35, delay: 4000, desc: "Calm Baseflow (Buffer Stable)" },
-        { step: 6,  stage: 0.34, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
-        { step: 7,  stage: 0.35, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
-        { step: 8,  stage: 0.35, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
-        { step: 9,  stage: 0.36, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
-        { step: 10, stage: 0.35, delay: 4000, desc: "Calm Baseflow (Buffer Stable)" },
-        { step: 11, stage: 0.35, delay: 4000, desc: "Calm Baseflow (Ultrasonic Ripple)" },
-        { step: 12, stage: 0.35, delay: 4000, desc: "Calm Baseflow Baseline Complete" },
-      ],
+        { stage: 0.35, delay: 3000, desc: "Normal Baseflow (0.35m)" },
+        { stage: 0.34, delay: 3000, desc: "Acoustic Ripple Variation" },
+        { stage: 0.35, delay: 3000, desc: "Stable Clear Baseflow" },
+        { stage: 0.36, delay: 3000, desc: "Acoustic Ripple Variation" },
+        { stage: 0.35, delay: 3000, desc: "Steady Channel Baseline" }
+      ]
     };
 
     async function runScenario(key) {
       const list = scenarios[key];
-      logMessage(`[SCENARIO] Starting scenario: ${key.toUpperCase()} (${list.length} steps)...`, 'text-amber-300 font-bold');
+      logMessage(`[SCENARIO] Starting: ${key.toUpperCase()} (${list.length} steps)...`, 'text-amber-300 font-bold');
       for (let i = 0; i < list.length; i++) {
         const item = list[i];
-        const stageVal = item.stage != null ? item.stage : item.level;
-        const descVal = item.desc != null ? item.desc : item.comment;
-        const delayMs = item.delay != null ? item.delay : 2500;
-
-        await sendPacket(stageVal, `[Step ${i+1}/${list.length}] (${(delayMs/1000).toFixed(1)}s tick) ${descVal}`);
-        if (i < list.length - 1) await new Promise(r => setTimeout(r, delayMs));
+        document.getElementById('levelSlider').value = item.stage;
+        await sendPacket(item.stage, `[Step ${i+1}/${list.length}] ${item.desc}`);
+        if (i < list.length - 1) await new Promise(r => setTimeout(r, item.delay));
       }
-      logMessage(`[SCENARIO] ${key.toUpperCase()} execution complete!`, 'text-emerald-400 font-bold');
+      logMessage(`[SCENARIO] ${key.toUpperCase()} completed successfully.`, 'text-emerald-400 font-bold');
     }
 
     function toggleAutoStream() {
@@ -519,24 +933,28 @@
         autoStreamInterval = null;
         badge.innerText = 'OFF';
         badge.className = 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300';
-        logMessage('[AUTO STREAM] Continuous real-time streaming stopped.', 'text-amber-300');
+        logMessage('[AUTO STREAM] Continuous loop stopped.', 'text-amber-300');
       } else {
         badge.innerText = 'ACTIVE 🔄';
         badge.className = 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 animate-pulse';
         logMessage('[AUTO STREAM] Started continuous streaming (1 packet every 5s)...', 'text-emerald-400 font-bold');
 
         let currentLvl = 0.35;
-        let trend = 0.02;
+        let trend = 0.03;
 
         autoStreamInterval = setInterval(() => {
-          if (currentLvl >= 1.60) trend = -0.03;
-          if (currentLvl <= 0.32) trend = 0.02;
-          const jitter = (Math.random() - 0.48) * 0.02;
-          currentLvl = Math.max(0.25, Math.min(1.75, currentLvl + trend + jitter));
-          sendPacket(currentLvl, 'Auto Stream');
+          if (currentLvl >= 1.80) trend = -0.04;
+          if (currentLvl <= 0.30) trend = 0.03;
+          const jitter = (Math.random() - 0.5) * 0.02;
+          currentLvl = Math.max(0.10, Math.min(2.10, currentLvl + trend + jitter));
+          document.getElementById('levelSlider').value = currentLvl.toFixed(2);
+          sendPacket(currentLvl, 'Auto Stream Loop');
         }, 5000);
       }
     }
+
+    // Initialize visual state on load
+    updateComponentVisuals(0.00);
   </script>
 </body>
 </html>

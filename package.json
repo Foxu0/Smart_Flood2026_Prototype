@@ -10,6 +10,7 @@
     "virtual-esp32": "node tools/virtual-esp32.js",
     "simulator-gui": "node tools/server-simulator-gui.js",
     "test:simulate-stream": "node tools/virtual-esp32.js",
+    "test:suite": "node tools/test_system_suite.js",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
