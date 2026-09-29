@@ -91,8 +91,7 @@ export default function EmailSubscribersModal({ isOpen, onClose, onNotification 
   const filteredSubscribers = subscribers.filter(
     (s) =>
       s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.fullName && s.fullName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (s.barangay && s.barangay.toLowerCase().includes(searchQuery.toLowerCase()))
+      (s.fullName && s.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -126,24 +125,8 @@ export default function EmailSubscribersModal({ isOpen, onClose, onNotification 
         </div>
 
         {/* Modal Body */}
-        <div className="bg-[#f8fafc] p-4 sm:p-6 overflow-y-auto flex-1 space-y-5 font-sans">
+        <div className="bg-[#f8fafc] p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 font-sans">
           
-          {/* Top Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div className="bg-white p-3 rounded-xl border border-[#e2e8f0] shadow-2xs">
-              <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">Total Registered</span>
-              <p className="text-xl font-bold text-[#0f172a] mt-0.5">{stats.total}</p>
-            </div>
-            <div className="bg-white p-3 rounded-xl border border-[#e2e8f0] shadow-2xs">
-              <span className="text-[10px] font-bold text-[#2f9463] uppercase tracking-wider">Active Recipients</span>
-              <p className="text-xl font-bold text-[#2f9463] mt-0.5">{stats.active}</p>
-            </div>
-            <div className="bg-white p-3 rounded-xl border border-[#e2e8f0] shadow-2xs">
-              <span className="text-[10px] font-bold text-[#e0522f] uppercase tracking-wider">Unsubscribed</span>
-              <p className="text-xl font-bold text-[#e0522f] mt-0.5">{stats.unsubscribed}</p>
-            </div>
-          </div>
-
           {/* Tab Navigation */}
           <div className="flex border-b border-[#e2e8f0] gap-2">
             {[
@@ -173,7 +156,7 @@ export default function EmailSubscribersModal({ isOpen, onClose, onNotification 
                   <Search size={14} className="absolute left-3 top-2.5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search by email, name, or barangay..."
+                    placeholder="Search by email or name..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-white border border-[#d9e2ec] focus:outline-none focus:ring-2 focus:ring-[#2b6e8f]"
@@ -195,7 +178,6 @@ export default function EmailSubscribersModal({ isOpen, onClose, onNotification 
                     <thead className="bg-[#f8fafc] text-[#64748b] font-bold text-[10px] uppercase border-b border-[#e2e8f0]">
                       <tr>
                         <th className="py-2.5 px-3">Subscriber</th>
-                        <th className="py-2.5 px-3">Barangay</th>
                         <th className="py-2.5 px-3">Filter</th>
                         <th className="py-2.5 px-3">Status</th>
                         <th className="py-2.5 px-3 text-right">Action</th>
@@ -204,7 +186,7 @@ export default function EmailSubscribersModal({ isOpen, onClose, onNotification 
                     <tbody className="divide-y divide-[#f1f5f9]">
                       {filteredSubscribers.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="text-center py-6 text-[#94a3b8]">
+                          <td colSpan={4} className="text-center py-6 text-[#94a3b8]">
                             No subscribers found.
                           </td>
                         </tr>
@@ -215,7 +197,6 @@ export default function EmailSubscribersModal({ isOpen, onClose, onNotification 
                               <div className="font-semibold text-[#0f172a]">{sub.email}</div>
                               {sub.fullName && <div className="text-[10px] text-[#64748b]">{sub.fullName}</div>}
                             </td>
-                            <td className="py-2.5 px-3 text-[#475569]">{sub.barangay}</td>
                             <td className="py-2.5 px-3">
                               <span
                                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${

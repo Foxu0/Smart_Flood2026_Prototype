@@ -8,11 +8,11 @@ import useCountUp from '../hooks/useCountUp.js';
  * - Animated sine wave water surface (requestAnimationFrame)
  * - Smooth fill height transition by level
  * - Rising bubble particles inside the water column
- * - Danger dashed line at 1.60 m
+ * - Danger dashed line at 2.00 m
  * - Circular arc progress ring behind the tank
  * - Animated digit readout via useCountUp
  */
-export default function WaterTankGauge({ levelM, maxM = 2.0, dangerM = 1.6, color }) {
+export default function WaterTankGauge({ levelM, maxM = 2.4, dangerM = 2.0, color }) {
   const pct    = Math.min(100, Math.max(0, (levelM / maxM) * 100));
   const fillH  = 160; // inner drawable height in SVG units
   const tankW  = 120; // wider tank width in SVG units
@@ -41,7 +41,7 @@ export default function WaterTankGauge({ levelM, maxM = 2.0, dangerM = 1.6, colo
   const wavePath = `M 0,${fillY} L ${wavePoints.join(' L ')} L ${tankW},${fillH} L 0,${fillH} Z`;
 
   // Danger line in SVG units (bounded within tank height)
-  const dangerVal = dangerM || 1.6;
+  const dangerVal = dangerM || 2.0;
   const dangerY = fillH * (1 - Math.min(maxM, Math.max(0, dangerVal)) / maxM);
   const textY = dangerY < 18 ? dangerY + 10 : dangerY - 4;
 

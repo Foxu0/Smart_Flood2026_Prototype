@@ -91,7 +91,7 @@ export async function runScenario(req, res) {
       totalSteps: scenario.totalSteps,
     });
 
-    const MOUNT_HEIGHT_CM = 180;
+    const MOUNT_HEIGHT_CM = parseFloat(process.env.SENSOR_MOUNT_HEIGHT_CM ?? 240);
     let prevStage = scenario.steps[0]?.stage || 0.35;
 
     activeInterval = setInterval(async () => {
@@ -138,13 +138,13 @@ export async function runScenario(req, res) {
       // Determine alert level
       let eventCode = null;
       let severity = 'INFO';
-      if (water_level_m >= 1.6) {
+      if (water_level_m >= 2.00) {
         eventCode = 'ALERT_L3';
         severity = 'CRITICAL';
-      } else if (water_level_m >= 1.4) {
+      } else if (water_level_m >= 1.60) {
         eventCode = 'ALERT_L2';
         severity = 'WARNING';
-      } else if (water_level_m >= 1.0) {
+      } else if (water_level_m >= 1.20) {
         eventCode = 'ALERT_L1';
         severity = 'NOTICE';
       }
@@ -181,8 +181,8 @@ export async function runScenario(req, res) {
       }
 
       const alertStatus = {
-        level: water_level_m >= 1.6 ? 3 : water_level_m >= 1.4 ? 2 : water_level_m >= 1.0 ? 1 : 0,
-        thresholds: { level1_watch: 1.0, level2_alarm: 1.4, level3_danger: 1.6 },
+        level: water_level_m >= 2.00 ? 3 : water_level_m >= 1.60 ? 2 : water_level_m >= 1.20 ? 1 : 0,
+        thresholds: { level1_watch: 1.20, level2_alarm: 1.60, level3_danger: 2.00 },
         eventCode,
       };
 

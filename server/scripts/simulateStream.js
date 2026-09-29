@@ -43,7 +43,7 @@ async function runSimulation() {
       batteryVoltage: step.voltage,
       wifiRssi:       step.rssi,
       uptime:         step.uptime,
-      relayState:     step.stage >= 1.4,
+      relayState:     step.stage >= 1.60,
     };
 
     try {

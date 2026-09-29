@@ -106,12 +106,12 @@
               <span class="font-semibold text-white">River Stage Height (Water Level)</span>
               <span id="levelValueDisplay" class="font-mono text-lg font-bold text-sky-400">0.00 m</span>
             </div>
-            <input id="levelSlider" type="range" min="0" max="1.80" step="0.05" value="0.00" oninput="updateManualReadout()" class="w-full h-2 bg-[#0b2030] rounded-lg appearance-none cursor-pointer accent-sky-400" />
+            <input id="levelSlider" type="range" min="0" max="2.20" step="0.05" value="0.00" oninput="updateManualReadout()" class="w-full h-2 bg-[#0b2030] rounded-lg appearance-none cursor-pointer accent-sky-400" />
             <div class="flex justify-between text-[10px] text-sky-200/60 font-mono">
               <span>0.00m (Dry Baseline)</span>
-              <span>1.00m (L1 Watch)</span>
-              <span>1.40m (L2 Siren)</span>
-              <span class="text-amber-400">1.60m (L3 Danger)</span>
+              <span>1.20m (L1 Watch)</span>
+              <span>1.60m (L2 Siren)</span>
+              <span class="text-amber-400">2.00m (L3 Danger)</span>
             </div>
           </div>
 
@@ -318,7 +318,7 @@
         batteryVoltage,
         wifiRssi,
         uptime: uptimeSec,
-        relayState: waterLevelM >= 1.4,
+        relayState: waterLevelM >= 1.60,
       };
 
       try {
@@ -341,7 +341,7 @@
 
         const logObj = data.log || data.data || {};
         const stageM = parseFloat(logObj.waterLevelM ?? logObj.water_level_m ?? waterLevelM).toFixed(2);
-        const alertCode = data.event?.eventCode || data.event?.event_code || data.eventTriggered?.event_type || (stageM >= 1.6 ? 'ALERT_L3' : stageM >= 1.4 ? 'ALERT_L2' : stageM >= 1.0 ? 'ALERT_L1' : 'NORMAL');
+        const alertCode = data.event?.eventCode || data.event?.event_code || data.eventTriggered?.event_type || (stageM >= 2.00 ? 'ALERT_L3' : stageM >= 1.60 ? 'ALERT_L2' : stageM >= 1.20 ? 'ALERT_L1' : 'NORMAL');
         const projObj = data.projection || data.aiProjection || {};
         const ai30m = parseFloat(projObj.horizon30mM ?? projObj.predicted30m ?? projObj.horizon_30m_m ?? stageM).toFixed(2);
         const aiEval = data.aiEvaluation || {};
@@ -349,7 +349,7 @@
         const aiConf = typeof rawConf === 'number'
           ? `${rawConf.toFixed(1)}%`
           : (typeof rawConf === 'string' ? rawConf : '96.5%');
-        const sirenState = (payload.relayState || data.sirenActive || stageM >= 1.4);
+        const sirenState = (payload.relayState || data.sirenActive || stageM >= 1.60);
 
         // Update Server Response Inspector Card
         document.getElementById('lastHttpStatus').innerText = res.status + ' OK';

@@ -10,25 +10,26 @@ import { authMiddleware } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 // ── Physical sensor constants ────────────────────────────────────────────────
-const MOUNT_HEIGHT_CM  = parseFloat(process.env.SENSOR_MOUNT_HEIGHT_CM  ?? 180);  // cm above riverbed
+const MOUNT_HEIGHT_CM  = parseFloat(process.env.SENSOR_MOUNT_HEIGHT_CM  ?? 240);  // cm above riverbed
 const BLIND_SPOT_CM    = parseFloat(process.env.SENSOR_BLIND_SPOT_CM    ?? 25);   // JSN-SR04T min range
 
 // ── Default alert thresholds (overridable via SystemSetting) ─────────────────
 const DEFAULT_THRESHOLDS = {
-  level1_watch:  1.0,
-  level2_alarm:  1.4,
-  level3_danger: 1.6,
+  level1_watch:  1.20,
+  level2_alarm:  1.60,
+  level3_danger: 2.00,
 };
 
 async function getThresholds() {
   try {
     const settings = await prisma.systemSetting.findMany({
-      where: { key_name: { in: ['level1_watch', 'level2_alarm', 'level3_danger'] } },
+      where: { keyName: { in: ['level1_watch', 'level2_alarm', 'level3_danger'] } },
     });
     const overrides = {};
-    settings.forEach((s) => { overrides[s.key_name] = parseFloat(s.value); });
+    settings.forEach((s) => { overrides[s.keyName] = parseFloat(s.value); });
     return { ...DEFAULT_THRESHOLDS, ...overrides };
-  } catch {
+  } catch (err) {
+    console.error('[getThresholds] Error fetching thresholds from database, falling back to defaults:', err);
     return DEFAULT_THRESHOLDS;
   }
 }
@@ -189,12 +190,21 @@ router.post('/', async (req, res) => {
     broadcast({      type: 'ALERT_STATUS', data: alertStatus });
     broadcast({      type: 'AI_EVALUATION', data: getEvaluationMetrics() });
 
-    // ── 11. Trigger Email Emergency Broadcast on Level 2+ (with anti-spam cooldown) ──
-    if (alertStatus.level >= 2) {
-      const alertTitle = alertStatus.level === 3 ? '🚨 LEVEL 3 EMERGENCY ALERT' : '⚠️ LEVEL 2 WARNING ALARM';
+    // ── 11. Trigger Email Broadcast on Level 1+ (with anti-spam cooldown) ──────
+    // Level 1 (Advisory) → email advisory only (no siren)
+    // Level 2 (Warning)  → email + siren activated on ESP32
+    // Level 3 (Danger)   → email + siren activated on ESP32
+    if (alertStatus.level >= 1) {
+      const alertTitle = alertStatus.level === 3
+        ? '🚨 LEVEL 3 EMERGENCY ALERT'
+        : alertStatus.level === 2
+          ? '⚠️ LEVEL 2 WARNING ALARM'
+          : 'ℹ️ LEVEL 1 ADVISORY NOTICE';
       const alertBody  = alertStatus.level === 3
         ? `EMERGENCY: Water level reached ${water_level_m.toFixed(2)}m. Immediate evacuation required in Lower Antipolo.`
-        : `WARNING: Water level reached ${water_level_m.toFixed(2)}m. Prepare for potential evacuation.`;
+        : alertStatus.level === 2
+          ? `WARNING: Water level reached ${water_level_m.toFixed(2)}m. Prepare for potential evacuation.`
+          : `ADVISORY: Water level at Lower Antipolo has reached ${water_level_m.toFixed(2)}m and is rising. Please stay alert and monitor further updates.`;
 
       broadcastEmailAlert({
         title: alertTitle,

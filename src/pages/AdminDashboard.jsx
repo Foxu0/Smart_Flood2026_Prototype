@@ -41,20 +41,20 @@ const logIdRef = { current: 100 };
 
 // ─── Flood level thresholds (kept for the underlying logic) ──────────────────
 const FLOOD_LEVELS = [
-  { id: 0, min: 0, max: 1.0, color: '#2f9463', soft: '#e5f6ec', border: '#bfe6cf' },
-  { id: 1, min: 1.0, max: 1.4, color: '#2b6e8f', soft: '#e6f2f8', border: '#bfdbe8' },
-  { id: 2, min: 1.4, max: 1.6, color: '#e69138', soft: '#fdf1de', border: '#f4d6a4' },
-  { id: 3, min: 1.6, max: 1.8, color: '#e0522f', soft: '#fce7e0', border: '#f2bfab' },
+  { id: 0, min: 0, max: 1.2, color: '#2f9463', soft: '#e5f6ec', border: '#bfe6cf' },
+  { id: 1, min: 1.2, max: 1.6, color: '#2b6e8f', soft: '#e6f2f8', border: '#bfdbe8' },
+  { id: 2, min: 1.6, max: 2.0, color: '#e69138', soft: '#fdf1de', border: '#f4d6a4' },
+  { id: 3, min: 2.0, max: 2.4, color: '#e0522f', soft: '#fce7e0', border: '#f2bfab' },
 ];
 function getFloodLevel(waterM, thresholds) {
-  const l1 = thresholds?.level1_watch ?? 1.0;
-  const l2 = thresholds?.level2_alarm ?? 1.4;
-  const l3 = thresholds?.level3_danger ?? 1.6;
+  const l1 = thresholds?.level1_watch ?? 1.2;
+  const l2 = thresholds?.level2_alarm ?? 1.6;
+  const l3 = thresholds?.level3_danger ?? 2.0;
 
   if (waterM < l1) return { ...FLOOD_LEVELS[0], min: 0.0, max: l1 };
   if (waterM < l2) return { ...FLOOD_LEVELS[1], min: l1, max: l2 };
   if (waterM < l3) return { ...FLOOD_LEVELS[2], min: l2, max: l3 };
-  return { ...FLOOD_LEVELS[3], min: l3, max: 1.8 };
+  return { ...FLOOD_LEVELS[3], min: l3, max: 2.4 };
 }
 
 // ─── Plain-language content, keyed by flood level id ─────────────────────────
@@ -213,9 +213,9 @@ export default function FloodMonitoringDashboard() {
   });
 
   const [thresholds, setThresholds] = useState({
-    level1_watch: 1.0,
-    level2_alarm: 1.4,
-    level3_danger: 1.6,
+    level1_watch: 1.20,
+    level2_alarm: 1.60,
+    level3_danger: 2.00,
   });
 
   const [aiMetrics, setAiMetrics] = useState({
@@ -773,9 +773,9 @@ export default function FloodMonitoringDashboard() {
     if (floodLevel.id > prevLevelIdRef.current) {
       const msgs = [
         '',
-        'Water level has entered WATCH range (>1.0 m). Stay alert.',
-        '⚠ Water is rising fast — now in ALARM range (>1.4 m). Prepare to act.',
-        '🚨 DANGER LEVEL reached (>1.6 m). Move to higher ground immediately!',
+        'Water level has entered WATCH range (>1.2 m). Stay alert.',
+        '⚠ Water is rising fast — now in ALARM range (>1.6 m). Prepare to act.',
+        '🚨 DANGER LEVEL reached (>2.0 m). Move to higher ground immediately!',
       ];
       const severityMap = ['info', 'info', 'warning', 'danger'];
       pushToast({
@@ -828,7 +828,7 @@ export default function FloodMonitoringDashboard() {
   const tryScenario = (label, level) => {
     setIsLive(false);
     setManualOverride(false);
-    setSirenActive(level >= 1.4);
+    setSirenActive(level >= 1.60);
     setTelemetry(prev => ({
       ...prev,
       waterLevelM: level,
@@ -836,9 +836,9 @@ export default function FloodMonitoringDashboard() {
       rainRateMmHr: level < 0.6 ? 2 : level < 1.3 ? 14 : 30,
     }));
     setAiPrediction(prev => {
-      const p30 = Math.min(1.8, level + 0.10);
-      const p60 = Math.min(1.8, level + 0.20);
-      return { ...prev, riskScore: Math.round((p60 / 1.8) * 100), predicted30m: +p30.toFixed(2), predicted60m: +p60.toFixed(2), timeToCriticalMins: Math.max(5, Math.round((1.6 - level) * 120)) };
+      const p30 = Math.min(2.4, level + 0.10);
+      const p60 = Math.min(2.4, level + 0.20);
+      return { ...prev, riskScore: Math.round((p60 / 2.4) * 100), predicted30m: +p30.toFixed(2), predicted60m: +p60.toFixed(2), timeToCriticalMins: Math.max(5, Math.round((2.0 - level) * 120)) };
     });
     addLog('system', `Preview mode: showing what "${label}" looks like.`);
   };
@@ -853,7 +853,7 @@ export default function FloodMonitoringDashboard() {
 
   const chartH = 130;
   const chartW = 560;
-  const maxLevel = 1.8;
+  const maxLevel = 2.4;
   const histLevels = activeHistory.map(h => h.waterLevel);
   // Allocate 88% width for historical telemetry, reserving rightmost 12% for +60m ML forecast projection
   const telemetryW = chartW * 0.88;
@@ -1134,7 +1134,7 @@ export default function FloodMonitoringDashboard() {
 
                   {/* Danger Line (Dynamic Level 3 Threshold) */}
                   {(() => {
-                    const dangerVal = thresholds.level3_danger || 1.6;
+                    const dangerVal = thresholds.level3_danger || 2.0;
                     const dangerY = chartH - Math.min(1, Math.max(0, dangerVal / maxLevel)) * chartH;
                     return (
                       <>
@@ -1307,9 +1307,9 @@ export default function FloodMonitoringDashboard() {
                 <p className="text-[10px] text-[#6d818d] mb-3">Adjust trigger levels for automated siren &amp; warnings.</p>
                 <div className="space-y-3.5 text-xs bg-[#fbfdfe] rounded-xl p-3 border border-[#eef2f3]">
                   {[
-                    { key: 'level1_watch', label: 'Level 1 — Advisory Watch', min: 0.5, max: 1.2, color: '#2b6e8f' },
-                    { key: 'level2_alarm', label: 'Level 2 — Siren Warning Alarm', min: 1.0, max: 1.5, color: '#e69138' },
-                    { key: 'level3_danger', label: 'Level 3 — Emergency Danger', min: 1.4, max: 1.8, color: '#e0522f' },
+                    { key: 'level1_watch', label: 'Level 1 — Advisory Watch', min: 0.5, max: 1.5, color: '#2b6e8f' },
+                    { key: 'level2_alarm', label: 'Level 2 — Siren Warning Alarm', min: 1.2, max: 1.9, color: '#e69138' },
+                    { key: 'level3_danger', label: 'Level 3 — Emergency Danger', min: 1.6, max: 2.5, color: '#e0522f' },
                   ].map(({ key, label, min, max, color }) => {
                     const val = thresholds[key] || min;
                     const pct = Math.min(100, Math.max(0, ((val - min) / (max - min)) * 100));

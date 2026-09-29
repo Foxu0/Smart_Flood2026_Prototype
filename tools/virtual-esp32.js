@@ -35,7 +35,7 @@ const LOCALHOST_URL     = 'http://localhost:3001/api/v1/telemetry';
 let TARGET_URL = process.env.TELEMETRY_URL || RENDER_PROD_URL;
 
 // Physical Hardware Constants (matches SmartFlood_ESP32.ino)
-const SENSOR_MOUNT_HEIGHT_CM = 180; // 1.80m above riverbed
+const SENSOR_MOUNT_HEIGHT_CM = parseFloat(process.env.SENSOR_MOUNT_HEIGHT_CM ?? 240); // 2.40m above riverbed
 
 // System Uptime Tracker
 let systemUptimeSec = 300;
@@ -66,16 +66,16 @@ const askQuestion = (query) => new Promise(resolve => rl.question(query, resolve
  * with Gaussian surface acoustic jitter.
  */
 function synthesizeTelemetryPacket(waterLevelM) {
-  // Base raw distance in cm (mount height 180cm)
+  // Base raw distance in cm (mount height 240cm)
   const baseDistance = SENSOR_MOUNT_HEIGHT_CM - (waterLevelM * 100);
 
   // Gaussian surface acoustic chop jitter (±0.8 to 1.5 cm)
   const acousticJitter = (Math.random() - 0.5) * 2.2;
   let rawDistance = Math.round(baseDistance + acousticJitter);
-  rawDistance = Math.max(20, Math.min(180, rawDistance));
+  rawDistance = Math.max(20, Math.min(SENSOR_MOUNT_HEIGHT_CM, rawDistance));
 
   // Relay & Battery voltage dynamics (drops 0.3V when siren is energized)
-  const relayActive = waterLevelM >= 1.4;
+  const relayActive = waterLevelM >= 1.60;
   const baseVoltage = 12.4 + (Math.random() * 0.3 - 0.15); // 12.4V ± 0.15V
   const batteryVoltage = parseFloat((relayActive ? baseVoltage - 0.3 : baseVoltage).toFixed(2));
   const wifiRssi = -58 + Math.floor(Math.random() * 9 - 4); // -58 ± 4 dBm
@@ -90,7 +90,6 @@ function synthesizeTelemetryPacket(waterLevelM) {
     relayState: relayActive,
   };
 }
-
 /**
  * Send POST /api/v1/telemetry packet to target server and parse response
  */
@@ -111,17 +110,17 @@ async function sendTelemetry(packet, stepStr = '01/01', comment = '', delaySec =
 
     // Parse Response Highlights
     const logObj = data.log || data.data || {};
-    const stageM = parseFloat(logObj.waterLevelM ?? logObj.water_level_m ?? (180 - packet.rawDistance) / 100).toFixed(2);
+    const stageM = parseFloat(logObj.waterLevelM ?? logObj.water_level_m ?? (SENSOR_MOUNT_HEIGHT_CM - packet.rawDistance) / 100).toFixed(2);
     const rawCm = logObj.rawDistanceCm ?? logObj.raw_distance_cm ?? packet.rawDistance;
 
-    const alertStatus = data.event?.event_code || data.eventTriggered?.event_type || data.alertStatus?.eventCode || (stageM >= 1.6 ? 'ALERT_L3' : stageM >= 1.4 ? 'ALERT_L2' : stageM >= 1.0 ? 'ALERT_L1' : 'NORMAL');
+    const alertStatus = data.event?.event_code || data.eventTriggered?.event_type || data.alertStatus?.eventCode || (stageM >= 2.00 ? 'ALERT_L3' : stageM >= 1.60 ? 'ALERT_L2' : stageM >= 1.20 ? 'ALERT_L1' : 'NORMAL');
     const aiEval = data.aiEvaluation || {};
     const rawConf = aiEval.avgAccuracy_pct;
     const ai30m = aiEval.forecast30min != null ? `${parseFloat(aiEval.forecast30min).toFixed(2)}m` : 'Evaluating...';
     const aiConf = typeof rawConf === 'number'
       ? `${rawConf.toFixed(1)}%`
       : (aiEval.confidenceScore ? `${aiEval.confidenceScore.toFixed(1)}%` : 'Evaluating...');
-    const sirenText = (packet.relayState || data.sirenActive || stageM >= 1.4) ? `${C.red}${C.bold}ON 🚨${C.reset}` : `${C.dim}OFF${C.reset}`;
+    const sirenText = (packet.relayState || data.sirenActive || stageM >= 1.60) ? `${C.red}${C.bold}ON 🚨${C.reset}` : `${C.dim}OFF${C.reset}`;
 
     let statusColor = C.green;
     if (alertStatus.includes('L1')) statusColor = C.yellow;

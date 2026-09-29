@@ -35,10 +35,10 @@ function usePSTClock() {
 
 // ─── Flood level thresholds & theme configuration ────────────────────────────
 const FLOOD_LEVELS = [
-  { id: 0, min: 0, max: 1.0, label: 'All Clear', color: '#2f9463', soft: '#e5f6ec', border: '#bfe6cf' },
-  { id: 1, min: 1.0, max: 1.4, label: 'Advisory', color: '#2b6e8f', soft: '#e6f2f8', border: '#bfdbe8' },
-  { id: 2, min: 1.4, max: 1.6, label: 'Watch Closely', color: '#e69138', soft: '#fdf1de', border: '#f4d6a4' },
-  { id: 3, min: 1.6, max: 1.8, label: 'EVACUATE NOW', color: '#e0522f', soft: '#fce7e0', border: '#f2bfab' },
+  { id: 0, min: 0, max: 1.2, label: 'All Clear', color: '#2f9463', soft: '#e5f6ec', border: '#bfe6cf' },
+  { id: 1, min: 1.2, max: 1.6, label: 'Advisory', color: '#2b6e8f', soft: '#e6f2f8', border: '#bfdbe8' },
+  { id: 2, min: 1.6, max: 2.0, label: 'Watch Closely', color: '#e69138', soft: '#fdf1de', border: '#f4d6a4' },
+  { id: 3, min: 2.0, max: 2.4, label: 'EVACUATE NOW', color: '#e0522f', soft: '#fce7e0', border: '#f2bfab' },
 ];
 
 function getFloodLevel(waterM) {
@@ -564,7 +564,7 @@ export default function PublicPortal() {
                 <h3 className="text-xs font-bold text-[#123a54]">Live Telemetry Feed Notice</h3>
               </div>
               <p className="text-xs text-[#6d818d] leading-relaxed">
-                This portal displays real-time readings measured directly at the Antipolo Flood Station (JSN-SR04T ultrasonic sensor &amp; tipping-bucket rain gauge).
+                This portal displays real-time readings measured directly at the Antipolo Flood Station (JSN-SR04T ultrasonic water-level sensor &amp; OpenWeatherMap digital weather feed).
               </p>
               <div className="pt-2 border-t border-[#f1f5f6] flex items-center justify-between text-[11px]">
                 <span className="text-[#6d818d]">Command Center Status:</span>
