@@ -204,19 +204,23 @@ export default function WeatherMapCard() {
           : 'h-[340px] sm:h-[460px] bg-[#05131e]'
       }`}>
 
-        {/* Bottom Floating Legend Badge (Only for Rain Radar Doppler) */}
+        {/* 🌧️ Sleek Modern Glassmorphic Radar Scale Capsule */}
         {mapViewMode === 'doppler' && (
-          <div className="absolute bottom-3 right-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-2 rounded-xl shadow-lg border border-white/20 text-[10px] space-y-1.5">
-            <div className="flex items-center gap-1.5 font-bold text-[11px] text-sky-200 border-b border-white/10 pb-1">
-              <Radio size={12} className="text-emerald-400" />
-              <span>RainViewer Doppler</span>
+          <div className="absolute bottom-3 right-3 z-[1000] bg-slate-900/80 hover:bg-slate-900/90 backdrop-blur-md border border-white/15 text-white px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2.5 transition-all select-none">
+            <div className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-300 uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Rain Intensity</span>
             </div>
-            <div className="flex items-center gap-1 text-[9px] font-mono">
-              <span className="text-gray-300">Light</span>
-              <div className="h-2 w-14 rounded overflow-hidden flex mx-1">
-                <span className="w-1/4 h-full bg-emerald-400" /><span className="w-1/4 h-full bg-yellow-400" /><span className="w-1/4 h-full bg-orange-500" /><span className="w-1/4 h-full bg-red-600" />
-              </div>
-              <span className="text-red-300 font-bold">Heavy</span>
+            <div className="h-3 w-px bg-white/20" />
+            <div className="flex items-center gap-1.5 text-[9px] font-medium text-slate-400">
+              <span>Light</span>
+              <div
+                className="h-1.5 w-16 sm:w-20 rounded-full shadow-inner"
+                style={{
+                  background: 'linear-gradient(90deg, #38bdf8 0%, #22c55e 28%, #eab308 55%, #f97316 78%, #ef4444 100%)',
+                }}
+              />
+              <span>Heavy</span>
             </div>
           </div>
         )}
