@@ -1,0 +1,335 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.3.6 Chrome/140.0.7339.249 Electron/38.8.0 Safari/537.36" version="29.3.6">
+  <diagram name="Page-1" id="smartflood-full-detailed">
+    <mxGraphModel dx="872" dy="1521" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1750" pageHeight="950" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1001" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#f2f2f2;strokeColor=#000000;fontStyle=1;fontSize=11;" value="Power Supply / 12V 2A DC Adapter" vertex="1">
+          <mxGeometry height="50" width="180" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="n1002" parent="n1001" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="180" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1003" parent="n1002" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="+12V OUT" vertex="1">
+          <mxGeometry height="20" width="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n1004" parent="n1002" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GND" vertex="1">
+          <mxGeometry height="20" width="90" x="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n1005" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#f2f2f2;strokeColor=#000000;fontStyle=1;fontSize=11;" value="Power Connector / DC Barrel Jack" vertex="1">
+          <mxGeometry height="50" width="140" x="260" y="-80" as="geometry" />
+        </mxCell>
+        <mxCell id="n1006" parent="n1005" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="140" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1007" parent="n1006" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="+" vertex="1">
+          <mxGeometry height="20" width="70" as="geometry">
+            <mxRectangle height="20" width="70" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n1008" parent="n1006" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="-" vertex="1">
+          <mxGeometry height="20" width="70" x="70" as="geometry">
+            <mxRectangle height="20" width="70" as="alternateBounds" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n1009" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#f2f2f2;strokeColor=#000000;fontStyle=1;fontSize=11;" value="2A Inline Fuse" vertex="1">
+          <mxGeometry height="50" width="150" x="480" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="n1010" parent="n1009" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="150" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1011" parent="n1010" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="IN" vertex="1">
+          <mxGeometry height="20" width="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n1012" parent="n1010" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="OUT" vertex="1">
+          <mxGeometry height="20" width="75" x="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n1013" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#f2f2f2;strokeColor=#000000;fontStyle=1;fontSize=11;" value="Power Converter / LM2596 Buck (12V-&gt;5V)" vertex="1">
+          <mxGeometry height="70" width="180" x="700" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="n1014" parent="n1013" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="180" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1015" parent="n1014" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="IN+" vertex="1">
+          <mxGeometry height="20" width="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n1016" parent="n1014" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="IN-" vertex="1">
+          <mxGeometry height="20" width="90" x="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n1017" parent="n1013" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="180" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n1018" parent="n1017" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="OUT+ (5V)" vertex="1">
+          <mxGeometry height="20" width="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n1019" parent="n1017" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="OUT- (GND)" vertex="1">
+          <mxGeometry height="20" width="90" x="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n1020" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe1e1;strokeColor=#FF0000;fontSize=9;fontStyle=1;" value="1x WAGO 221-413 (3-Port) 12V Split" vertex="1">
+          <mxGeometry height="80" width="110" x="480" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="n1021" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#e8f5e9;strokeColor=#000000;fontStyle=1;fontSize=11;" value="Breadboard (Power Rails)" vertex="1">
+          <mxGeometry height="50" width="260" x="700" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="n1022" parent="n1021" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="260" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1023" parent="n1022" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="+5V RAIL" vertex="1">
+          <mxGeometry height="20" width="130" as="geometry" />
+        </mxCell>
+        <mxCell id="n1024" parent="n1022" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GND RAIL" vertex="1">
+          <mxGeometry height="20" width="130" x="130" as="geometry" />
+        </mxCell>
+        <mxCell id="n1025" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#f2f2f2;strokeColor=#000000;fontStyle=1;fontSize=11;" value="ESP32 DevKit V1" vertex="1">
+          <mxGeometry height="130" width="190" x="460" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="n1026" parent="n1025" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="190" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1027" parent="n1026" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="5V / VIN" vertex="1">
+          <mxGeometry height="20" width="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1028" parent="n1026" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GND" vertex="1">
+          <mxGeometry height="20" width="95" x="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1029" parent="n1025" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="190" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n1030" parent="n1029" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GPIO 5" vertex="1">
+          <mxGeometry height="20" width="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1031" parent="n1029" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="TRIG out" vertex="1">
+          <mxGeometry height="20" width="95" x="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1032" parent="n1025" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="190" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="n1033" parent="n1032" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GPIO 18" vertex="1">
+          <mxGeometry height="20" width="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1034" parent="n1032" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="ECHO in" vertex="1">
+          <mxGeometry height="20" width="95" x="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1035" parent="n1025" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="190" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n1036" parent="n1035" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GPIO 23" vertex="1">
+          <mxGeometry height="20" width="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1037" parent="n1035" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="Relay Signal Out" vertex="1">
+          <mxGeometry height="20" width="95" x="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1038" parent="n1025" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="190" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="n1039" parent="n1038" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GPIO 34" vertex="1">
+          <mxGeometry height="20" width="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1040" parent="n1038" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="ADC In (Battery)" vertex="1">
+          <mxGeometry height="20" width="95" x="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1041" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#f2f2f2;strokeColor=#000000;fontStyle=1;fontSize=11;" value="JSN-SR04T V3.0 Ultrasonic Sensor" vertex="1">
+          <mxGeometry height="70" width="200" x="760" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="n1042" parent="n1041" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="200" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1043" parent="n1042" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="VCC (5V)" vertex="1">
+          <mxGeometry height="20" width="100" as="geometry" />
+        </mxCell>
+        <mxCell id="n1044" parent="n1042" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GND" vertex="1">
+          <mxGeometry height="20" width="100" x="100" as="geometry" />
+        </mxCell>
+        <mxCell id="n1045" parent="n1041" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="200" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n1046" parent="n1045" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="TRIG" vertex="1">
+          <mxGeometry height="20" width="100" as="geometry" />
+        </mxCell>
+        <mxCell id="n1047" parent="n1045" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="ECHO" vertex="1">
+          <mxGeometry height="20" width="100" x="100" as="geometry" />
+        </mxCell>
+        <mxCell id="n1048" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#f2f2f2;strokeColor=#000000;fontStyle=1;fontSize=11;" value="1-Ch Relay Module (KY-019)" vertex="1">
+          <mxGeometry height="70" width="220" x="1020" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="n1049" parent="n1048" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="220" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1050" parent="n1049" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="VCC" vertex="1">
+          <mxGeometry height="20" width="73" as="geometry" />
+        </mxCell>
+        <mxCell id="n1051" parent="n1049" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GND" vertex="1">
+          <mxGeometry height="20" width="73" x="73" as="geometry" />
+        </mxCell>
+        <mxCell id="n1052" parent="n1049" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="IN" vertex="1">
+          <mxGeometry height="20" width="74" x="146" as="geometry" />
+        </mxCell>
+        <mxCell id="n1053" parent="n1048" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="220" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n1054" parent="n1053" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="COM" vertex="1">
+          <mxGeometry height="20" width="73" as="geometry" />
+        </mxCell>
+        <mxCell id="n1055" parent="n1053" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="NO" vertex="1">
+          <mxGeometry height="20" width="73" x="73" as="geometry" />
+        </mxCell>
+        <mxCell id="n1056" parent="n1053" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="NC" vertex="1">
+          <mxGeometry height="20" width="74" x="146" as="geometry" />
+        </mxCell>
+        <mxCell id="n1057" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#f2f2f2;strokeColor=#000000;fontStyle=1;fontSize=11;" value="12V Piezo Siren" vertex="1">
+          <mxGeometry height="50" width="150" x="1290" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="n1058" parent="n1057" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="150" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1059" parent="n1058" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="+12V" vertex="1">
+          <mxGeometry height="20" width="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n1060" parent="n1058" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GND" vertex="1">
+          <mxGeometry height="20" width="75" x="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n1061" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e6e6e6;strokeColor=#000000;fontSize=9;fontStyle=1;" value="1x WAGO 221-412 (2-Port)" vertex="1">
+          <mxGeometry height="80" width="110" x="1020" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="n1062" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#dfe9ff;strokeColor=#000000;fontStyle=1;fontSize=11;" value="R1 -- 10k Ohm (ECHO divider)" vertex="1">
+          <mxGeometry height="50" width="170" x="760" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="n1063" parent="n1062" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="170" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1064" parent="n1063" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="IN" vertex="1">
+          <mxGeometry height="20" width="85" as="geometry" />
+        </mxCell>
+        <mxCell id="n1065" parent="n1063" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="OUT" vertex="1">
+          <mxGeometry height="20" width="85" x="85" as="geometry" />
+        </mxCell>
+        <mxCell id="n1066" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#dfe9ff;strokeColor=#000000;fontStyle=1;fontSize=11;" value="R2 -- 22k Ohm (ECHO divider)" vertex="1">
+          <mxGeometry height="50" width="170" x="760" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="n1067" parent="n1066" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="170" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1068" parent="n1067" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="IN (tap)" vertex="1">
+          <mxGeometry height="20" width="85" as="geometry" />
+        </mxCell>
+        <mxCell id="n1069" parent="n1067" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GND" vertex="1">
+          <mxGeometry height="20" width="85" x="85" as="geometry" />
+        </mxCell>
+        <mxCell id="n1070" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#fff0e0;strokeColor=#000000;fontStyle=1;fontSize=11;" value="R1 -- 100k Ohm (Battery divider)" vertex="1">
+          <mxGeometry height="50" width="190" x="40" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="n1071" parent="n1070" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="190" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1072" parent="n1071" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="12V IN" vertex="1">
+          <mxGeometry height="20" width="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1073" parent="n1071" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="OUT (tap)" vertex="1">
+          <mxGeometry height="20" width="95" x="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1074" parent="1" style="shape=table;startSize=30;container=1;collapsible=0;childLayout=tableLayout;fillColor=#fff0e0;strokeColor=#000000;fontStyle=1;fontSize=11;" value="R2 -- 22k Ohm (Battery divider)" vertex="1">
+          <mxGeometry height="50" width="190" x="40" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="n1075" parent="n1074" style="shape=tableRow;horizontal=0;startSize=0;swimlaneHead=0;swimlaneBody=0;fillColor=none;collapsible=0;dropTarget=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;top=0;left=0;right=0;bottom=1;" value="" vertex="1">
+          <mxGeometry height="20" width="190" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n1076" parent="n1075" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="IN (tap)" vertex="1">
+          <mxGeometry height="20" width="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1077" parent="n1075" style="shape=partialRectangle;html=1;whiteSpace=nowrap;connectable=1;fillColor=none;top=0;left=0;bottom=0;right=0;fontSize=10;fontStyle=4;align=center;" value="GND" vertex="1">
+          <mxGeometry height="20" width="95" x="95" as="geometry" />
+        </mxCell>
+        <mxCell id="n1078" edge="1" parent="1" source="n1003" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#FF0000;strokeWidth=2;fontSize=8;fontColor=#FF0000;" target="n1007" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1079" edge="1" parent="1" source="n1004" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontSize=8;fontColor=#000000;" target="n1008" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1080" edge="1" parent="1" source="n1007" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#FF0000;strokeWidth=2;fontSize=8;fontColor=#FF0000;" target="n1011" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1081" edge="1" parent="1" source="n1008" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontSize=8;fontColor=#000000;" target="n1016" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1082" edge="1" parent="1" source="n1012" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#FF0000;strokeWidth=2;fontSize=8;fontColor=#FF0000;" target="n1020" value="22 AWG (fused line)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1083" edge="1" parent="1" source="n1020" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#FF0000;strokeWidth=2;fontSize=8;fontColor=#FF0000;" target="n1015" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1084" edge="1" parent="1" source="n1020" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#FF0000;strokeWidth=2;fontSize=8;fontColor=#FF0000;" target="n1054" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1085" edge="1" parent="1" source="n1020" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#FF0000;strokeWidth=2;fontSize=8;fontColor=#FF0000;" target="n1072" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1086" edge="1" parent="1" source="n1018" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#d6b656;strokeWidth=2;fontSize=8;fontColor=#d6b656;" target="n1023" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1087" edge="1" parent="1" source="n1019" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontSize=8;fontColor=#000000;" target="n1024" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1088" edge="1" parent="1" source="n1023" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#d6b656;strokeWidth=2;fontSize=8;fontColor=#d6b656;" target="n1027" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1089" edge="1" parent="1" source="n1024" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontSize=8;fontColor=#000000;" target="n1028" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1090" edge="1" parent="1" source="n1023" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#d6b656;strokeWidth=2;fontSize=8;fontColor=#d6b656;" target="n1043" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1091" edge="1" parent="1" source="n1024" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontSize=8;fontColor=#000000;" target="n1044" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1092" edge="1" parent="1" source="n1023" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#d6b656;strokeWidth=2;fontSize=8;fontColor=#d6b656;" target="n1050" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1093" edge="1" parent="1" source="n1024" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontSize=8;fontColor=#000000;" target="n1051" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1094" edge="1" parent="1" source="n1030" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=8;fontColor=#6c8ebf;" target="n1046" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1095" edge="1" parent="1" source="n1047" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=8;fontColor=#6c8ebf;" target="n1064" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1096" edge="1" parent="1" source="n1065" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=8;fontColor=#6c8ebf;" target="n1068" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1097" edge="1" parent="1" source="n1065" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=8;fontColor=#6c8ebf;" target="n1033" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1098" edge="1" parent="1" source="n1069" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontSize=8;fontColor=#000000;" target="n1024" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1099" edge="1" parent="1" source="n1036" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=8;fontColor=#6c8ebf;" target="n1052" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1100" edge="1" parent="1" source="n1055" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#FF0000;strokeWidth=2;fontSize=8;fontColor=#FF0000;" target="n1059" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1101" edge="1" parent="1" source="n1051" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontSize=8;fontColor=#000000;" target="n1061" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1102" edge="1" parent="1" source="n1061" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontSize=8;fontColor=#000000;" target="n1060" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1103" edge="1" parent="1" source="n1073" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=8;fontColor=#6c8ebf;" target="n1076" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1104" edge="1" parent="1" source="n1073" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#6c8ebf;strokeWidth=2;fontSize=8;fontColor=#6c8ebf;" target="n1039" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1105" edge="1" parent="1" source="n1077" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#000000;strokeWidth=2;fontSize=8;fontColor=#000000;" target="n1024" value="22 AWG">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n1106" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=10;align=left;spacingLeft=6;size=14;" value="Legend: Red=+12V  Orange=+5V  Black=GND  Blue=Signal All wire: 22 AWG solid copper" vertex="1">
+          <mxGeometry height="70" width="280" x="1300" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="n1107" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=10;align=left;spacingLeft=6;size=14;" value="Wire &amp; Connector Guide:  22 AWG solid copper -- used throughout.  2A Inline Fuse -- ONE fuse total. Splices into the +12V line right after the Barrel Jack; only that wire is marked (fused line).  12V Split: 1x WAGO 221-413 (3-port)   feeds Buck, Relay COM, Battery Divider Relay-Siren GND: 1x WAGO 221-412 (2-port)  5V/GND: distributed via breadboard power rails -- no WAGO needed for this phase.  ECHO Divider: R1 10k + R2 22k Ohm   protects GPIO18 from JSN&#39;s 5V ECHO pulse  Battery Divider: R1 100k + R2 22k Ohm   steps 12V down for GPIO34 (ADC)" vertex="1">
+          <mxGeometry height="280" width="280" x="1300" y="130" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

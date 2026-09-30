@@ -1,76 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  MapContainer, TileLayer, Marker, Popup,
-  CircleMarker, useMap, ImageOverlay,
-} from 'react-leaflet';
-import L from 'leaflet';
-import { Layers, Radio, Play, Pause, SkipForward, Info } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { Layers, Radio, Info } from 'lucide-react';
 import DataSourcesDisclaimerModal from './components/DataSourcesDisclaimerModal';
-
-const API_KEY = '9c04674c3ef012dce3e3d789ea5ba263';
-
-/* ── Severity-keyed beacon colours ─────────────────────────────────────── */
-const BEACON = [
-  { color: '#2f9463', label: 'Normal', rings: 2 },
-  { color: '#2b6e8f', label: 'Watch',  rings: 2 },
-  { color: '#e69138', label: 'Alarm',  rings: 3 },
-  { color: '#e0522f', label: 'Danger', rings: 3 },
-];
-
-/* ── Flood-prone barangays of Antipolo City ─────────────────────────────
-
-
-/* ── Severity beacon DivIcon ────────────────────────────────────────────── */
-function buildBeaconIcon(severityId = 0) {
-  const b = BEACON[severityId] || BEACON[0];
-  const c = b.color;
-  const ringsHtml = Array.from({ length: b.rings })
-    .map((_, i) => `
-      <div style="
-        position:absolute; inset:0; border-radius:50%;
-        border:2.5px solid ${c};
-        animation:ping-ring 2s ease-out ${i * 0.6}s infinite;
-        pointer-events:none;
-        box-sizing:border-box;
-      "></div>
-    `).join('');
-  return L.divIcon({
-    className: 'station-beacon-marker',
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -18],
-    html: `
-      <div style="position:relative;width:32px;height:32px;box-sizing:border-box;">
-        ${ringsHtml}
-        <div style="
-          position:absolute;inset:6px;border-radius:50%;
-          background:${c};border:2.5px solid white;
-          box-shadow:0 0 10px ${c}cc;
-          box-sizing:border-box;
-        "></div>
-      </div>
-    `,
-  });
-}
-
-/* ── Inner component: swaps TileLayer URL when frame changes ────────────── */
-function RadarLayer({ path, opacity = 0.65 }) {
-  if (!path) return null;
-  return (
-    <TileLayer
-      key={path}
-      url={`https://tilecache.rainviewer.com${path}/256/{z}/{x}/{y}/2/1_1.png`}
-      opacity={opacity}
-      maxZoom={18}
-      maxNativeZoom={6}
-    />
-  );
-}
 
 /* ── Philippine Area Boundary & Map Limits ──────────────────────────────── */
 const PAGASA_SAT_BOUNDS = [
-  [-1.0, 102.0],  // Southwest corner (expanded full-bleed to cover container width)
-  [25.5, 144.0], // Northeast corner (expanded full-bleed to cover container width)
+  [-1.0, 102.0],  // Southwest corner
+  [25.5, 144.0], // Northeast corner
 ];
 
 const PH_RADAR_BOUNDS = [
@@ -83,18 +19,15 @@ function MapViewController({ mapViewMode }) {
   const map = useMap();
 
   useEffect(() => {
-    // Invalidate size to ensure container dimensions are computed cleanly (prevents grey screen)
     map.invalidateSize();
     const t1 = setTimeout(() => map.invalidateSize(), 150);
     const t2 = setTimeout(() => map.invalidateSize(), 400);
 
     if (mapViewMode === 'pagasa') {
-      // Fit bounds to cover 100% of container width without side gaps
       map.fitBounds(PAGASA_SAT_BOUNDS, { animate: true, padding: [0, 0] });
       map.setMinZoom(4);
       map.setMaxBounds(PAGASA_SAT_BOUNDS);
     } else {
-      // Return to local flood radar view centered on Antipolo
       map.setMinZoom(6);
       map.setMaxBounds(PH_RADAR_BOUNDS);
       map.flyTo([14.5869, 121.1754], 10, { animate: true, duration: 0.8 });
@@ -110,26 +43,22 @@ function MapViewController({ mapViewMode }) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════ */
-export default function WeatherMapCard({ severity = 0 }) {
+export default function WeatherMapCard() {
   const antipoloPos = [14.5869, 121.1754];
 
-  /* ── Map View Mode: default 'pagasa' (DOST-PAGASA Himawari Satellite IR) ── */
+  /* ── Map View Mode: default 'pagasa' or 'doppler' ── */
   const [mapViewMode, setMapViewMode] = useState('pagasa');
 
   /* ── Radar frames state ─────────────────────────────────────────────── */
-  const [frames, setFrames]             = useState([]);     // all past + nowcast frames
-  const [frameIdx, setFrameIdx]         = useState(-1);     // -1 = live (latest)
-  const [isPlaying]                     = useState(true);   // Permanent active loop
-  const [radarTimeStr, setRadarTimeStr] = useState('Fetching radar...');
-  const [nextRefreshSec, setNextRefreshSec] = useState(120);
-  const playTimerRef = useRef(null);
+  const [frames, setFrames] = useState([]);
+  const [activeLoopIdx, setActiveLoopIdx] = useState(0);
 
-  /* ── PAGASA Satellite Animation State (Chronological loop: 24irsml.gif [-23h] → 1irsml.gif [Live]) ── */
-  const [satFrameIdx, setSatFrameIdx]   = useState(23); // 23 = 24irsml.gif (oldest past scan), decrements forward to 0 (1irsml.gif = Live)
-  const [isSatPlaying]                  = useState(true);
+  /* ── PAGASA Satellite Animation State ───────────────────────────────── */
+  const [satFrameIdx, setSatFrameIdx] = useState(23);
+  const [isSatPlaying] = useState(true);
   const satTimerRef = useRef(null);
 
-  /* Preload all 24 PAGASA Himawari Satellite GIF images into browser cache for zero-flicker 60fps animation */
+  /* Preload all 24 PAGASA Himawari Satellite GIF images */
   useEffect(() => {
     for (let i = 1; i <= 24; i++) {
       const img = new Image();
@@ -144,30 +73,12 @@ export default function WeatherMapCard({ severity = 0 }) {
 
     satTimerRef.current = setInterval(() => {
       setSatFrameIdx(prev => (prev <= 0 ? 23 : prev - 1));
-    }, 350); // 350ms per frame = smooth chronological PAGASA cloud motion
+    }, 350);
 
     return () => clearInterval(satTimerRef.current);
   }, [isSatPlaying]);
 
   const currentSatUrl = `https://src.meteopilipinas.gov.ph/repo/himawari/24hour/irsml/${satFrameIdx + 1}irsml.gif`;
-
-  /* ── Flood zone toggle ──────────────────────────────────────────────── */
-  const [showZones, setShowZones] = useState(true);
-
-  /* ── Inject ping-ring keyframes once ────────────────────────────────── */
-  useEffect(() => {
-    const styleId = 'beacon-keyframes';
-    if (document.getElementById(styleId)) return;
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
-      @keyframes ping-ring {
-        0%   { transform: scale(1);   opacity: 0.75; }
-        100% { transform: scale(2.8); opacity: 0; }
-      }
-    `;
-    document.head.appendChild(style);
-  }, []);
 
   /* ── Fetch RainViewer frames (past + nowcast) ───────────────────────── */
   const fetchFrames = useCallback(async () => {
@@ -184,66 +95,55 @@ export default function WeatherMapCard({ severity = 0 }) {
       ];
 
       setFrames(allFrames);
-      const lastPast = past[past.length - 1];
-      if (lastPast) {
-        const dateObj = new Date(lastPast.time * 1000);
-        setRadarTimeStr(`Live · ${dateObj.toLocaleTimeString('en-PH', {
-          hour: '2-digit', minute: '2-digit', hour12: true,
-        })}`);
-      }
-      setNextRefreshSec(120);
+      const pastCount = past.length > 0 ? past.length : allFrames.length;
+      const loopLen = Math.min(6, pastCount);
+      setActiveLoopIdx(Math.max(0, loopLen - 1));
     } catch (err) {
       console.error('Failed to update radar tiles:', err);
-      setRadarTimeStr('Radar stream active');
     }
   }, []);
 
   useEffect(() => {
     fetchFrames();
     const interval = setInterval(fetchFrames, 120000);
-    const countdown = setInterval(() => {
-      setNextRefreshSec(s => (s <= 1 ? 120 : s - 1));
-    }, 1000);
-    return () => {
-      clearInterval(interval);
-      clearInterval(countdown);
-    };
+    return () => clearInterval(interval);
   }, [fetchFrames]);
 
-  /* ── Radar Playback logic (continuous infinite loop at 550ms interval) ── */
+  /* ── High-Performance Frame Buffer (last 6 frames for instant, smooth loop) ── */
+  const radarLoopFrames = useMemo(() => {
+    if (!frames || frames.length === 0) return [];
+    const past = frames.filter(f => f.type === 'past');
+    const subset = past.slice(-6); // last 6 frames (~50-60 mins)
+    return subset.length > 0 ? subset : frames.slice(-6);
+  }, [frames]);
+
+  /* Background preload tiles for the Antipolo basin to eliminate latency */
   useEffect(() => {
-    if (playTimerRef.current) clearInterval(playTimerRef.current);
-    if (!isPlaying || frames.length === 0) return;
-
-    playTimerRef.current = setInterval(() => {
-      setFrameIdx(prev => {
-        const next = prev + 1;
-        if (next >= frames.length) return 0; // Infinite continuous loop back to start!
-        return next;
+    if (radarLoopFrames.length === 0) return;
+    [913, 914].forEach(x => {
+      [477, 478].forEach(y => {
+        radarLoopFrames.forEach(f => {
+          const img = new Image();
+          img.src = `https://tilecache.rainviewer.com${f.path}/256/10/${x}/${y}/2/1_1.png`;
+        });
       });
-    }, 550);
+    });
+  }, [radarLoopFrames]);
 
-    return () => clearInterval(playTimerRef.current);
-  }, [isPlaying, frames]);
+  /* ── Intelligent Radar Loop Pacing (750ms on past, 2.2s pause on Live) ── */
+  useEffect(() => {
+    if (radarLoopFrames.length === 0) return;
 
-  const activeFrame = frameIdx === -1
-    ? frames.filter(f => f.type === 'past').slice(-1)[0]
-    : frames[frameIdx];
-  const activePath = activeFrame?.path || null;
+    const isLive = activeLoopIdx === radarLoopFrames.length - 1;
+    const delay = isLive ? 2200 : 750; // Pause longer on current live frame
 
-  const frameLabel = (() => {
-    if (!activeFrame) return '—';
-    const d = new Date(activeFrame.time * 1000);
-    const timeStr = d.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
-    if (activeFrame.type === 'forecast') return `+Forecast ${timeStr}`;
-    if (frameIdx === -1) return `Live ${timeStr}`;
-    return timeStr;
-  })();
+    const timer = setTimeout(() => {
+      setActiveLoopIdx(prev => (prev + 1) % radarLoopFrames.length);
+    }, delay);
 
-  const pastFrames     = frames.filter(f => f.type === 'past');
-  const forecastFrames = frames.filter(f => f.type === 'forecast');
+    return () => clearTimeout(timer);
+  }, [activeLoopIdx, radarLoopFrames.length]);
 
-  const b = BEACON[severity] || BEACON[0];
   const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   return (
@@ -263,7 +163,6 @@ export default function WeatherMapCard({ severity = 0 }) {
             <Info size={13} />
             <span>Sources &amp; Disclaimers</span>
           </button>
-
         </div>
       </div>
 
@@ -272,7 +171,7 @@ export default function WeatherMapCard({ severity = 0 }) {
         <div className="bg-[#f1f5f7] p-1 rounded-xl flex items-center gap-1 border border-[#e4edf0]">
           <button
             onClick={() => setMapViewMode('doppler')}
-            className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
               mapViewMode === 'doppler'
                 ? 'bg-[#2b6e8f] text-white shadow-sm'
                 : 'text-[#6d818d] hover:text-[#123a54] hover:bg-white/60 font-semibold'
@@ -283,7 +182,7 @@ export default function WeatherMapCard({ severity = 0 }) {
           </button>
           <button
             onClick={() => setMapViewMode('pagasa')}
-            className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
               mapViewMode === 'pagasa'
                 ? 'bg-[#2b6e8f] text-white shadow-sm'
                 : 'text-[#6d818d] hover:text-[#123a54] hover:bg-white/60 font-semibold'
@@ -298,12 +197,13 @@ export default function WeatherMapCard({ severity = 0 }) {
         </div>
       </div>
 
-      {/* Inset Satellite / Radar Viewport Frame (Adaptive Aspect Ratio for Satellite, Fixed Height for Interactive Radar) */}
+      {/* Inset Satellite / Radar Viewport Frame */}
       <div className={`relative w-full overflow-hidden rounded-xl border border-[#e4edf0] transition-all duration-300 ${
         mapViewMode === 'pagasa' 
           ? 'w-full aspect-[748/750] bg-black' 
           : 'h-[340px] sm:h-[460px] bg-[#05131e]'
       }`}>
+
         {/* Bottom Floating Legend Badge (Only for Rain Radar Doppler) */}
         {mapViewMode === 'doppler' && (
           <div className="absolute bottom-3 right-3 z-[1000] bg-[#123a54]/90 backdrop-blur-md text-white px-3 py-2 rounded-xl shadow-lg border border-white/20 text-[10px] space-y-1.5">
@@ -343,11 +243,11 @@ export default function WeatherMapCard({ severity = 0 }) {
             attributionControl={false}
           >
             <MapViewController mapViewMode={mapViewMode} />
-            {/* Base: Esri World Imagery (satellite) — free, no API key required */}
+            {/* Base: Esri World Imagery (satellite) */}
             <TileLayer
               url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
               maxZoom={19}
-              attribution="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+              attribution="Tiles &copy; Esri"
             />
             {/* Labels overlay on top of satellite */}
             <TileLayer
@@ -355,7 +255,18 @@ export default function WeatherMapCard({ severity = 0 }) {
               maxZoom={19}
               opacity={0.6}
             />
-            <RadarLayer path={activePath} opacity={0.70} />
+
+            {/* 🚀 High-Performance Multi-Layer Radar Buffer: Preloaded in memory, zero re-mounts, 60 FPS instant opacity swapping */}
+            {radarLoopFrames.map((f, i) => (
+              <TileLayer
+                key={f.path}
+                url={`https://tilecache.rainviewer.com${f.path}/256/{z}/{x}/{y}/2/1_1.png`}
+                opacity={i === activeLoopIdx ? 0.75 : 0}
+                maxZoom={18}
+                maxNativeZoom={6}
+                zIndex={100 + i}
+              />
+            ))}
           </MapContainer>
         )}
       </div>

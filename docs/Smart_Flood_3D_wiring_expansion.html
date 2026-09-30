@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smart Flood: 3D wiring (detailed)</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f5f4ef;--fg:#1d1d1b;--mut:#66655e;--ln:#d9d7cd;--card:#fff;--ac:#0b6e6e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171716;--fg:#ecebe5;--mut:#a3a29a;--ln:#38372f;--card:#222220;--ac:#5cc4c4}}
+:root[data-theme="dark"]{--bg:#171716;--fg:#ecebe5;--mut:#a3a29a;--ln:#38372f;--card:#222220;--ac:#5cc4c4}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1240px;margin:0 auto;padding:18px 16px 40px}
+h1{font-size:25px;margin:0 0 4px}h2{font-size:17px;margin:24px 0 8px}
+.sub{color:var(--mut);margin:0 0 12px;max-width:72ch}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+button{font:inherit;font-size:13px;padding:5px 12px;border:1px solid var(--ln);background:var(--card);color:var(--fg);border-radius:999px;cursor:pointer}
+button:hover,button:focus-visible{border-color:var(--ac);outline:none}button.act{background:var(--ac);border-color:var(--ac);color:var(--bg)}
+#v{position:relative;height:min(72vh,640px);border:1px solid var(--ln);border-radius:10px;overflow:hidden;background:#e6e4db;touch-action:none}
+#v canvas{display:block;width:100%;height:100%}
+#info{position:absolute;left:10px;top:10px;background:rgba(255,255,255,.9);color:#1d1d1b;padding:5px 10px;border-radius:8px;font-size:13px;max-width:80%}
+.lg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;color:var(--mut);margin:0 0 10px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+#ls{columns:2 380px;padding:0;margin:0;list-style:none;font-size:14px}
+#ls li{padding:4px 8px;border-radius:6px;cursor:pointer;break-inside:avoid}
+#ls li:hover{background:color-mix(in srgb,var(--ac) 10%,transparent)}
+#ls li.sel{background:color-mix(in srgb,var(--ac) 22%,transparent)}
+ol.n{padding-left:20px;max-width:80ch}
+</style>
+</head>
+<body>
+<main>
+<h1>Smart Flood: 3D wiring, detailed and fixed</h1>
+<p class="sub">Drag to orbit, scroll or pinch to zoom, right-drag to pan. Hover a wire to read it, click a wire or list entry to isolate it.</p>
+<div class="bar" id="bar">
+  <button data-t="" class="act">All wires</button><button data-t="AWG">22 AWG solid</button><button data-t="MM">M-M jumpers</button><button data-t="FM">F-M jumpers</button>
+  <button id="bl">Labels</button><button id="bi">Angled view</button><button id="bt">Top view</button>
+</div>
+<div class="lg">
+  <span><i class="dot" style="background:#d62828"></i>+12V</span><span><i class="dot" style="background:#ef8a1c"></i>+5V</span><span><i class="dot" style="background:#222"></i>GND</span><span><i class="dot" style="background:#2f6fdb"></i>Signal</span>
+  <span>Round end: 22 AWG · black housing both ends: M-M · dark socket on the module: F-M</span>
+</div>
+<div id="v"><div id="info">All wires shown</div></div>
+<h2>Wires</h2>
+<ul id="ls"></ul>
+<h2>Check before power-on</h2>
+<ol class="n">
+<li>Set the LM2596 to 5.0 V with a multimeter before connecting it to the rails.</li>
+<li>The WAGO 221-415 has 3 ports but 4 wires land on it. Use a 221-415, or chain two blocks.</li>
+<li>12V touches the breadboard only at a35, into R1 (5.1 kΩ). The models are stylized; check pin order on your actual modules.</li>
+</ol>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const S=.05,P=(x,y,h)=>new THREE.Vector3((x-650)*S,h,(y-365)*S);
+const X=c=>250+(c-1)*16,Y={T:312,G:328,a:356,b:372,c:388,d:404,e:420,f:452,g:468,h:484,i:500,j:516,K:560,B:576},H=(r,c)=>[X(c),Y[r]];
+const C={r:'#d62828',o:'#ef8a1c',k:'#222222',b:'#2f6fdb'},T={AWG:'22 AWG solid',MM:'M-M jumper',FM:'F-M jumper',FF:'F-F jumper'};
+const el=document.getElementById('v'),scene=new THREE.Scene();
+const ren=new THREE.WebGLRenderer({antialias:true});ren.setPixelRatio(Math.min(devicePixelRatio,2));el.prepend(ren.domElement);
+const cam=new THREE.PerspectiveCamera(45,1,.1,300),ctl=new THREE.OrbitControls(cam,ren.domElement);ctl.enableDamping=true;
+function view(p,t){cam.position.set(...p);ctl.target.set(...t);ctl.update()}
+const ISO=[[0,40,44],[0,0,3]],TOP=[[0,68,3.1],[0,0,3]];view(...ISO);
+scene.background=new THREE.Color('#e6e4db');
+scene.add(new THREE.HemisphereLight('#fff','#9a978a',.85));
+const dl=new THREE.DirectionalLight('#fff',.7);dl.position.set(-20,40,25);scene.add(dl);
+const M=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.55,metalness:.1},o||{}));
+function box(w,h,d,c,x,y,z,g,o){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,o));m.position.set(x,y,z);(g||scene).add(m);return m}
+function cyl(r,l,c,x,y,z,ax,g,o){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,l,24),M(c,o));m.position.set(x,y,z);if(ax=='x')m.rotation.z=Math.PI/2;if(ax=='z')m.rotation.x=Math.PI/2;(g||scene).add(m);return m}
+const labels=new THREE.Group();scene.add(labels);
+function lab(t,s,x,y,z,bg){const c=document.createElement('canvas'),g=c.getContext('2d'),f='600 34px system-ui,sans-serif';g.font=f;const w=Math.ceil(g.measureText(t).width)+24;c.width=w;c.height=56;g.font=f;g.fillStyle=bg||'rgba(255,255,255,.9)';g.fillRect(0,0,w,56);g.fillStyle='#1d1d1b';g.textBaseline='middle';g.fillText(t,12,29);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true}));sp.scale.set(w/56*s,s,1);sp.position.set(x,y,z);sp.renderOrder=10;labels.add(sp)}
+
+// bench and breadboard
+box(72,.2,44,'#d6d3c6',0,-.1,3);
+const bc=P(566,442,0);
+box(33.8,.5,16.2,'#efeee6',bc.x,.25,bc.z);
+box(33.8,.02,.4,'#d9d7cb',bc.x,.51,P(0,436,0).z);
+// MB-102 split power rails with visible physical gap at Column 30
+[[304,'#ef8a1c'],[336,'#333'],[552,'#333'],[584,'#ef8a1c']].forEach(([y,c])=>{
+  // Left half (Cols 1 to 29)
+  const xLeft = (X(1) + X(29)) / 2, wLeft = (X(29) - X(1)) * S;
+  box(wLeft, .02, .1, c, P(xLeft, 0, 0).x, .51, P(0, y, 0).z);
+  // Right half (Cols 31 to 40)
+  const xRight = (X(31) + X(40)) / 2, wRight = (X(40) - X(31)) * S;
+  box(wRight, .02, .1, c, P(xRight, 0, 0).x, .51, P(0, y, 0).z);
+  // Gap at Column 30 is left unpainted (white plastic visible)
+});
+{const im=new THREE.InstancedMesh(new THREE.BoxGeometry(.17,.03,.17),M('#55534b'),560),d=new THREE.Object3D();let n=0;
+ for(let c=1;c<=40;c++){'abcdefghijTGKB'.split('').forEach(r=>{const p=P(X(c),Y[r],.51);d.position.copy(p);d.updateMatrix();im.setMatrixAt(n++,d.matrix)})}scene.add(im)}
+lab('MB-102 830-Point Breadboard',.8,bc.x-11,1.4,P(0,272,0).z);
+
+// ESP32
+{const g=new THREE.Group(),c=P(560,740,0);g.position.set(c.x,0,c.z);scene.add(g);
+ box(12,.12,7.2,'#141a26',0,1,0,g);box(4.4,.4,3.2,'#c9ccd1',1.2,1.25,0,g,{metalness:.8,roughness:.3});
+ box(1.1,.4,1.3,'#9aa0a6',-6.4,1.15,0,g,{metalness:.7});box(2.6,.02,7,'#0b0f17',4.7,1.07,0,g);box(.9,.25,.9,'#111',-3.4,1.1,-1.6,g);box(.9,.25,.9,'#111',-3.4,1.1,1.6,g);
+ for(let i=0;i<15;i++)[-3.2,3.2].forEach(z=>cyl(.05,.6,'#d4af37',-5.6+.8*i,.75,z,'',g,{metalness:.9,roughness:.25}));
+ lab('ESP32 DevKit V1',.8,c.x,3,c.z)}
+[].forEach(([t,x,y])=>lab(t,.45,P(x,y,0).x,2,P(x,y,0).z+(y<436?-.5:.5),'rgba(255,240,180,.95)'));
+
+// resistors
+function res(c1,c2,r,t,bands){const a=P(X(c1),Y[r],0),b=P(X(c2),Y[r],0),m=(a.x+b.x)/2;
+ [a,b].forEach(p=>cyl(.03,.45,'#aaa',p.x,.72,p.z));cyl(.03,Math.abs(a.x-b.x),'#aaa',m,.95,a.z,'x');
+ cyl(.27,1.7,'#e8d3a0',m,.95,a.z,'x');bands.concat('#c9a227').forEach((c,k)=>cyl(.285,.13,c,m-.55+k*.36,.95,a.z,'x'));lab(t,.45,m,1.7,a.z)}
+const B5k1=['#2f9463','#8b4513','#d33'],B10=['#8b4513','#111','#f80'],B1k=['#8b4513','#111','#d33'];
+res(31,35,'c','R1 5.1 kΩ',B5k1);res(27,31,'d','R2 1 kΩ',B1k);res(27,31,'g','R2 10 kΩ',B10);res(31,35,'h','R1 5.1 kΩ',B5k1);
+
+// components
+const comps=[
+{x:30,y:40,w:130,h:80,t:'12V 2A DC adapter',p:[['+12V OUT',160,70],['GND',160,100]]},
+{x:200,y:40,w:120,h:80,t:'DC barrel jack',p:[['+',200,70],['−',200,100],['+',320,70],['−',320,100]]},
+{x:360,y:40,w:110,h:80,t:'2A inline fuse',p:[['IN',360,70],['OUT',470,70]]},
+{x:520,y:40,w:120,h:120,t:'WAGO 221-415',p:[['fused 12V',520,70],['Buck',640,70],['Relay COM',640,100],['Divider',640,130]]},
+{x:700,y:40,w:170,h:110,t:'LM2596 buck 12V to 5V',p:[['IN+',700,70],['IN−',700,120],['OUT+',810,150],['OUT−',842,150]]},
+{x:1020,y:296,w:200,h:96,t:'JSN-SR04T V3.0',p:[['VCC 5V',1020,316],['TRIG',1020,336],['ECHO',1020,356],['GND',1020,376]]},
+{x:1020,y:430,w:210,h:150,t:'1-ch relay KY-019 (HW-482)',p:[['VCC',1020,450],['GND',1020,470],['IN',1020,490],['COM',1230,450],['NO',1230,490],['NC unused',1230,530]]},
+{x:930,y:640,w:100,h:50,t:'WAGO 221-413',p:[['Buck IN−',930,655],['Jack −',930,675],['Siren GND',1030,665]]},
+{x:1060,y:640,w:160,h:50,t:'12V piezo siren',p:[['GND',1060,665],['+12V',1220,665]]}];
+
+comps.forEach(o=>{const c=P(o.x+o.w/2,o.y+o.h/2,0),w=o.w*S,d=o.h*S,g=new THREE.Group(),t=o.t;g.position.set(c.x,0,c.z);scene.add(g);
+ if(t.startsWith('12V 2A')){
+   // Matte black wall adapter body with beveled edges and cooling grooves
+   box(w,1.55,d,'#161616',0,.77,0,g,{roughness:.7});
+   box(w-.4,.1,d-.4,'#222',0,1.57,0,g,{roughness:.6});
+   [-1,1].forEach(s=>[-.8,0,.8].forEach(dz=>box(.08,.6,d*.2,'#0a0a0a',s*(w/2-.02),.8,dz,g)));
+   cyl(.4,1.1,'#111',w/2-.2,.75,0,'x',g);
+   cyl(.25,1.2,'#0a0a0a',w/2+.4,.75,0,'x',g);
+   // Fix #1: US flat-blade wall prongs on the -x face (opposite cable exit)
+   [-0.3,0.3].forEach(function(dz){
+     box(0.16,1.15,0.09,'#d0d0d0',-w/2-0.05,.65,dz,g,{metalness:.88,roughness:.18});
+     box(0.14,0.22,0.09,'#b8a060',-w/2-0.05,.08,dz,g,{metalness:.85,roughness:.25});
+   });
+ }
+ else if(t.startsWith('DC barrel')){
+   // 5.5x2.1mm Female Jack with attached 2-pin Green Screw Terminal Block
+   box(w*.52,1.25,d*.8,'#1c1c1c',-w*.24,.65,0,g,{roughness:.6});
+   cyl(.55,1.1,'#9aa0a6',-w/2+.2,.65,0,'x',g,{metalness:.9,roughness:.25});
+   cyl(.35,1.2,'#050505',-w/2+.2,.65,0,'x',g);
+   cyl(.12,1.3,'#c0c4c8',-w/2+.2,.65,0,'x',g,{metalness:.95});
+   box(w*.48,1.35,d*.85,'#267845',w*.24,.7,0,g,{roughness:.5});
+   [-1,1].forEach(s=>{
+     cyl(.26,.06,'#a0a4a8',w*.24,1.4,s*d*.2,'',g,{metalness:.85,roughness:.3});
+     box(.06,.08,.35,'#222',w*.24,1.42,s*d*.2,g);
+     cyl(.22,.5,'#0a0a0a',w*.45,.65,s*d*.2,'x',g);
+   });
+ }
+ else if(t.startsWith('2A')){
+   // Automotive waterproof inline twist-lock cartridge fuse holder
+   cyl(.75,w*.32,'#1e1e1e',-w*.32,.85,0,'x',g,{roughness:.7});
+   cyl(.75,w*.32,'#1e1e1e',w*.32,.85,0,'x',g,{roughness:.7});
+   for(let k=-2;k<=2;k++)if(k!==0)cyl(.78,.15,'#111',k*.8,.85,0,'x',g);
+   cyl(.62,w*.38,'#eaf4f4',0,.85,0,'x',g,{transparent:true,opacity:.65,roughness:.1});
+   [-1,1].forEach(s=>cyl(.63,.45,'#c4c8cc',s*(w*.19-.22),.85,0,'x',g,{metalness:.9,roughness:.2}));
+   cyl(.04,w*.3,'#d4af37',0,.85,0,'x',g,{metalness:.95});
+   [-1,1].forEach(s=>cyl(.4,w*.2,'#b22222',s*(w/2-.1),.85,0,'x',g));
+ }
+ else if(t.startsWith('WAGO')){
+   const n=t.includes('415')?5:3;
+   const dSize=Math.min(d,3);
+   box(w*.72,1.3,dSize,'#e8edef',0,.65,0,g,{transparent:true,opacity:.78,roughness:.15,metalness:.05});
+   box(w*.5,.15,dSize*.85,'#c87a38',0,.18,0,g,{metalness:.85,roughness:.3});
+   for(let i=0;i<n;i++){
+     const zpos=(i-(n-1)/2)*dSize/n;
+     box(.25,.4,.18,'#8e949a',-w*.1,.5,zpos,g,{metalness:.9});
+     box(.85,.32,dSize/n*.76,'#ff6600',w*.04,1.42,zpos,g,{roughness:.4});
+     box(.3,.25,dSize/n*.7,'#e65500',w*.36,1.48,zpos,g);
+     cyl(.22,.35,'#111',-w*.36,.65,zpos,'x',g);
+     box(.22,.06,.15,'#333',w*.1,1.33,zpos,g);
+   }
+ }
+ else if(t.startsWith('LM2596')){
+   // High-quality Blue FR-4 PCB with corner mounting holes
+   box(w,.16,d,'#1554a4',0,.6,0,g,{roughness:.35});
+   [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>{
+     cyl(.32,.2,'#b8bcc2',sx*(w/2-.55),.61,sz*(d/2-.55),'',g,{metalness:.85});
+     cyl(.18,.25,'#0a0a0a',sx*(w/2-.55),.62,sz*(d/2-.55),'',g);
+   });
+   // LM2596S IC (TO-263 package with heatsink tab and 5 curved leads)
+   box(2.2,.45,2.1,'#181818',-1.2,.85,0,g,{roughness:.5});
+   box(.8,.15,1.8,'#b0b4b8',-2.3,.72,0,g,{metalness:.9,roughness:.25});
+   for(let i=0;i<5;i++)cyl(.04,.55,'#c0c4c8',-.1,.72,-.7+i*.35,'x',g,{metalness:.9});
+   // Toroidal power inductor (donut ferrite core + wound copper wire)
+   cyl(1.1,.85,'#202b24',.8,1.05,-.4,'',g,{roughness:.6});
+   // Input and Output Aluminum Electrolytic Capacitors (silver top with etched score)
+   [[-w/2+1.5,d/2-1.4],[w/2-1.5,-d/2+1.4]].forEach(([cx,cz])=>{
+     cyl(.75,1.55,'#181818',cx,1.4,cz,'',g);
+     cyl(.74,.05,'#d0d4d8',cx,2.18,cz,'',g,{metalness:.9,roughness:.2});
+     box(.9,.02,.12,'#555',cx,2.2,cz,g);box(.12,.02,.9,'#555',cx,2.2,cz,g);
+   });
+   // Bourns 3296 Multi-turn Trimmer Potentiometer (Signature Blue box with top brass screw)
+   box(1.1,1.3,1.1,'#1962be',2.8,1.25,1.5,g,{roughness:.4});
+   cyl(.25,.12,'#d4af37',2.8,1.93,1.5,'',g,{metalness:.9,roughness:.2});
+   box(.06,.15,.35,'#222',2.8,1.96,1.5,g);
+   // SS34 Schottky Power Diode
+   box(1.2,.35,.75,'#181818',-1.2,.78,1.6,g);box(.15,.37,.76,'#eee',-1.7,.78,1.6,g);
+   // Red SMD Power LED
+   box(.35,.15,.35,'#ff2020',-w/2+1.2,.7,-d/2+1.2,g,{emissive:'#ff2020',emissiveIntensity:.9});
+   // Screw terminal blocks (IN and OUT)
+   box(1.1,.85,d*.8,'#2562b5',-w/2+.55,1.05,0,g);
+   box(1.1,.85,d*.8,'#2562b5',w/2-.55,1.05,0,g);
+ }
+ else if(t.startsWith('JSN')){
+   // Deep forest green PCB with gold-plated corner holes
+   box(w,.16,d,'#1b6135',0,.6,0,g,{roughness:.4});
+   [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>cyl(.25,.2,'#d4af37',sx*(w/2-.4),.61,sz*(d/2-.4),'',g,{metalness:.9}));
+   // Black RCA Coaxial Female Socket for probe connection
+   cyl(.85,1.2,'#1a1a1a',w*.28,1.2,0,'x',g);
+   cyl(.65,1.4,'#c0c4c8',w*.28,1.2,0,'x',g,{metalness:.9,roughness:.2});
+   cyl(.35,1.5,'#0a0a0a',w*.28,1.2,0,'x',g);
+   cyl(.1,1.55,'#d4af37',w*.28,1.2,0,'x',g,{metalness:.95});
+   // High-voltage step-up transformer / inductor shield can
+   box(1.5,1.2,1.5,'#b8bcc2',-.5,1.2,0,g,{metalness:.85,roughness:.3});
+   // SOP-16 processor IC and SOP-8 op-amp
+   box(1.8,.25,1.1,'#181818',-2.2,.75,-.6,g);
+   box(1.1,.25,.9,'#181818',-2.2,.75,1.1,g);
+   // 4-pin male header (5V, Trig, Echo, GND)
+   box(.6,.25,2.4,'#111',-w/2+.6,.75,0,g);
+   [0,1,2,3].forEach(i=>cyl(.04,.65,'#d4af37',-w/2+.6,1.05,(i-1.5)*.65,'',g,{metalness:.95}));
+   
+   // Hyper-realistic Waterproof Ultrasonic Transducer Probe
+   const pr=P(1290,344,0);
+   cyl(1.45,2.2,'#282c32',pr.x,1.5,pr.z,'x',null,{metalness:.8,roughness:.3});
+   cyl(1.55,.25,'#1f2328',pr.x-.95,1.5,pr.z,'x',null,{metalness:.85});
+   cyl(1.28,.08,'#15171a',pr.x-1.08,1.5,pr.z,'x');
+   cyl(1.48,.45,'#111',pr.x-.2,1.5,pr.z,'x');
+   cyl(1.05,.8,'#1a1a1a',pr.x+.9,1.5,pr.z,'x');
+   cyl(.75,.6,'#111',pr.x+1.4,1.5,pr.z,'x');
+   cyl(.45,.6,'#0a0a0a',pr.x+1.8,1.5,pr.z,'x');
+   lab('JSN waterproof probe',.5,pr.x,3.2,pr.z);
+   const cb=new THREE.CatmullRomCurve3([
+     P(1220,344,.8),
+     P(1240,344,.5),
+     P(1265,344,1.2),
+     new THREE.Vector3(pr.x+2.1, 1.5, pr.z)
+   ]);
+   scene.add(new THREE.Mesh(new THREE.TubeGeometry(cb,32,.14,8),M('#111',{roughness:.6})));
+ }
+ else if(t.startsWith('1-ch')){
+   // Blue FR-4 PCB
+   box(w,.16,d,'#1554a4',0,.6,0,g,{roughness:.35});
+   // Songle Relay Cube (glossy royal blue)
+   box(4.4,2.5,3.5,'#1c68d2',-.5,1.95,0,g,{roughness:.3});
+   // 3-Pin Green Screw Terminal Block (NO, COM, NC)
+   box(1.4,1.6,3.6,'#267845',w/2-.8,1.45,0,g,{roughness:.5});
+   [-1,0,1].forEach(z=>{
+     cyl(.28,.08,'#a0a4a8',w/2-.8,2.28,z*1.15,'',g,{metalness:.85,roughness:.3});
+     box(.06,.1,.35,'#222',w/2-.8,2.31,z*1.15,g);
+     cyl(.24,.6,'#0a0a0a',w/2-.05,1.4,z*1.15,'x',g);
+   });
+   // EL817 4-Pin Optocoupler DIP chip
+   box(1.2,.6,1.4,'#181818',2.3,.9,0,g);
+   cyl(.1,.1,'#eee',2.7,.95,-.5,'',g);
+   // S8050 NPN switching transistor and 1N4148 flyback diode
+   box(.7,.6,.4,'#111',1.4,.9,1.8,g);
+   cyl(.12,.7,'#e67e22',.5,.8,2.1,'x',g);
+   // Dual LEDs: Green Power & Red Active Trigger
+   box(.35,.15,.4,'#3ddc84',2.5,.7,-1.8,g,{emissive:'#3ddc84',emissiveIntensity:.9});
+   box(.35,.15,.4,'#ff2020',2.5,.7,-1.0,g,{emissive:'#ff2020',emissiveIntensity:.9});
+   // 3-pin male control header (VCC, GND, IN)
+   box(.6,.25,1.8,'#111',-w/2+.6,.75,0,g);
+   [0,1,2].forEach(i=>cyl(.04,.65,'#d4af37',-w/2+.6,1.05,(i-1)*.65,'',g,{metalness:.95}));
+ }
+ else if(t.includes('siren')){
+   // Exact 12V Mini Horn / Strobe Siren (White collar, vibrant red cone, center CE decal, coiled cable & 3.5mm plug)
+   // Base mounting flange bracket with side ears
+   box(3.2,.2,5.2,'#1c1c1c',0,.1,0,g,{roughness:.7});
+   [-1,1].forEach(s=>{
+     cyl(.52,.22,'#1c1c1c',0,.11,s*2.6,'',g);
+     cyl(.22,.28,'#050505',0,.12,s*2.6,'',g);
+   });
+   
+   // Dark rear cylindrical body housing
+   cyl(1.85,1.55,'#181818',0,.85,0,'',g,{roughness:.6});
+   cyl(1.9,.15,'#111',0,.45,0,'',g);
+   cyl(1.9,.15,'#111',0,1.15,0,'',g);
+
+   // Outer flared WHITE collar / rim (pure white bezel)
+   cyl(2.5,.38,'#ffffff',0,1.8,0,'',g,{roughness:.25});
+   cyl(2.6,.12,'#f0f2f5',0,1.96,0,'',g,{roughness:.2});
+   cyl(2.35,.18,'#e5e8ec',0,1.92,0,'',g,{roughness:.3});
+
+   // Vibrant semi-translucent RED acoustic strobe cone inside the white rim
+   cyl(2.15,.35,'#e61919',0,2.02,0,'',g,{roughness:.25,transparent:true,opacity:.93});
+   cyl(1.75,.16,'#d01414',0,2.15,0,'',g,{roughness:.3,transparent:true,opacity:.95});
+   cyl(1.25,.18,'#bf1111',0,2.22,0,'',g,{roughness:.3});
+   
+   // 8 radial acoustic / strobe facets on the red cone
+   for(let k=0;k<8;k++){
+     const ang=k*Math.PI/4;
+     const rx=Math.cos(ang)*1.2, rz=Math.sin(ang)*1.2;
+     const rib=box(.15,.1,1.0,'#ff3b3b',rx,2.12,rz,g,{roughness:.3});
+     rib.rotation.y=-ang;
+   }
+
+   // Center circular WHITE / SILVER 'CE' decal badge
+   cyl(.6,.04,'#ffffff',0,2.32,0,'',g,{roughness:.2});
+   cyl(.66,.02,'#c0c8d2',0,2.31,0,'',g,{metalness:.8,roughness:.2});
+   
+   // CE silkscreen decal on center badge
+   {
+     const cv=document.createElement('canvas');cv.width=128;cv.height=128;
+     const ctx=cv.getContext('2d');
+     ctx.fillStyle='#ffffff';ctx.fillRect(0,0,128,128);
+     ctx.fillStyle='#111111';ctx.font='bold 58px system-ui,sans-serif';
+     ctx.textAlign='center';ctx.textBaseline='middle';
+     ctx.fillText('CE',64,64);
+     const ceTex=new THREE.CanvasTexture(cv);ceTex.anisotropy=4;
+     const ceMesh=new THREE.Mesh(new THREE.PlaneGeometry(.95,.95),new THREE.MeshBasicMaterial({map:ceTex,transparent:true}));
+     ceMesh.rotation.x=-Math.PI/2;ceMesh.position.set(0,2.345,0);g.add(ceMesh);
+   }
+
+   // Coiled red and black wire bundle (just like the photo with twist-tie)
+   cyl(.4,.35,'#111',0,.4,-1.8,'z',g);
+   [-.15,.15].forEach((dx,idx)=>{
+     const col=idx===0?'#d62828':'#111';
+     // coiled figure-8 wire loop
+     for(let r=0;r<3;r++){
+       const zoff=-2.3+r*.4;
+       cyl(.09,2.2,col,dx+1.0,.25+r*.18,zoff,'z',g);
+     }
+   });
+   // Black wire twist-tie binding the middle of the coil
+   box(.7,.45,.25,'#0a0a0a',1.0,.45,-2.3,g);
+
+   // Option 1 Applied: Direct stripped lead wiring
+   // Snipped-off 3.5mm jack displayed separately to illustrate Option 1
+   cyl(.32,1.3,'#181818',3.2,.45,-2.6,'x',g,{roughness:.5});
+   cyl(.24,.4,'#111',2.5,.45,-2.6,'x',g);
+   [0,.3,.6].forEach(dx=>cyl(.35,.08,'#0a0a0a',2.8+dx,.45,-2.6,'x',g));
+   // Silver 3.5mm plug tip
+   cyl(.175,1.2,'#d8dce2',4.3,.45,-2.6,'x',g,{metalness:.95,roughness:.15});
+   cyl(.185,.05,'#111',4.0,.45,-2.6,'x',g);
+   cyl(.185,.05,'#111',4.4,.45,-2.6,'x',g);
+   // Cut wire stubs showing copper inside
+   cyl(.08,.4,'#d62828',2.2,.5,-2.65,'x',g);
+   cyl(.08,.4,'#111',2.2,.5,-2.55,'x',g);
+   cyl(.04,.2,'#d08a4a',1.9,.5,-2.65,'x',g,{metalness:.9});
+   cyl(.04,.2,'#d08a4a',1.9,.5,-2.55,'x',g,{metalness:.9});
+   lab('✂ Cut off 3.5mm jack (Option 1)',.38,3.2,1.4,-2.6,'rgba(255,220,220,.95)');
+
+   // Stripped leads going directly to terminals
+   // Exposed bare copper tips entering Relay NO and WAGO
+   lab('Stripped RED -> Relay NO  |  BLACK -> WAGO 221-413',.45,0,3.6,-1.2,'rgba(220,255,220,.95)');
+   // Fix #2: lay siren on its side (cone horizontal mount)
+   g.rotation.z = -Math.PI/2;
+   g.position.y = 1.55;
+ }
+ lab(t,.75,c.x,3.2,c.z-(t.startsWith('LM')||t.startsWith('JSN')||t.startsWith('1-ch')?0:0))});
+comps.forEach(o=>o.p.forEach(([t,x,y])=>{if(t){const p=P(x,y,0);lab(t,.4,p.x,1.9,p.z,'rgba(255,255,255,.8)')}}));
+// Fix #4: fuse rating label (the fuse model has no text on it)
+lab('2A',0.4,P(415,80,0).x,2.15,P(415,80,0).z,'rgba(255,255,255,.88)');
+
+// wires
+const W=[
+[0,'r','MM','MB-102 Bridge: Top +5V rail (col 29 → col 31)',[H('T',29),[X(29),282],[X(31),282],H('T',31)]],
+[0,'k','MM','MB-102 Bridge: Top GND rail (col 29 → col 31)',[H('G',29),[X(29),296],[X(31),296],H('G',31)]],
+[0,'o','MM','Top +5V rail (col 2) → bottom +5V rail (col 2)',[H('T',2),[214,312],[214,576],H('B',2)]],
+[0,'k','MM','Top GND rail (col 3) → bottom GND rail (col 3)',[H('G',3),[222,328],[222,560],H('K',3)]],
+// RIGHT-SIDE cross-connection: powers bottom rails cols 31-40 (relay VCC/GND land here)
+[0,'o','MM','Top +5V rail (col 37) → bottom +5V rail (col 37) [relay VCC rail]',[H('T',37),[826,312],[826,576],H('B',37)]],
+[0,'k','MM','Top GND rail (col 37) → bottom GND rail (col 37) [relay GND rail]',[H('G',37),[826,328],[826,560],H('K',37)]],
+[0,'o','FM','+5V rail (col 9) → expansion board VIN (5V in)',[H('T',9),[378,312],[378,620],[448,620],[448,638]]],
+[0,'k','FM','GND rail (col 13) → expansion board GND',[H('G',13),[442,620],[464,620],[464,658]]],
+[1,'k','MM','GND rail (col 27) → a27 (battery divider GND)',[H('G',27),H('a',27)]],
+[1,'b','FM','Expansion board D34 → a31 (battery divider tap)',[[624,638],[624,610],[730,610],H('a',31)]],
+[1,'k','MM','Bottom GND rail (col 27) → j27 (ECHO divider GND)',[H('K',27),H('j',27)]],
+[1,'b','FM','Expansion board D18 → j31 (ECHO divider node)',[[576,842],[576,858],[750,858],[750,516],H('j',31)]],
+[2,'o','FM','JSN VCC → +5V rail (col 40)',[[1020,316],[900,316],[900,312],H('T',40)]],
+[2,'k','FM','JSN GND → GND rail (col 40)',[[1020,376],[985,376],[985,328],H('G',40)]],
+[2,'b','FM','JSN TRIG → a19 (TRIG joint)',[[1020,336],[930,336],[930,344],[X(19),344],H('a',19)]],
+[2,'b','FM','Expansion board D5 → e19 (TRIG joint)',[[560,842],[560,862],[410,862],[410,622],[X(19),622],H('e',19)]],
+[2,'b','FM','JSN ECHO → j35 (ECHO divider input)',[[1020,356],[950,356],[950,534],[X(35),534],H('j',35)]],
+[2,'b','FM','Relay IN → a26 (IN joint)',[[1020,490],[940,490],[940,340],[X(26),340],H('a',26)]],
+[2,'b','FM','Expansion board D23 → e26 (IN joint)',[[672,842],[672,864],[712,864],[712,598],[X(26),598],H('e',26)]],
+[2,'o','FM','Relay VCC → bottom +5V rail (col 40)',[[1020,450],[995,450],[995,576],H('B',40)]],
+[2,'k','FM','Relay GND → bottom GND rail (col 40)',[[1020,470],[985,470],[985,560],H('K',40)]],
+[3,'r','AWG','Adapter +12V → jack +',[[160,70],[200,70]]],
+[3,'k','AWG','Adapter GND → jack −',[[160,100],[200,100]]],
+[3,'r','AWG','Jack + → fuse IN',[[320,70],[360,70]]],
+[3,'k','AWG','Jack − → WAGO 221-413 (12V GND node)',[[320,100],[338,100],[338,720],[915,720],[915,675],[930,675]]],
+[3,'k','AWG','WAGO 221-413 → buck IN−',[[930,655],[908,655],[908,190],[690,190],[690,120],[700,120]]],
+[3,'r','AWG','Fuse OUT → WAGO 221-415 (fused +12V)',[[470,70],[520,70]]],
+[3,'r','AWG','WAGO → buck IN+',[[640,70],[700,70]]],
+[3,'r','AWG','WAGO → relay COM',[[640,100],[640,70],[1255,70],[1255,450],[1230,450]]],
+[3,'r','AWG','WAGO → a35 (battery divider R1)',[[640,130],[660,130],[660,210],[X(35),210],H('a',35)]],
+[3,'o','AWG','Buck OUT+ → +5V rail (col 36)',[[810,150],H('T',36)]],
+[3,'k','AWG','Buck OUT− → GND rail (col 38)',[[842,150],H('G',38)]],
+[3,'r','AWG','Relay NO → siren +12V',[[1230,490],[1255,490],[1255,665],[1220,665]]],
+[3,'k','AWG','Siren GND → WAGO 221-413',[[1060,665],[1030,665]]],];
+const meshes=[],onB=q=>q[0]>=228&&q[0]<=904&&q[1]>=280&&q[1]<=604;
+W.forEach((w,i)=>{const p=w[4],h=(w[2]=='AWG'?1.1:1.5)+(i%6)*.22,e=q=>P(q[0],q[1],onB(q)?.55:.95),up=q=>P(q[0],q[1],h);
+ const pts=[e(p[0]),up(p[0])];for(let k=1;k<p.length-1;k++)pts.push(up(p[k]));pts.push(up(p[p.length-1]),e(p[p.length-1]));
+ const cv=new THREE.CatmullRomCurve3(pts,false,'catmullrom',.1),r=w[2]=='AWG'?.1:.075;
+ const m=new THREE.Mesh(new THREE.TubeGeometry(cv,pts.length*14,r,8),M(C[w[1]],{transparent:true,roughness:.4}));m.userData.i=i;scene.add(m);meshes.push(m);
+ const ends=[p[0],p[p.length-1]];
+ ends.forEach((q,k)=>{const a=e(q),mk=(cl)=>{const b=box(.28,.5,.28,cl,a.x,a.y+.3,a.z);b.userData.i=i;b.material.transparent=true;meshes.push(b)};
+  if(w[2]=='AWG'){const s=new THREE.Mesh(new THREE.SphereGeometry(.14),M(C[w[1]],{transparent:true}));s.position.copy(a);s.userData.i=i;scene.add(s);meshes.push(s)}
+  else if(w[2]=='FM'&&k==0)mk('#1e1e1e');else mk('#111')})});
+// ui
+const info=document.getElementById('info'),ls=document.getElementById('ls'),bar=document.getElementById('bar');
+W.forEach((w,i)=>{const l=document.createElement('li');l.dataset.i=i;l.innerHTML='<i class="dot" style="background:'+C[w[1]]+'"></i>'+(i+1)+'. '+w[3]+' <small style="color:var(--mut)">('+T[w[2]]+')</small>';ls.appendChild(l)});
+function only(fn,msg){meshes.forEach(m=>{const on=!fn||fn(W[m.userData.i],m.userData.i);m.material.opacity=on?1:.1;m.material.emissive.set(fn&&on?'#333':'#000')});
+ [...ls.children].forEach((l,i)=>l.classList.toggle('sel',!!fn&&fn(W[i],i)));info.textContent=msg}
+function act(b){bar.querySelectorAll('button[data-t]').forEach(x=>x.classList.toggle('act',x===b))}
+bar.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if(b.dataset.t!==undefined){act(b);b.dataset.t?only(w=>w[2]==b.dataset.t,T[b.dataset.t]+' wires'):only(null,'All wires shown')}});
+ls.addEventListener('click',e=>{const l=e.target.closest('li');if(l){act(null);const i=+l.dataset.i;only((_,k)=>k==i,(i+1)+'. '+W[i][3])}});
+document.getElementById('bl').onclick=e=>{labels.visible=!labels.visible;e.target.classList.toggle('act',!labels.visible)};
+document.getElementById('bi').onclick=()=>view(...ISO);document.getElementById('bt').onclick=()=>view(...TOP);
+const ray=new THREE.Raycaster(),mv=new THREE.Vector2();let dn=null;
+ren.domElement.addEventListener('pointerdown',e=>dn=[e.clientX,e.clientY]);
+ren.domElement.addEventListener('pointerup',e=>{if(!dn||Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>4)return;const r=ren.domElement.getBoundingClientRect();
+ mv.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mv,cam);const h=ray.intersectObjects(meshes)[0];
+ if(h){const i=h.object.userData.i;act(null);only((_,k)=>k==i,(i+1)+'. '+W[i][3]);ls.children[i].scrollIntoView({block:'nearest'})}else{act(bar.querySelector('button'));only(null,'All wires shown')}});
+function rs(){const w=el.clientWidth,h=el.clientHeight;ren.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+addEventListener('resize',rs);rs();
+(function loop(){ctl.update();ren.render(scene,cam);requestAnimationFrame(loop)})();
+</script>
+<script>
+(()=>{
+// ---- renderer, lighting, shadows
+ren.outputEncoding=THREE.sRGBEncoding;ren.toneMapping=THREE.ACESFilmicToneMapping;ren.toneMappingExposure=1.25;
+ren.shadowMap.enabled=true;ren.shadowMap.type=THREE.PCFSoftShadowMap;
+dl.intensity=1.15;dl.castShadow=true;dl.shadow.mapSize.set(2048,2048);dl.shadow.bias=-.0004;
+Object.assign(dl.shadow.camera,{left:-45,right:45,top:32,bottom:-32,near:1,far:140});
+const fl=new THREE.DirectionalLight('#cfe0ff',.3);fl.position.set(30,20,-20);scene.add(fl);
+const grid=new THREE.GridHelper(72,72,'#b3b0a2','#c6c3b6');grid.scale.z=44/72;grid.position.set(0,.01,3);scene.add(grid);
+
+// ---- helpers
+const reg=(m,i)=>{m.userData.i=i;meshes.push(m);return m};
+function tx(lines,w,d,x,y,z,fg){const c=document.createElement('canvas');c.width=512;c.height=Math.max(64,Math.round(512*d/w));const g=c.getContext('2d'),n=lines.length,fs=Math.min(c.height/(n+.6),46);
+ g.fillStyle=fg;g.textAlign='center';g.textBaseline='middle';g.font='600 '+fs+'px system-ui,sans-serif';lines.forEach((t,k)=>g.fillText(t,256,c.height*(k+.8)/(n+.6)));
+ const t=new THREE.CanvasTexture(c);t.anisotropy=8;const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));
+ m.rotation.x=-Math.PI/2;m.position.set(x,y,z);m.userData.flat=1;scene.add(m);return m}
+const MT={metalness:.9,roughness:.3},cc=o=>P(o.x+o.w/2,o.y+o.h/2,0);
+
+// ---- breadboard markings
+{const c=document.createElement('canvas');c.width=1352;c.height=648;const g=c.getContext('2d');g.textAlign='center';g.textBaseline='middle';g.font='600 15px system-ui';
+ for(let n=1;n<=40;n++)if(n==1||n%5==0){const x=(X(n)-228)*2;g.fillStyle='#8a877a';g.fillText(n,x,134);g.fillText(n,x,496)}
+ 'abcde'.split('').forEach(r=>{g.fillStyle='#8a877a';[16,1336].forEach(x=>g.fillText(r,x,(Y[r]-280)*2))});
+ 'fghij'.split('').forEach(r=>[16,1336].forEach(x=>g.fillText(r,x,(Y[r]-280)*2)));
+ [['T','+','#d62828'],['G','−','#2f6fdb'],['K','−','#2f6fdb'],['B','+','#d62828']].forEach(([r,s,cl])=>{g.fillStyle=cl;g.font='700 20px system-ui';[16,1336].forEach(x=>g.fillText(s,x,(Y[r]-280)*2))});
+ const t=new THREE.CanvasTexture(c);t.anisotropy=8;const m=new THREE.Mesh(new THREE.PlaneGeometry(33.8,16.2),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));
+ m.rotation.x=-Math.PI/2;m.position.set(bc.x,.525,bc.z);m.userData.flat=1;scene.add(m)}
+
+// ---- ESP32 detail
+{const c=P(560,740,0);
+ tx(['ESP-WROOM-32','ESPRESSIF'],4,1.6,c.x+1.2,1.46,c.z,'#333');tx(['ESP32 30P · CH340C'],3.4,.8,c.x-2.2,1.075,c.z,'#e8e8e8');
+ [-1.6,1.6].forEach(z=>cyl(.28,.1,'#ddd',c.x-3.4,1.3,c.z+z));
+ [[-1.6,'#ff3030'],[-.9,'#3b82f6']].forEach(([dx,cl])=>box(.3,.12,.5,cl,c.x-1.2+dx,1.12,c.z+2.6,null,{emissive:cl,emissiveIntensity:.8}));
+ for(let i=0;i<6;i++)box(2,.03,.15,'#c9a227',c.x+4.7,1.09,c.z-2.7+i*1.0,null,MT);
+ box(12.1,.28,.5,'#111',c.x,1.2,c.z-3.2);box(12.1,.28,.5,'#111',c.x,1.2,c.z+3.2)}
+
+// ---- component high-definition textures & silkscreen
+const [ad,jk,fu,w3,bk,js,rl,w2,sr]=comps;
+{
+  const c=cc(ad);
+  tx(['AC/DC ADAPTER','12V ⎓ 2.0A  24W','FJ-SW1202000'],3.4,1.7,c.x,1.63,c.z,'#e8f5e9');
+  box(.4,.15,.4,'#3ddc84',c.x-2.4,1.68,c.z+1.3,null,{emissive:'#3ddc84',emissiveIntensity:.9});
+}
+{
+  const c=cc(jk);
+  tx(['+  −','5.5×2.1'],2.2,1.0,c.x+1.2,1.44,c.z,'#f0fff0');
+}
+{
+  const c=cc(bk);
+  tx(['LM2596S DC-DC STEP-DOWN','IN+  IN−  ==>>>  OUT+  OUT−'],7.2,1.6,c.x,0.73,c.z-2.2,'#ffffff');
+  lab('turn to 5.0 V',.4,c.x+3.2,2.2,c.z+1.6,'rgba(255,240,180,.95)');
+}
+{
+  const c=cc(js);
+  tx(['JSN-SR04T V3.0','5V  TRIG  ECHO  GND'],4.2,1.2,c.x-.6,0.73,c.z-1.8,'#ffffff');
+}
+{
+  const c=cc(rl);
+  tx(['SONGLE','SRD-05VDC-SL-C','10A 250VAC · 10A 30VDC'],4.0,2.3,c.x-.5,3.22,c.z,'#ffffff');
+  tx(['NO  COM  NC'],2.6,0.6,c.x+rl.w*S/2-.8,2.38,c.z,'#ffffff');
+  tx(['VCC  GND  IN'],2.4,0.6,c.x-rl.w*S/2+1.5,0.73,c.z,'#ffffff');
+}
+
+// ---- real connector ends
+W.forEach((w,i)=>{[w[4][0],w[4][w[4].length-1]].forEach(q=>{const b=onB(q),a=P(q[0],q[1],b?.55:.95);
+ if(w[2]=='AWG')reg(cyl(.075,.45,'#d08a4a',a.x,a.y-.05,a.z,'',null,Object.assign({transparent:true},MT)),i);
+ else{if(b)reg(cyl(.035,.55,'#c9ccd1',a.x,a.y-.2,a.z,'',null,Object.assign({transparent:true},MT)),i);reg(box(.36,.14,.36,'#050505',a.x,a.y+.62,a.z,null,{transparent:true}),i)}})});
+meshes.forEach(m=>{if(m.material&&m.material.roughness!==undefined&&m.geometry.type=='TubeGeometry'){m.material.roughness=.32}});
+
+// ---- shadows on everything solid
+scene.traverse(o=>{if(o.isMesh&&!o.userData.flat){o.castShadow=!o.isInstancedMesh;o.receiveShadow=true}if(o.material)o.material.needsUpdate=true});
+
+// ---- hover tooltip + extra buttons
+const tip=document.createElement('div');tip.style.cssText='position:absolute;pointer-events:none;background:rgba(0,0,0,.8);color:#fff;font-size:12px;padding:3px 8px;border-radius:6px;display:none;max-width:280px';el.appendChild(tip);
+ren.domElement.addEventListener('pointermove',e=>{if(e.buttons){tip.style.display='none';return}const r=ren.domElement.getBoundingClientRect();mv.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(mv,cam);
+ const h=ray.intersectObjects(meshes)[0];ren.domElement.style.cursor=h?'pointer':'grab';if(h){const i=h.object.userData.i;tip.textContent=(i+1)+'. '+W[i][3];tip.style.left=e.clientX-r.left+12+'px';tip.style.top=e.clientY-r.top+12+'px';tip.style.display='block'}else tip.style.display='none'});
+bar.insertAdjacentHTML('beforeend','<button id="ba">Auto-rotate</button><button id="bs" class="act">Shadows</button>');
+document.getElementById('ba').onclick=e=>{ctl.autoRotate=!ctl.autoRotate;ctl.autoRotateSpeed=1.2;e.target.classList.toggle('act',ctl.autoRotate)};
+document.getElementById('bs').onclick=e=>{ren.shadowMap.enabled=!ren.shadowMap.enabled;e.target.classList.toggle('act',ren.shadowMap.enabled);scene.traverse(o=>{if(o.material)o.material.needsUpdate=true})};
+})();
+</script>
+<script>
+(()=>{
+// ---- edge outlines on solid parts (wires excluded)
+const skip=new Set(meshes),ol=[],lm=new THREE.LineBasicMaterial({color:'#15130f',transparent:true,opacity:.7});
+scene.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||o.userData.flat||skip.has(o))return;const g=o.geometry;if(/Tube|Sphere|Plane/.test(g.type))return;
+ g.computeBoundingBox();const s=g.boundingBox.getSize(new THREE.Vector3());if(Math.max(s.x,s.y,s.z)<.7)return;
+ const l=new THREE.LineSegments(new THREE.EdgesGeometry(g,25),lm);o.add(l);ol.push(l);
+ if(o.material){o.material.polygonOffset=true;o.material.polygonOffsetFactor=1;o.material.polygonOffsetUnits=1}});
+
+// ---- free camera
+bar.insertAdjacentHTML('beforeend','<button id="bf">Free camera</button><button id="bo" class="act">Outlines</button>');
+const fb=document.getElementById('bf'),ou=ctl.update.bind(ctl),ks={},dir=new THREE.Vector3();let fly=false,yaw=0,pit=0,sp=1,t0=performance.now(),lx=0,ly=0;
+cam.rotation.order='YXZ';
+const fw=()=>dir.set(-Math.sin(yaw)*Math.cos(pit),Math.sin(pit),-Math.cos(yaw)*Math.cos(pit));
+ctl.update=function(){if(!fly)return ou();const t=performance.now(),dt=Math.min((t-t0)/1000,.1);t0=t;const v=(ks.ShiftLeft||ks.ShiftRight?36:12)*sp*dt;fw();
+ const rt=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),mv=(k,vec,s)=>{if(ks[k])cam.position.addScaledVector(vec,s*v)};
+ mv('KeyW',dir,1);mv('ArrowUp',dir,1);mv('KeyS',dir,-1);mv('ArrowDown',dir,-1);mv('KeyD',rt,1);mv('ArrowRight',rt,1);mv('KeyA',rt,-1);mv('ArrowLeft',rt,-1);
+ if(ks.KeyE)cam.position.y+=v;if(ks.KeyQ)cam.position.y-=v;cam.position.y=Math.max(.3,cam.position.y);cam.rotation.set(pit,yaw,0);return true};
+function setFly(on){if(on===fly)return;if(on){cam.getWorldDirection(dir);yaw=Math.atan2(-dir.x,-dir.z);pit=Math.asin(dir.y);t0=performance.now();ctl.enabled=false;fly=true}
+ else{fw();ctl.target.copy(cam.position).addScaledVector(dir,20);ctl.enabled=true;fly=false;ou()}
+ fb.classList.toggle('act',on);info.textContent=on?'Free camera: drag to look · WASD/arrows move · Q/E down/up · Shift fast · wheel dolly · Esc to exit':'Orbit camera'}
+fb.onclick=()=>setFly(!fly);
+document.getElementById('bo').onclick=e=>{const on=!ol[0].visible;ol.forEach(l=>l.visible=on);e.target.classList.toggle('act',on)};
+['bi','bt'].forEach(id=>{const b=document.getElementById(id),f=b.onclick;b.onclick=()=>{if(fly){fly=false;ctl.enabled=true;fb.classList.remove('act')}f()}});
+const cv=ren.domElement;
+cv.addEventListener('pointerdown',e=>{lx=e.clientX;ly=e.clientY});
+cv.addEventListener('pointermove',e=>{if(!fly||!e.buttons)return;yaw-=(e.clientX-lx)*.004;pit=Math.max(-1.5,Math.min(1.5,pit-(e.clientY-ly)*.004));lx=e.clientX;ly=e.clientY});
+cv.addEventListener('wheel',e=>{if(!fly)return;e.preventDefault();fw();cam.position.addScaledVector(dir,-e.deltaY*.02*sp)},{passive:false});
+addEventListener('keydown',e=>{if(e.code=='Escape')setFly(false);if(fly&&/^(Key[WASDQE]|Arrow.*|Shift.*)$/.test(e.code)){ks[e.code]=true;e.preventDefault()}});
+addEventListener('keyup',e=>{ks[e.code]=false});
+
+// ---- circuit review notes
+document.querySelector('ol.n').insertAdjacentHTML('beforeend',
+'<li>Verify the breadboard power rails are continuous across the whole length. Full-size boards often split them mid-way, which would cut the ESP32 (col 12) off from the buck (col 36) and JSN (col 40).</li>'+
+'<li>Siren return current currently flows through the breadboard GND rail and the LM2596 ground. Run the siren GND straight back to the jack − / 12 V GND node instead.</li>'+
+'<li>ECHO divider: R1 = 5.1 kΩ, R2 = 10 kΩ gives 3.31 V at D18 (safely under 3.3 V logic).</li>'+
+'<li>12V Battery divider: R1 = 5.1 kΩ, R2 = 1 kΩ steps 12 V down to 1.97 V at D34 (ADC multiplier: 6.1x). C1 100 nF filters ADC noise.</li>');
+})();
+</script>
+<script>
+(()=>{
+const MT={metalness:.9,roughness:.3},G='rgba(190,255,190,.95)';
+function leads(c1,c2,r){const a=P(X(c1),Y[r],0),b=P(X(c2),Y[r],0);[a,b].forEach(p=>cyl(.03,.45,'#aaa',p.x,.72,p.z,'',null,MT));cyl(.03,b.x-a.x,'#aaa',(a.x+b.x)/2,.95,a.z,'x',null,MT);return[a,(a.x+b.x)/2]}
+function diode(c1,c2,r,t,col,band){const[a,m]=leads(c1,c2,r);cyl(.2,1.5,col,m,.95,a.z,'x');cyl(.215,.16,band,m+.5,.95,a.z,'x');lab(t,.45,m,1.75,a.z,G)}
+// D1, D2, C1 omitted: using pure resistor dividers and direct 5V VIN feed (no extra diodes/capacitors needed)
+scene.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&!o.userData.flat&&!o.castShadow){o.castShadow=o.receiveShadow=true}});
+// clean legend
+document.querySelector('ol.n').innerHTML=
+'<li><b>Applied:</b> WAGO 221-415 (5 ports) replaces the 221-413, so all 4 wires fit.</li>'+
+'<li><b>Applied:</b> the second WAGO (now 221-413) is the 12 V ground node: jack −, buck IN− and siren GND. The siren return no longer crosses the breadboard or the LM2596.</li>'+
+'<li><b>Applied (Pure Resistor Dividers):</b> ECHO divider uses R1 = 5.1 kΩ and R2 = 10 kΩ, giving a safe 3.31 V at GPIO 18 (no extra diodes or caps needed).</li>'+
+'<li><b>Applied (Pure Resistor Dividers):</b> 12V battery divider uses R1 = 5.1 kΩ and R2 = 1 kΩ, scaling 12 V down to 1.97 V for GPIO 34 (ADC factor 6.1x).</li>'+
+'<li><b>Direct 5V VIN Feed:</b> +5V rail (col 9) connects directly to ESP32 VIN via a standard F-M jumper wire (no diode needed).</li>'+
+'<li>Set the LM2596 to 5.0 V with a multimeter before connecting it to the rails.</li>'+
+'<li>Check the power rails are continuous along the whole board. If they are split, add short M-M jumpers across the gap on both +5 V and GND rails.</li>'+
+'<li>Models are stylized; check pin order on your actual modules. Mount the JSN probe above the highest expected water level (blind zone ~20-25 cm).</li>';
+})();
+</script>
+<script>
+(()=>{
+const cn=P(560,740,0),MT={metalness:.9,roughness:.3},LY='rgba(255,240,180,.95)',px=i=>cn.x-5.6+.8*i,nm=[];
+// lift the ESP32 onto the expansion board sockets
+scene.children.forEach(o=>{if(o.isLight||Math.abs(o.position.x-cn.x)>6.5||Math.abs(o.position.z-cn.z)>3.8)return;if(o.isGroup||o.position.y>=.9)o.position.y+=.74});
+const g=scene.children.find(o=>o.isGroup&&o.children.length>25&&Math.abs(o.position.x-cn.x)<.1),u=g&&g.children.find(m=>m.geometry.parameters&&m.geometry.parameters.width===1.1);if(u)u.scale.set(1.25,1.2,1.5);
+const B=(...a)=>{const m=box(...a);nm.push(m);return m};
+B(13.2,.15,11.6,'#0f1216',cn.x,.6,cn.z,null,{roughness:.6});
+[-1,1].forEach(s=>{B(12.1,1,.5,'#1a1a1a',cn.x,1.175,cn.z+s*3.2);[4.1,4.6,5.1].forEach(d=>B(12.1,.25,.3,'#111',cn.x,.8,cn.z+s*d))});
+const im=new THREE.InstancedMesh(new THREE.CylinderGeometry(.04,.04,.85,8),M('#d4af37',MT),90),dm=new THREE.Object3D();let n=0;
+[-1,1].forEach(s=>[4.1,4.6,5.1].forEach(d=>{for(let i=0;i<15;i++){dm.position.set(px(i),.95,cn.z+s*d);dm.updateMatrix();im.setMatrixAt(n++,dm.matrix)}}));im.receiveShadow=true;scene.add(im);
+B(1.7,.75,1.4,'#b8bcc2',cn.x+6.4,1.05,cn.z,null,MT);
+B(.9,.35,.3,'#111',cn.x+6.15,.85,cn.z+4.6);B(.7,.5,.3,'#f5c400',cn.x+6.15,1.1,cn.z+4.6);
+B(.35,.12,.45,'#3ddc84',cn.x+6.15,.7,cn.z-4.6,null,{emissive:'#3ddc84',emissiveIntensity:.9});
+const nl=[];nm.forEach(m=>{m.castShadow=m.receiveShadow=true;m.geometry.computeBoundingBox();const s=m.geometry.boundingBox.getSize(new THREE.Vector3());
+ if(Math.max(s.x,s.y,s.z)>.7){const l=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry,25),new THREE.LineBasicMaterial({color:'#15130f',transparent:true,opacity:.7}));m.add(l);nl.push(l)}});
+document.getElementById('bo').addEventListener('click',e=>{const on=e.currentTarget.classList.contains('act');nl.forEach(l=>l.visible=on)});
+[['VIN (5V in)',0,-6.4],['GND',1,-7.2],['D34',11,-6.4],['D5',7,6.4],['D18',8,7.2],['D23',14,6.4]].forEach(([t,i,dz])=>lab(t,.42,px(i),1.6,cn.z+dz,LY));
+lab('ESP32 30P expansion board  ⚠ verify S/V/G row order on your board!',.5,cn.x,4.8,cn.z,'rgba(255,240,150,.97)');
+document.querySelector('ol.n').innerHTML=
+'<li><b>Layout:</b> the ESP32 now sits in the 30P expansion board sockets. The breadboard only holds the dividers, C1, D1 and D2. Check the S / V / G row order against the silkscreen on your board.</li>'+
+'<li><b>5 V feed:</b> LM2596 → rail col 9 → direct F-M wire to VIN pin. While running on the LM2596, leave the ESP32 USB cable unplugged.</li>'+
+'<li><b>Jumpers:</b> no F-F jumpers are needed. TRIG and relay IN each use two F-M jumpers joined through one breadboard strip (col 19 for TRIG, col 26 for relay IN). Every wire between the board and the breadboard is F-M.</li>'+
+'<li><b>Yellow jumper:</b> it only sets the V pins to 5 V or 3.3 V. The JSN and relay are powered from the LM2596 rails here, so it does not affect them.</li>'+
+'<li><b>Relay:</b> the listing says active HIGH. Test with only 5 V and GND connected (relay LED off), then touch IN to 3.3 V: it should click and the LED should light.</li>'+
+'<li><b>MB-102 Breadboard Notice:</b> Your MB-102 has split power rails with an open gap at Column 30 (confirmed in your photo). Two M-M jumper bridges have been added at Column 29→31 on the +5V (red) and GND (blue) rails so the LM2596 buck powers the ESP32 and dividers across the gap.</li>'+
+'<li><b>Siren Direct Wiring (Option 1 Applied):</b> Cut off the 3.5mm plug from the siren cable. Strip ~8-10 mm of outer insulation: tighten the bare <b>RED (+12V)</b> wire into <b>Relay NO</b>, and clamp the bare <b>BLACK (GND)</b> wire into the <b>WAGO 221-413</b> star-ground block.</li>'+
+'<li>Set the LM2596 to 5.0 V before connecting it. Check the breadboard rails are continuous, and mount the JSN probe above the highest expected water level (blind zone about 20-25 cm).</li>';
+})();
+</script>
+<script>
+[['TRIG joint (col 19)',19],['IN joint (col 26)',26]].forEach(([t,c])=>{const p=P(X(c),Y.a,0);lab(t,.4,p.x,2.3,p.z-1.2,'rgba(255,240,180,.95)')});
+lab('MB-102 Split Rail Bridge (Cols 29 → 31)', .42, P(X(30), 280, 0).x, 2.3, P(X(30), 280, 0).z-1.2, 'rgba(255,225,180,.95)');
+
+</script>
+</body>
+</html>
