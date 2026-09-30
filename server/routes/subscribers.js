@@ -227,7 +227,7 @@ router.post('/broadcast', authMiddleware, async (req, res) => {
     const { title, message, level = 2, waterLevelM = 1.5, force = true } = req.body;
 
     const result = await broadcastEmailAlert({
-      title: title || '⚠️ MANUAL FLOOD ADVISORY',
+      title: title || 'MANUAL FLOOD ADVISORY',
       message: message || 'CDRRMO Operator initiated emergency advisory.',
       level: Number(level),
       waterLevelM: Number(waterLevelM),

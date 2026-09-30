@@ -196,10 +196,10 @@ router.post('/', async (req, res) => {
     // Level 3 (Danger)   → email + siren activated on ESP32
     if (alertStatus.level >= 1) {
       const alertTitle = alertStatus.level === 3
-        ? '🚨 LEVEL 3 EMERGENCY ALERT'
+        ? 'Danger Level Reached'
         : alertStatus.level === 2
-          ? '⚠️ LEVEL 2 WARNING ALARM'
-          : 'ℹ️ LEVEL 1 ADVISORY NOTICE';
+          ? 'Flood Warning Active'
+          : 'Water Level Rising';
       const alertBody  = alertStatus.level === 3
         ? `EMERGENCY: Water level reached ${water_level_m.toFixed(2)}m. Immediate evacuation required in Lower Antipolo.`
         : alertStatus.level === 2

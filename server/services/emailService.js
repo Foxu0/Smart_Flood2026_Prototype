@@ -1,5 +1,38 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import { prisma } from '../db.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LOGO_PATH = path.resolve(__dirname, '../../public/PUBMAT3.png');
+const PUBLIC_LOGO_URL = 'https://raw.githubusercontent.com/Foxu0/Smart_Flood2026_Prototype/main/public/PUBMAT3.png';
+
+function getLogoAttachment() {
+  if (fs.existsSync(LOGO_PATH)) {
+    return [
+      {
+        filename: 'PUBMAT3.png',
+        path: LOGO_PATH,
+        cid: 'smartflood-logo',
+        contentDisposition: 'inline',
+      },
+    ];
+  }
+  return [];
+}
+
+function getLogoSrc() {
+  return fs.existsSync(LOGO_PATH) ? 'cid:smartflood-logo' : PUBLIC_LOGO_URL;
+}
+
+function stripEmojis(str = '') {
+  return String(str || '')
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F\u200D]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 // ── In-memory Cooldown Tracker ───────────────────────────────────────────────
 // Prevents spamming subscribers with repeated emails if water level hovers around a threshold
@@ -8,21 +41,6 @@ const lastBroadcastTimeByLevel = { 1: 0, 2: 0, 3: 0 };
 
 let transporterCache = null;
 let isEthereal = false;
-
-/**
- * Inline Vector SVG Icons (No external assets, zero emojis, crystal crisp rendering)
- */
-const ICONS = {
-  droplet: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
-  dropletSm: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`,
-  mapPin: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
-  timer: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
-  zap: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
-  shield: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-  phone: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
-  check: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M20 6L9 17l-5-5"/></svg>`,
-  checkCircle: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; display:inline-block;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
-};
 
 /**
  * Lazily initialize and return a Nodemailer transporter.
@@ -157,7 +175,7 @@ function generateAlertEmailHtml({
       color: '#e0522f',
       soft: '#fce7e0',
       border: '#f2bfab',
-      heroTitle: 'Critical Flood Danger',
+      heroTitle: 'Danger Level Reached',
       heroMsg: 'Water levels have reached critical danger thresholds. Please move immediately to designated high-ground evacuation shelters.',
       actionTitle: 'Critical Danger Actions',
       actionBadge: 'Danger Level',
@@ -174,8 +192,9 @@ function generateAlertEmailHtml({
   };
 
   const t = THEMES[level] || THEMES[1];
-  const displayTitle = title || t.heroTitle;
-  const displayMsg = message || t.heroMsg;
+  const displayTitle = stripEmojis(title || t.heroTitle) || t.heroTitle;
+  const displayMsg = stripEmojis(message || t.heroMsg) || t.heroMsg;
+  const logoSrc = getLogoSrc();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -208,7 +227,7 @@ function generateAlertEmailHtml({
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td width="46" valign="middle" style="padding-right:12px;">
-                    <img src="${baseUrl}/PUBMAT3.png" alt="Smart Flood Logo" width="40" height="40" style="display:block; width:40px; height:40px; border-radius:50%; border:2px solid rgba(255,255,255,0.7); background-color:#ffffff; padding:1px; object-fit:cover;" />
+                    <img src="${logoSrc}" alt="Smart Flood Logo" width="40" height="40" style="display:block; width:40px; height:40px; border-radius:50%; border:2px solid rgba(255,255,255,0.7); background-color:#ffffff; padding:1px; object-fit:cover;" />
                   </td>
                   <td valign="middle">
                     <div style="color:#ffffff; font-size:19px; font-weight:800; letter-spacing:0.3px; line-height:1.2;">
@@ -231,7 +250,7 @@ function generateAlertEmailHtml({
           <!-- Body Content Area -->
           <tr>
             <td style="padding:24px 22px;">
-              ${recipientName ? `<p style="margin:0 0 14px 0; font-size:14px; color:#123a54; font-weight:600;">Attention: <strong>${recipientName}</strong>,</p>` : ''}
+              ${recipientName ? `<p style="margin:0 0 14px 0; font-size:14px; color:#123a54; font-weight:600;">Attention: <strong>${stripEmojis(recipientName)}</strong>,</p>` : ''}
 
               <!-- Hero Status Advisory Card (Matches PublicPortal.jsx) -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: linear-gradient(135deg, ${t.soft} 0%, #ffffff 85%); border:1px solid ${t.border}; border-radius:16px; margin-bottom:16px;">
@@ -240,7 +259,6 @@ function generateAlertEmailHtml({
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:8px;">
                       <tr>
                         <td valign="middle">
-                          <span style="color:${t.color}; vertical-align:middle; margin-right:4px;">${ICONS.mapPin}</span>
                           <span style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:${t.color};">
                             Resident Status Advisory
                           </span>
@@ -261,7 +279,6 @@ function generateAlertEmailHtml({
                     </div>
 
                     <div style="font-size:11px; color:#6d818d; border-top:1px solid rgba(0,0,0,0.05); padding-top:10px;">
-                      <span style="color:#2b6e8f; vertical-align:middle; margin-right:4px;">${ICONS.timer}</span>
                       Dispatched: <strong>${pstTime}</strong> · Real-Time Sensor Telemetry
                     </div>
                   </td>
@@ -275,7 +292,6 @@ function generateAlertEmailHtml({
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:12px; border-bottom:1px solid #f1f5f6; padding-bottom:8px;">
                       <tr>
                         <td valign="middle">
-                          <span style="color:#2b6e8f; vertical-align:middle; margin-right:6px;">${ICONS.shield}</span>
                           <span style="font-size:13px; font-weight:700; color:#123a54;">${t.actionTitle}</span>
                         </td>
                         <td align="right" valign="middle">
@@ -321,7 +337,6 @@ function generateAlertEmailHtml({
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:10px;">
                       <tr>
                         <td valign="middle">
-                          <span style="color:#e0522f; vertical-align:middle; margin-right:6px;">${ICONS.phone}</span>
                           <span style="font-size:13px; font-weight:700; color:#123a54;">Verified Emergency Hotlines</span>
                         </td>
                         <td align="right" valign="middle">
@@ -380,10 +395,11 @@ function generateAlertEmailHtml({
 
 /**
  * Generates an aesthetic, responsive HTML email template for subscription confirmation.
- * Strictly NO emojis. All visual cues use clean SVG vector icons and web-tailored tokens.
+ * Strictly NO emojis and NO decorative icons.
  */
 function generateWelcomeEmailHtml({ recipientEmail, unsubscribeUrl, baseUrl = process.env.APP_BASE_URL || 'http://localhost:5173' }) {
   const pstTime = getFormattedPST();
+  const logoSrc = getLogoSrc();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -415,7 +431,7 @@ function generateWelcomeEmailHtml({ recipientEmail, unsubscribeUrl, baseUrl = pr
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                   <td width="46" valign="middle" style="padding-right:12px;">
-                    <img src="${baseUrl}/PUBMAT3.png" alt="Smart Flood Logo" width="40" height="40" style="display:block; width:40px; height:40px; border-radius:50%; border:2px solid rgba(255,255,255,0.7); background-color:#ffffff; padding:1px; object-fit:cover;" />
+                    <img src="${logoSrc}" alt="Smart Flood Logo" width="40" height="40" style="display:block; width:40px; height:40px; border-radius:50%; border:2px solid rgba(255,255,255,0.7); background-color:#ffffff; padding:1px; object-fit:cover;" />
                   </td>
                   <td valign="middle">
                     <div style="color:#ffffff; font-size:19px; font-weight:800; letter-spacing:0.3px; line-height:1.2;">
@@ -443,10 +459,7 @@ function generateWelcomeEmailHtml({ recipientEmail, unsubscribeUrl, baseUrl = pr
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: linear-gradient(135deg, #e5f6ec 0%, #ffffff 85%); border:1px solid #bfe6cf; border-radius:16px; margin-bottom:16px;">
                 <tr>
                   <td style="padding:22px; text-align:center;">
-                    <div style="display:inline-block; width:44px; height:44px; border-radius:50%; background:#2f9463; color:#ffffff; line-height:44px; text-align:center; margin-bottom:10px;">
-                      ${ICONS.check}
-                    </div>
-                    <div style="font-size:20px; font-weight:800; color:#123a54; line-height:1.2; margin-bottom:4px;">
+                    <div style="font-size:20px; font-weight:800; color:#123a54; line-height:1.2; margin-bottom:6px;">
                       Subscription Confirmed
                     </div>
                     <div style="font-size:13px; color:#3f5361; line-height:1.55; max-width:440px; margin:0 auto 12px auto;">
@@ -459,8 +472,6 @@ function generateWelcomeEmailHtml({ recipientEmail, unsubscribeUrl, baseUrl = pr
                 </tr>
               </table>
 
-
-
               <!-- What to Expect Box -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff; border:1px solid #e4edf0; border-radius:16px; padding:16px 18px; margin-bottom:16px;">
                 <tr>
@@ -468,7 +479,6 @@ function generateWelcomeEmailHtml({ recipientEmail, unsubscribeUrl, baseUrl = pr
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:12px; border-bottom:1px solid #f1f5f6; padding-bottom:8px;">
                       <tr>
                         <td valign="middle">
-                          <span style="color:#2b6e8f; vertical-align:middle; margin-right:6px;">${ICONS.shield}</span>
                           <span style="font-size:13px; font-weight:700; color:#123a54;">What You Will Receive</span>
                         </td>
                       </tr>
@@ -482,7 +492,7 @@ function generateWelcomeEmailHtml({ recipientEmail, unsubscribeUrl, baseUrl = pr
                             <tr>
                               <td width="26" valign="top">
                                 <div style="width:20px; height:20px; border-radius:50%; background:rgba(47,148,99,0.15); color:#2f9463; font-size:11px; font-weight:700; text-align:center; line-height:20px;">
-                                  ${ICONS.checkCircle}
+                                  1
                                 </div>
                               </td>
                               <td valign="middle" style="font-size:12px; color:#3f5361; line-height:1.5;">
@@ -498,7 +508,7 @@ function generateWelcomeEmailHtml({ recipientEmail, unsubscribeUrl, baseUrl = pr
                             <tr>
                               <td width="26" valign="top">
                                 <div style="width:20px; height:20px; border-radius:50%; background:rgba(230,145,56,0.15); color:#e69138; font-size:11px; font-weight:700; text-align:center; line-height:20px;">
-                                  ${ICONS.zap}
+                                  2
                                 </div>
                               </td>
                               <td valign="middle" style="font-size:12px; color:#3f5361; line-height:1.5;">
@@ -514,7 +524,7 @@ function generateWelcomeEmailHtml({ recipientEmail, unsubscribeUrl, baseUrl = pr
                             <tr>
                               <td width="26" valign="top">
                                 <div style="width:20px; height:20px; border-radius:50%; background:rgba(43,110,143,0.15); color:#2b6e8f; font-size:11px; font-weight:700; text-align:center; line-height:20px;">
-                                  ${ICONS.shield}
+                                  3
                                 </div>
                               </td>
                               <td valign="middle" style="font-size:12px; color:#3f5361; line-height:1.5;">
@@ -536,7 +546,6 @@ function generateWelcomeEmailHtml({ recipientEmail, unsubscribeUrl, baseUrl = pr
                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:10px;">
                       <tr>
                         <td valign="middle">
-                          <span style="color:#e0522f; vertical-align:middle; margin-right:6px;">${ICONS.phone}</span>
                           <span style="font-size:13px; font-weight:700; color:#123a54;">24/7 Emergency Hotlines</span>
                         </td>
                         <td align="right" valign="middle">
@@ -633,17 +642,20 @@ export async function broadcastEmailAlert({
 
     const defaultTitle =
       level === 1
-        ? 'Level 1 Advisory: River Stage Rising'
+        ? 'Water Level Rising'
         : level === 2
-        ? 'Level 2 Warning: Flood Alert Active'
-        : 'Level 3 Danger: Critical Flood Alert';
+        ? 'Flood Warning Active'
+        : 'Danger Level Reached';
+
+    const cleanTitle = stripEmojis(title || defaultTitle) || defaultTitle;
+    const cleanMessage = stripEmojis(message || 'Flood advisory issued for monitored river basin.');
 
     // 2. Record the AlertBroadcast entry in DB (linking to triggerLog if available)
     const broadcast = await prisma.alertBroadcast.create({
       data: {
         alertLevel: level,
-        title: title || defaultTitle,
-        message: message || 'Flood advisory issued for monitored river basin.',
+        title: cleanTitle,
+        message: cleanMessage,
         waterLevelM: Number(waterLevelM || 0),
         rainfallRateMmh: 0,
         broadcastSource: source,
@@ -661,7 +673,8 @@ export async function broadcastEmailAlert({
     console.log(`[Email] Dispatching Alert (Broadcast ID #${broadcast.id}, Level ${level}) to ${subscribers.length} subscriber(s)...`);
 
     // Clean, emoji-free subject line matching our web portal
-    const cleanSubject = `[Smart Flood] ${title || defaultTitle}`;
+    const cleanSubject = `[Smart Flood] ${cleanTitle}`;
+    const attachments = getLogoAttachment();
 
     // 3. Dispatch concurrently to all matching subscribers
     let sentCount = 0;
@@ -672,8 +685,8 @@ export async function broadcastEmailAlert({
         const unsubscribeUrl = `${appBaseUrl}/api/v1/subscribers/unsubscribe/${sub.unsubscribeToken}`;
         const emailHtml = generateAlertEmailHtml({
           level,
-          title: title || defaultTitle,
-          message,
+          title: cleanTitle,
+          message: cleanMessage,
           waterLevelM,
           recipientName: sub.fullName,
           unsubscribeUrl,
@@ -684,6 +697,7 @@ export async function broadcastEmailAlert({
           to: sub.email,
           subject: cleanSubject,
           html: emailHtml,
+          attachments,
         };
 
         try {
@@ -749,9 +763,9 @@ export async function sendTestEmail({ toEmail, level = 2 }) {
   const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:5173';
 
   const testLevelTitles = {
-    1: 'Level 1 Advisory: River Stage Rising',
-    2: 'Level 2 Warning: Flood Alert Active',
-    3: 'Level 3 Evacuation: Immediate Evacuation Order',
+    1: 'Water Level Rising',
+    2: 'Flood Warning Active',
+    3: 'Danger Level Reached',
   };
 
   const emailHtml = generateAlertEmailHtml({
@@ -769,6 +783,7 @@ export async function sendTestEmail({ toEmail, level = 2 }) {
     to: toEmail,
     subject: `[Smart Flood] System Verification Alert - Level ${level}`,
     html: emailHtml,
+    attachments: getLogoAttachment(),
   });
 
   const previewUrl = isEthereal ? nodemailer.getTestMessageUrl(info) : null;
@@ -807,6 +822,7 @@ export async function sendWelcomeConfirmationEmail({ toEmail, unsubscribeToken }
     to: toEmail,
     subject: '[Smart Flood] Subscription Confirmed - Early Flood Warning System',
     html: emailHtml,
+    attachments: getLogoAttachment(),
   });
 
   const previewUrl = isEthereal ? nodemailer.getTestMessageUrl(info) : null;
