@@ -95,7 +95,7 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
     case 3:
       return {
         badge: 'DANGER LEVEL', icon: AlertTriangle,
-        heroTitle: 'Immediate Evacuation Warning',
+        heroTitle: 'Danger Level Reached',
         heroMsg: 'Water levels have reached critical danger thresholds. Please move immediately to designated high-ground evacuation shelters.',
         actionTitle: 'Immediate Evacuation Order',
         actionItems: [
@@ -124,12 +124,12 @@ function rainIntensityKey(mmHr) {
   return 'heavy';
 }
 
-// ─── Smooth SVG area sparkline for Water Level ────────────────────────────────
+// ─── Line Graph for Water Level (Bottom: Timeframe, Right: Meter Scale) ──────
 function WaterLevelSparkline({ history = [], currentLevel = 0.35, color = '#2f9463' }) {
-  const width = 280;
-  const height = 82;
-  const padY = 18;
-  const padX = 10;
+  const width = 240;
+  const height = 72;
+  const padY = 8;
+  const padX = 8;
   const drawW = width - padX * 2;
   const drawH = height - padY * 2;
 
@@ -145,9 +145,13 @@ function WaterLevelSparkline({ history = [], currentLevel = 0.35, color = '#2f94
         +currentLevel.toFixed(2),
       ];
 
-  const minV = Math.min(...ptsRaw) - 0.04;
-  const maxV = Math.max(...ptsRaw) + 0.04;
-  const range = (maxV - minV) || 0.1;
+  const dataMin = Math.min(...ptsRaw);
+  const dataMax = Math.max(...ptsRaw);
+  const rawSpan = dataMax - dataMin;
+  const minV = rawSpan >= 0.02 ? dataMin : Math.max(0, dataMin - 0.02);
+  const maxV = rawSpan >= 0.02 ? dataMax : dataMax + 0.02;
+  const range = (maxV - minV) || 0.04;
+  const midV = (minV + maxV) / 2;
 
   const coords = ptsRaw.map((v, i) => ({
     x: padX + (i / Math.max(1, ptsRaw.length - 1)) * drawW,
@@ -164,159 +168,188 @@ function WaterLevelSparkline({ history = [], currentLevel = 0.35, color = '#2f94
 
   const last = coords[coords.length - 1];
   const first = coords[0];
-  const areaD = `${pathD} L ${last.x.toFixed(1)} ${height - 14} L ${first.x.toFixed(1)} ${height - 14} Z`;
+  const areaD = `${pathD} L ${last.x.toFixed(1)} ${height} L ${first.x.toFixed(1)} ${height} Z`;
   const gradId = `waterSparkGrad_${color.replace(/[^a-zA-Z0-9]/g, '')}`;
 
-  const startVal = Number(ptsRaw[0] || currentLevel * 0.96).toFixed(2);
-  const liveVal = Number(currentLevel || 0).toFixed(2);
   const time30mAgo = formatTimeOffset(-30);
+  const time15mAgo = formatTimeOffset(-15);
   const timeNow = formatTimeOffset(0);
 
   return (
-    <div className="relative w-full my-auto">
-      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-20 sm:h-24 overflow-visible">
-        <defs>
-          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.35" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
+    <div className="w-full pt-2 border-t border-[#f1f5f6] select-none">
+      <div className="grid grid-cols-[1fr_auto] gap-x-2 items-stretch">
+        {/* Plot Area with Grid & Axes */}
+        <div className="relative bg-[#f8fbfc] border-b border-r border-[#cbdbe2] rounded-tl-lg overflow-hidden">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-20 block">
+            <defs>
+              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+                <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
 
-        {/* Top Meter Values */}
-        <text x={padX} y={13} textAnchor="start" fontSize="10.5" fill="#6d818d" fontWeight="600">
-          {startVal} m
-        </text>
-        <text x={width - padX} y={13} textAnchor="end" fontSize="11" fill={color} fontWeight="700">
-          {liveVal} m Live ●
-        </text>
+            {/* Horizontal Y-axis grid lines (Top, Mid, Bottom) */}
+            <line x1="0" y1={padY} x2={width} y2={padY} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
+            <line x1="0" y1={padY + drawH * 0.5} x2={width} y2={padY + drawH * 0.5} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
+            <line x1="0" y1={padY + drawH} x2={width} y2={padY + drawH} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
 
-        {/* Gradient fill under curve */}
-        <path d={areaD} fill={`url(#${gradId})`} />
-        
-        {/* Bold curve stroke */}
-        <path d={pathD} fill="none" stroke={color} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-        
-        {/* Live endpoint marker */}
-        <circle cx={last.x} cy={last.y} r="3.6" fill={color} stroke="#ffffff" strokeWidth="1.5" />
+            {/* Vertical X-axis timeframe grid lines (Left, Center, Right) */}
+            <line x1={padX} y1="0" x2={padX} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1={width * 0.5} y1="0" x2={width * 0.5} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1={width - padX} y1="0" x2={width - padX} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
 
-        {/* Bottom Actual Timestamps */}
-        <text x={padX} y={height - 2} textAnchor="start" fontSize="9.5" fill="#6d818d" fontWeight="500">
-          {time30mAgo}
-        </text>
-        <text x={width - padX} y={height - 2} textAnchor="end" fontSize="9.5" fill="#6d818d" fontWeight="600">
-          {timeNow} (Now)
-        </text>
-      </svg>
+            {/* Gradient fill under curve */}
+            <path d={areaD} fill={`url(#${gradId})`} />
+
+            {/* Line graph stroke */}
+            <path d={pathD} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+            {/* Start & Live endpoint markers */}
+            <circle cx={first.x} cy={first.y} r="2.8" fill="#ffffff" stroke={color} strokeWidth="1.8" />
+            <circle cx={last.x} cy={last.y} r="3.8" fill={color} stroke="#ffffff" strokeWidth="1.5" />
+          </svg>
+        </div>
+
+        {/* Right Side: Y-Axis Meter Scale */}
+        <div className="flex flex-col justify-between text-[10.5px] font-mono font-semibold text-[#5a7180] py-1 text-right min-w-[44px]">
+          <span className="leading-none" style={{ color }}>{maxV.toFixed(2)} m</span>
+          <span className="leading-none">{midV.toFixed(2)} m</span>
+          <span className="leading-none">{minV.toFixed(2)} m</span>
+        </div>
+
+        {/* Bottom: X-Axis Timeframe Scale */}
+        <div className="flex items-center justify-between text-[10.5px] text-[#5a7180] pt-1.5">
+          <span className="font-medium">{time30mAgo}</span>
+          <span className="font-medium text-[#7b909d]">{time15mAgo}</span>
+          <span className="font-bold text-[#123a54]">{timeNow} (Now)</span>
+        </div>
+
+        {/* Bottom-Right Empty Corner */}
+        <div />
+      </div>
     </div>
   );
 }
 
-// ─── AI Forecast Trajectory Mini-Graph ────────────────────────────────────────
+// ─── AI Forecast Line Graph (Bottom: Timeframe, Right: Meter Scale) ──────────
 function AiForecastSparkline({ currentM = 0.35, p30M = 0.38, p60M = 0.41, color = '#e69138' }) {
-  const width = 280;
-  const height = 82;
-  const padY = 18;
-  const padX = 36;
+  const width = 240;
+  const height = 72;
+  const padY = 8;
+  const padX = 10;
   const drawW = width - padX * 2;
   const drawH = height - padY * 2;
 
-  const vals = [currentM, p30M, p60M];
-  const minV = Math.min(...vals) - 0.05;
-  const maxV = Math.max(...vals) + 0.05;
-  const range = (maxV - minV) || 0.1;
+  const vals = [Number(currentM) || 0, Number(p30M) || 0, Number(p60M) || 0];
+  const dataMin = Math.min(...vals);
+  const dataMax = Math.max(...vals);
+  const rawSpan = dataMax - dataMin;
+  const minV = rawSpan >= 0.02 ? dataMin : Math.max(0, dataMin - 0.02);
+  const maxV = rawSpan >= 0.02 ? dataMax : dataMax + 0.02;
+  const range = (maxV - minV) || 0.04;
+  const midV = (minV + maxV) / 2;
 
   const getY = (val) => padY + drawH - ((val - minV) / range) * drawH;
 
-  const pt0 = { x: padX, y: getY(currentM) };
-  const pt30 = { x: width * 0.5, y: getY(p30M) };
-  const pt60 = { x: width - padX, y: getY(p60M) };
+  const pt0 = { x: padX, y: getY(vals[0]) };
+  const pt30 = { x: width * 0.5, y: getY(vals[1]) };
+  const pt60 = { x: width - padX, y: getY(vals[2]) };
 
   // Confidence error margins (±1.5cm at 30m, ±2.2cm at 60m)
-  const offset30 = Math.max(5, (0.015 / range) * drawH);
-  const offset60 = Math.max(6, (0.022 / range) * drawH);
+  const offset30 = Math.min(12, Math.max(4, (0.015 / range) * drawH));
+  const offset60 = Math.min(16, Math.max(5, (0.022 / range) * drawH));
 
   const coneD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} ` +
-    `L ${pt30.x.toFixed(1)} ${(pt30.y - offset30).toFixed(1)} ` +
-    `L ${pt60.x.toFixed(1)} ${(pt60.y - offset60).toFixed(1)} ` +
-    `L ${pt60.x.toFixed(1)} ${(pt60.y + offset60).toFixed(1)} ` +
-    `L ${pt30.x.toFixed(1)} ${(pt30.y + offset30).toFixed(1)} Z`;
+    `L ${pt30.x.toFixed(1)} ${Math.max(2, pt30.y - offset30).toFixed(1)} ` +
+    `L ${pt60.x.toFixed(1)} ${Math.max(2, pt60.y - offset60).toFixed(1)} ` +
+    `L ${pt60.x.toFixed(1)} ${Math.min(height - 2, pt60.y + offset60).toFixed(1)} ` +
+    `L ${pt30.x.toFixed(1)} ${Math.min(height - 2, pt30.y + offset30).toFixed(1)} Z`;
 
   const lineD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} L ${pt30.x.toFixed(1)} ${pt30.y.toFixed(1)} L ${pt60.x.toFixed(1)} ${pt60.y.toFixed(1)}`;
-  const areaD = `${lineD} L ${pt60.x.toFixed(1)} ${height - 14} L ${pt0.x.toFixed(1)} ${height - 14} Z`;
+  const areaD = `${lineD} L ${pt60.x.toFixed(1)} ${height} L ${pt0.x.toFixed(1)} ${height} Z`;
 
   const timeNow = formatTimeOffset(0);
   const time30m = formatTimeOffset(30);
   const time60m = formatTimeOffset(60);
 
   return (
-    <div className="relative w-full my-auto">
-      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-20 sm:h-24 overflow-visible">
-        <defs>
-          <linearGradient id="aiForecastArea" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.28" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.01" />
-          </linearGradient>
-          <linearGradient id="aiConfidenceCone" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={color} stopOpacity="0.08" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.24" />
-          </linearGradient>
-        </defs>
+    <div className="w-full pt-2 border-t border-[#f1f5f6] select-none">
+      <div className="grid grid-cols-[1fr_auto] gap-x-2 items-stretch">
+        {/* Plot Area with Grid & Axes */}
+        <div className="relative bg-[#f8fbfc] border-b border-r border-[#cbdbe2] rounded-tl-lg overflow-hidden">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-20 block">
+            <defs>
+              <linearGradient id="aiForecastArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity="0.26" />
+                <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+              </linearGradient>
+              <linearGradient id="aiConfidenceCone" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={color} stopOpacity="0.08" />
+                <stop offset="100%" stopColor={color} stopOpacity="0.22" />
+              </linearGradient>
+            </defs>
 
-        {/* Top Meter Values */}
-        <text x={pt0.x} y={13} textAnchor="middle" fontSize="10.5" fill="#123a54" fontWeight="700">
-          {Number(currentM).toFixed(2)}m
-        </text>
-        <text x={pt30.x} y={13} textAnchor="middle" fontSize="11.5" fill={color} fontWeight="800">
-          {Number(p30M).toFixed(2)}m
-        </text>
-        <text x={pt60.x} y={13} textAnchor="middle" fontSize="10.5" fill="#6d818d" fontWeight="700">
-          {Number(p60M).toFixed(2)}m
-        </text>
+            {/* Horizontal Y-axis grid lines (Top, Mid, Bottom) */}
+            <line x1="0" y1={padY} x2={width} y2={padY} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
+            <line x1="0" y1={padY + drawH * 0.5} x2={width} y2={padY + drawH * 0.5} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
+            <line x1="0" y1={padY + drawH} x2={width} y2={padY + drawH} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
 
-        {/* Shaded Confidence Cone */}
-        <path d={coneD} fill="url(#aiConfidenceCone)" />
+            {/* Vertical X-axis timeframe grid lines (Now, +30m, +60m) */}
+            <line x1={pt0.x} y1="0" x2={pt0.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1={pt30.x} y1="0" x2={pt30.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1={pt60.x} y1="0" x2={pt60.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
 
-        {/* Under-line gradient */}
-        <path d={areaD} fill="url(#aiForecastArea)" />
+            {/* Shaded Confidence Cone */}
+            <path d={coneD} fill="url(#aiConfidenceCone)" />
 
-        {/* Forecast Trajectory Line */}
-        <path
-          d={lineD}
-          fill="none"
-          stroke={color}
-          strokeWidth="2.8"
-          strokeDasharray="5 3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+            {/* Under-line gradient */}
+            <path d={areaD} fill="url(#aiForecastArea)" />
 
-        {/* Point: Now */}
-        <circle cx={pt0.x} cy={pt0.y} r="3.2" fill="#123a54" stroke="#ffffff" strokeWidth="1" />
+            {/* Forecast Trajectory Line */}
+            <path
+              d={lineD}
+              fill="none"
+              stroke={color}
+              strokeWidth="2.5"
+              strokeDasharray="5 3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
 
-        {/* Point: +30m */}
-        <circle cx={pt30.x} cy={pt30.y} r="3.8" fill={color} stroke="#ffffff" strokeWidth="1.5" />
+            {/* Point: Now */}
+            <circle cx={pt0.x} cy={pt0.y} r="3.2" fill="#123a54" stroke="#ffffff" strokeWidth="1.4" />
 
-        {/* Point: +60m */}
-        <circle cx={pt60.x} cy={pt60.y} r="3.8" fill="#ffffff" stroke={color} strokeWidth="2.2" />
+            {/* Point: +30m */}
+            <circle cx={pt30.x} cy={pt30.y} r="3.6" fill={color} stroke="#ffffff" strokeWidth="1.5" />
 
-        {/* Bottom Actual Timestamps */}
-        <text x={pt0.x} y={height - 2} textAnchor="middle" fontSize="9" fill="#6d818d" fontWeight="500">
-          {timeNow}
-        </text>
-        <text x={pt30.x} y={height - 2} textAnchor="middle" fontSize="9.5" fill={color} fontWeight="700">
-          {time30m} (+30m)
-        </text>
-        <text x={pt60.x} y={height - 2} textAnchor="middle" fontSize="9" fill="#6d818d" fontWeight="500">
-          {time60m} (+60m)
-        </text>
-      </svg>
+            {/* Point: +60m */}
+            <circle cx={pt60.x} cy={pt60.y} r="3.6" fill="#ffffff" stroke={color} strokeWidth="2" />
+          </svg>
+        </div>
+
+        {/* Right Side: Y-Axis Meter Scale */}
+        <div className="flex flex-col justify-between text-[10.5px] font-mono font-semibold text-[#5a7180] py-0.5 text-right min-w-[44px]">
+          <span className="leading-none" style={{ color }}>{maxV.toFixed(2)} m</span>
+          <span className="leading-none">{midV.toFixed(2)} m</span>
+          <span className="leading-none text-[#123a54]">{minV.toFixed(2)} m</span>
+        </div>
+
+        {/* Bottom: X-Axis Timeframe Scale */}
+        <div className="grid grid-cols-3 items-center text-[10.5px] text-[#5a7180] pt-1.5">
+          <span className="text-left font-medium text-[#123a54]">{timeNow} (Now)</span>
+          <span className="text-center font-bold" style={{ color }}>{time30m}</span>
+          <span className="text-right font-medium">{time60m}</span>
+        </div>
+
+        {/* Bottom-Right Empty Corner */}
+        <div />
+      </div>
     </div>
   );
 }
 
 // ─── Stat Card component ──────────────────────────────────────────────────────
 function AnimatedStatCard({
-  icon: Icon,
   label,
   value,
   numericValue,
@@ -333,54 +366,71 @@ function AnimatedStatCard({
   predicted60m = 0,
 }) {
   const validNum = (numericValue != null && !Number.isNaN(Number(numericValue))) ? Number(numericValue) : 0;
+  const valid30m = (predicted30m != null && !Number.isNaN(Number(predicted30m))) ? Number(predicted30m) : 0;
+  const valid60m = (predicted60m != null && !Number.isNaN(Number(predicted60m))) ? Number(predicted60m) : 0;
   const displayed = useCountUp(validNum, 900, decimals);
+  const displayed30m = useCountUp(valid30m, 900, decimals);
+  const displayed60m = useCountUp(valid60m, 900, decimals);
   const cleanVal = (value || '').replace(/NaN/g, '').trim();
 
   return (
     <div
-      className={`bg-white rounded-2xl p-4 sm:p-5 border border-[#e4edf0] shadow-sm flex flex-col justify-between card-enter card-enter-d${delay} hover:shadow-md transition-shadow duration-300 min-h-[162px]`}
+      className={`bg-white rounded-2xl p-4 sm:p-5 border border-[#e4edf0] shadow-sm flex flex-col justify-between gap-3 card-enter card-enter-d${delay} hover:shadow-md transition-shadow duration-300`}
       title={tooltip}
     >
-      {/* Top Header: Label & Icon */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1.5">
-          <div className="w-6 h-6 rounded-md flex items-center justify-center transition-transform hover:scale-110 flex-shrink-0" style={{ background: `${color}18`, color }}>
-            <Icon size={13} />
-          </div>
-          <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#6d818d]">{label}</span>
+      {/* Top Header & Reading */}
+      <div>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#6d818d]">{label}</span>
+          {trendText && (
+            <span
+              className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: `${color}15`, color }}
+            >
+              {trendText}
+            </span>
+          )}
         </div>
-      </div>
 
-      {/* Main Content: Number on LEFT, Bigger Graph on RIGHT with actual time and meter */}
-      <div className="grid grid-cols-[auto_1fr] gap-3.5 sm:gap-5 items-center my-auto">
-        {/* Left Side: Large Number & Subtext */}
-        <div className="flex flex-col justify-center min-w-[95px] sm:min-w-[125px] flex-shrink-0">
-          <div className="mb-1.5">
-            <span className="font-display text-2xl sm:text-4xl font-bold text-[#123a54] tracking-tight leading-none inline-block">
+        {variant === 'ai' ? (
+          <div className="flex flex-col gap-1.5 pt-0.5">
+            <div className="flex items-baseline justify-between bg-[#f8fbfc] px-3 py-1.5 rounded-xl border border-[#eef4f6]">
+              <span className="text-xs sm:text-sm font-semibold text-[#5a7180]">In 30 mins:</span>
+              <span className="font-display text-lg sm:text-xl font-bold text-[#123a54] tracking-tight leading-none">
+                {displayed30m} m
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between bg-[#f8fbfc] px-3 py-1.5 rounded-xl border border-[#eef4f6]">
+              <span className="text-xs sm:text-sm font-semibold text-[#5a7180]">In 60 mins:</span>
+              <span className="font-display text-lg sm:text-xl font-bold text-[#123a54] tracking-tight leading-none">
+                {displayed60m} m
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-baseline justify-between gap-2 flex-wrap">
+            <span className="font-display text-3xl sm:text-4xl font-bold text-[#123a54] tracking-tight leading-none">
               {numericValue != null && !Number.isNaN(Number(numericValue))
                 ? `${displayed}${cleanVal.replace(/^[\d.\s-]+/, ' ')}`
                 : (cleanVal || '0.00 m')}
             </span>
-            {trendText && (
-              <span className="block text-[11px] sm:text-xs font-semibold text-[#e69138] mt-0.5">
-                ({trendText})
-              </span>
+            {sub && (
+              <p className="text-xs text-[#6d818d] font-medium leading-snug">
+                {sub}
+              </p>
             )}
           </div>
-          <p className="text-[11px] sm:text-xs text-[#6d818d] font-medium leading-tight">
-            {sub}
-          </p>
-        </div>
+        )}
+      </div>
 
-        {/* Right Side: Bigger Graph with Actual Time and Meter */}
-        <div className="min-w-0 flex-1 pl-1 sm:pl-2">
-          {variant === 'water' && (
-            <WaterLevelSparkline history={history} currentLevel={validNum} color={color} />
-          )}
-          {variant === 'ai' && (
-            <AiForecastSparkline currentM={currentLevel} p30M={predicted30m} p60M={predicted60m} color={color} />
-          )}
-        </div>
+      {/* Bottom Full-Width Graph with Crisp Time and Meter Labels */}
+      <div className="w-full">
+        {variant === 'water' && (
+          <WaterLevelSparkline history={history} currentLevel={validNum} color={color} />
+        )}
+        {variant === 'ai' && (
+          <AiForecastSparkline currentM={currentLevel} p30M={predicted30m} p60M={predicted60m} color={color} />
+        )}
       </div>
     </div>
   );
@@ -701,16 +751,24 @@ export default function PublicPortal() {
             </div>
 
             {/* ── STAT CARDS GRID ─────────────────────────────────────────── */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <AnimatedStatCard
-                icon={Droplets}
                 label="Water Level"
                 value={`${telemetry.waterLevelM.toFixed(2)} m`}
                 numericValue={telemetry.waterLevelM}
                 decimals={2}
+                trendText={
+                  telemetry.waterLevelM < 1.2
+                    ? 'Normal'
+                    : telemetry.waterLevelM < 1.6
+                    ? 'Advisory'
+                    : telemetry.waterLevelM < 2.0
+                    ? 'Warning'
+                    : 'Danger'
+                }
                 sub={
                   telemetry.waterDistanceCm <= 25
-                    ? '⚠️ Sensor Limit Reached'
+                    ? 'Sensor Limit Reached'
                     : telemetry.waterLevelM < 1.2
                     ? 'Normal River Depth'
                     : telemetry.waterLevelM < 1.6
@@ -726,13 +784,10 @@ export default function PublicPortal() {
               />
 
               <AnimatedStatCard
-                icon={Zap}
                 label="Flood Forecast"
                 value={`${aiPrediction.predicted30m.toFixed(2)} m`}
                 numericValue={aiPrediction.predicted30m}
                 decimals={2}
-                trendText={aiPrediction.predicted30m >= telemetry.waterLevelM ? 'Rising slowly' : 'Receding'}
-                sub={`In 1 hour: ${aiPrediction.predicted60m.toFixed(2)} m · ${aiPrediction.predicted60m < 1.2 ? 'Normal Flow' : aiPrediction.predicted60m < 1.6 ? 'Advisory' : 'Critical'}`}
                 color="#e69138"
                 tooltip="Antipolo river level forecast for the next 30 and 60 minutes based on real-time upstream conditions"
                 delay={4}
@@ -746,10 +801,7 @@ export default function PublicPortal() {
             {/* ── SAFETY GUIDANCE CARD ────────────────────────────────────── */}
             <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-3 card-enter card-enter-d5">
               <div className="flex items-center justify-between border-b border-[#f1f5f6] pb-2">
-                <div className="flex items-center gap-2">
-                  <Shield size={16} className="text-[#2b6e8f]" />
-                  <h3 className="text-sm font-semibold text-[#123a54]">{friendly.actionTitle}</h3>
-                </div>
+                <h3 className="text-sm font-semibold text-[#123a54]">{friendly.actionTitle}</h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                   style={{ background: `${floodLevel.color}15`, color: floodLevel.color }}>
                   {friendly.badge}

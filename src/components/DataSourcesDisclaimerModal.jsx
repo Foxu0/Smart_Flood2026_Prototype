@@ -224,14 +224,8 @@ export default function DataSourcesDisclaimerModal({ isOpen, onClose }) {
         </div>
 
         {/* Modal Footer (Web Light Theme Accent) */}
-        <div className="bg-[#f1f5f7] px-4 py-2.5 border-t border-[#e2e8f0] flex items-center justify-between text-[10px] text-[#64748b] font-mono">
+        <div className="bg-[#f1f5f7] px-4 py-2.5 border-t border-[#e2e8f0] flex items-center justify-center text-[10px] text-[#64748b] font-mono">
           <span>SmartFlood · Capstone Project 2026</span>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 bg-[#2b6e8f] hover:bg-[#1f6f94] text-white font-bold rounded-lg text-xs transition shadow-sm cursor-pointer flex items-center gap-1 active:scale-95"
-          >
-            Got It
-          </button>
         </div>
       </div>
     </div>

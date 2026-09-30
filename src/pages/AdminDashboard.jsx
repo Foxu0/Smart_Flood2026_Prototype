@@ -98,7 +98,7 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
     default:
       return {
         badge: 'EVACUATE NOW', icon: AlertTriangle,
-        heroTitle: 'Critical Danger Threshold Exceeded',
+        heroTitle: 'Danger Level Reached',
         heroMsg: `Station water level has reached critical danger stage (${telemetry.waterLevelM.toFixed(2)} m). Immediate disaster evacuation protocols in effect.`,
         adviceTitle: 'Immediate Emergency Directives',
         advice: [
@@ -137,22 +137,33 @@ function formatTimeOffset(minutesOffset = 0) {
   }).format(d);
 }
 
-// ─── Water Level Sparkline with Real-Time Nodes & Operator Details ─────────────
+// ─── Line Graph for Water Level (Bottom: Timeframe, Right: Meter Scale) ──────
 function WaterLevelSparkline({ history = [], currentLevel = 0.35, color = '#2f9463' }) {
-  const width = 560;
-  const height = 82;
-  const padY = 18;
-  const padX = 14;
+  const width = 260;
+  const height = 72;
+  const padY = 8;
+  const padX = 8;
   const drawW = width - padX * 2;
   const drawH = height - padY * 2;
 
   const pts = Array.isArray(history) && history.length >= 2
     ? history
-    : [+(currentLevel * 0.96).toFixed(2), +(currentLevel * 0.98).toFixed(2), +(currentLevel * 0.97).toFixed(2), +(currentLevel * 0.99).toFixed(2), +(currentLevel * 1.0).toFixed(2), +currentLevel.toFixed(2)];
+    : [
+        +(currentLevel * 0.96).toFixed(2),
+        +(currentLevel * 0.98).toFixed(2),
+        +(currentLevel * 0.97).toFixed(2),
+        +(currentLevel * 0.99).toFixed(2),
+        +(currentLevel * 1.0).toFixed(2),
+        +currentLevel.toFixed(2),
+      ];
 
-  const minVal = Math.min(...pts) - 0.04;
-  const maxVal = Math.max(...pts) + 0.04;
-  const range = (maxVal - minVal) || 0.1;
+  const dataMin = Math.min(...pts);
+  const dataMax = Math.max(...pts);
+  const rawSpan = dataMax - dataMin;
+  const minVal = rawSpan >= 0.02 ? dataMin : Math.max(0, dataMin - 0.02);
+  const maxVal = rawSpan >= 0.02 ? dataMax : dataMax + 0.02;
+  const range = (maxVal - minVal) || 0.04;
+  const midVal = (minVal + maxVal) / 2;
 
   const coords = pts.map((val, idx) => {
     const x = padX + (idx / Math.max(1, pts.length - 1)) * drawW;
@@ -170,95 +181,105 @@ function WaterLevelSparkline({ history = [], currentLevel = 0.35, color = '#2f94
 
   const last = coords[coords.length - 1];
   const first = coords[0];
-  const areaD = `${pathD} L ${last.x.toFixed(1)} ${height - 14} L ${first.x.toFixed(1)} ${height - 14} Z`;
+  const areaD = `${pathD} L ${last.x.toFixed(1)} ${height} L ${first.x.toFixed(1)} ${height} Z`;
   const gradId = `adminWaterSparkGrad_${color.replace(/[^a-zA-Z0-9]/g, '')}`;
 
-  const startVal = Number(pts[0] || (currentLevel * 0.96)).toFixed(2);
-  const liveVal = Number(currentLevel || 0).toFixed(2);
-  const deltaVal = +(liveVal - startVal).toFixed(2);
-  const deltaText = deltaVal > 0 ? `+${deltaVal.toFixed(2)}m` : deltaVal < 0 ? `${deltaVal.toFixed(2)}m` : '0.00m';
-
-  const timeNow = formatTimeOffset(0);
   const time30mAgo = formatTimeOffset(-30);
+  const time15mAgo = formatTimeOffset(-15);
+  const timeNow = formatTimeOffset(0);
 
   return (
     <div className="relative w-full my-auto select-none">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible block" style={{ minHeight: '80px', maxHeight: '110px' }}>
-        <defs>
-          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.32" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-          </linearGradient>
-        </defs>
+      <div className="grid grid-cols-[1fr_auto] gap-x-2 items-stretch">
+        {/* Plot Area with Grid & Axes */}
+        <div className="relative bg-[#f8fbfc] border-b border-r border-[#cbdbe2] rounded-tl-lg overflow-hidden">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-20 block">
+            <defs>
+              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+                <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
 
-        {/* Subtle horizontal reference grid guides */}
-        <line x1={padX} y1={padY + drawH * 0.3} x2={width - padX} y2={padY + drawH * 0.3} stroke="#eef4f6" strokeWidth="1" strokeDasharray="3 3" />
-        <line x1={padX} y1={padY + drawH * 0.7} x2={width - padX} y2={padY + drawH * 0.7} stroke="#eef4f6" strokeWidth="1" strokeDasharray="3 3" />
+            {/* Horizontal Y-axis grid lines (Top, Mid, Bottom) */}
+            <line x1="0" y1={padY} x2={width} y2={padY} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
+            <line x1="0" y1={padY + drawH * 0.5} x2={width} y2={padY + drawH * 0.5} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
+            <line x1="0" y1={padY + drawH} x2={width} y2={padY + drawH} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
 
-        {/* Top Meter Values & Delta */}
-        <text x={padX} y={13} textAnchor="start" fontSize="11" fill="#6d818d" fontWeight="600">
-          {startVal} m
-        </text>
-        <text x={width * 0.5} y={13} textAnchor="middle" fontSize="10.5" fill="#6d818d" fontWeight="600" className="font-mono">
-          Δ {deltaText}
-        </text>
-        <text x={width - padX} y={13} textAnchor="end" fontSize="11.5" fill={color} fontWeight="700">
-          {liveVal} m Live ●
-        </text>
+            {/* Vertical X-axis timeframe grid lines (Left, Center, Right) */}
+            <line x1={padX} y1="0" x2={padX} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1={width * 0.5} y1="0" x2={width * 0.5} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1={width - padX} y1="0" x2={width - padX} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
 
-        {/* Gradient fill under curve */}
-        <path d={areaD} fill={`url(#${gradId})`} />
-        
-        {/* Bold curve stroke */}
-        <path d={pathD} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        
-        {/* Live endpoint marker */}
-        <circle cx={last.x} cy={last.y} r="4" fill={color} stroke="#ffffff" strokeWidth="2" />
+            {/* Gradient fill under curve */}
+            <path d={areaD} fill={`url(#${gradId})`} />
 
-        {/* Bottom Actual Timestamps */}
-        <text x={padX} y={height - 2} textAnchor="start" fontSize="10" fill="#6d818d" fontWeight="500">
-          {time30mAgo}
-        </text>
-        <text x={width - padX} y={height - 2} textAnchor="end" fontSize="10" fill="#6d818d" fontWeight="600">
-          {timeNow} (Now)
-        </text>
-      </svg>
+            {/* Line graph stroke */}
+            <path d={pathD} fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+
+            {/* Start & Live endpoint markers */}
+            <circle cx={first.x} cy={first.y} r="2.8" fill="#ffffff" stroke={color} strokeWidth="1.8" />
+            <circle cx={last.x} cy={last.y} r="3.8" fill={color} stroke="#ffffff" strokeWidth="1.6" />
+          </svg>
+        </div>
+
+        {/* Right Side: Y-Axis Meter Scale */}
+        <div className="flex flex-col justify-between text-[10.5px] font-mono font-semibold text-[#5a7180] py-1 text-right min-w-[44px]">
+          <span className="leading-none" style={{ color }}>{maxVal.toFixed(2)} m</span>
+          <span className="leading-none">{midVal.toFixed(2)} m</span>
+          <span className="leading-none">{minVal.toFixed(2)} m</span>
+        </div>
+
+        {/* Bottom: X-Axis Timeframe Scale */}
+        <div className="flex items-center justify-between text-[10.5px] text-[#5a7180] pt-1.5">
+          <span className="font-medium">{time30mAgo}</span>
+          <span className="font-medium text-[#7b909d]">{time15mAgo}</span>
+          <span className="font-bold text-[#123a54]">{timeNow} (Now)</span>
+        </div>
+
+        {/* Bottom-Right Empty Corner */}
+        <div />
+      </div>
     </div>
   );
 }
 
-// ─── AI Forecast Trajectory Mini-Graph with Confidence Cone ──────────────────
+// ─── AI Forecast Line Graph (Bottom: Timeframe, Right: Meter Scale) ──────────
 function AiForecastSparkline({ currentM = 0.35, p30M = 0.38, p60M = 0.41, color = '#e69138' }) {
-  const width = 560;
-  const height = 82;
-  const padY = 18;
-  const padX = 36;
+  const width = 260;
+  const height = 72;
+  const padY = 8;
+  const padX = 10;
   const drawW = width - padX * 2;
   const drawH = height - padY * 2;
 
-  const vals = [currentM, p30M, p60M];
-  const minV = Math.min(...vals) - 0.05;
-  const maxV = Math.max(...vals) + 0.05;
-  const range = (maxV - minV) || 0.1;
+  const vals = [Number(currentM) || 0, Number(p30M) || 0, Number(p60M) || 0];
+  const dataMin = Math.min(...vals);
+  const dataMax = Math.max(...vals);
+  const rawSpan = dataMax - dataMin;
+  const minV = rawSpan >= 0.02 ? dataMin : Math.max(0, dataMin - 0.02);
+  const maxV = rawSpan >= 0.02 ? dataMax : dataMax + 0.02;
+  const range = (maxV - minV) || 0.04;
+  const midV = (minV + maxV) / 2;
 
   const getY = (val) => padY + drawH - ((val - minV) / range) * drawH;
 
-  const pt0 = { x: padX, y: getY(currentM) };
-  const pt30 = { x: width * 0.5, y: getY(p30M) };
-  const pt60 = { x: width - padX, y: getY(p60M) };
+  const pt0 = { x: padX, y: getY(vals[0]) };
+  const pt30 = { x: width * 0.5, y: getY(vals[1]) };
+  const pt60 = { x: width - padX, y: getY(vals[2]) };
 
   // Confidence error margins (±1.5cm at 30m, ±2.2cm at 60m)
-  const offset30 = Math.max(5, (0.015 / range) * drawH);
-  const offset60 = Math.max(6, (0.022 / range) * drawH);
+  const offset30 = Math.min(12, Math.max(4, (0.015 / range) * drawH));
+  const offset60 = Math.min(16, Math.max(5, (0.022 / range) * drawH));
 
   const coneD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} ` +
-    `L ${pt30.x.toFixed(1)} ${(pt30.y - offset30).toFixed(1)} ` +
-    `L ${pt60.x.toFixed(1)} ${(pt60.y - offset60).toFixed(1)} ` +
-    `L ${pt60.x.toFixed(1)} ${(pt60.y + offset60).toFixed(1)} ` +
-    `L ${pt30.x.toFixed(1)} ${(pt30.y + offset30).toFixed(1)} Z`;
+    `L ${pt30.x.toFixed(1)} ${Math.max(2, pt30.y - offset30).toFixed(1)} ` +
+    `L ${pt60.x.toFixed(1)} ${Math.max(2, pt60.y - offset60).toFixed(1)} ` +
+    `L ${pt60.x.toFixed(1)} ${Math.min(height - 2, pt60.y + offset60).toFixed(1)} ` +
+    `L ${pt30.x.toFixed(1)} ${Math.min(height - 2, pt30.y + offset30).toFixed(1)} Z`;
 
   const lineD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} L ${pt30.x.toFixed(1)} ${pt30.y.toFixed(1)} L ${pt60.x.toFixed(1)} ${pt60.y.toFixed(1)}`;
-  const areaD = `${lineD} L ${pt60.x.toFixed(1)} ${height - 14} L ${pt0.x.toFixed(1)} ${height - 14} Z`;
+  const areaD = `${lineD} L ${pt60.x.toFixed(1)} ${height} L ${pt0.x.toFixed(1)} ${height} Z`;
 
   const timeNow = formatTimeOffset(0);
   const time30m = formatTimeOffset(30);
@@ -266,70 +287,76 @@ function AiForecastSparkline({ currentM = 0.35, p30M = 0.38, p60M = 0.41, color 
 
   return (
     <div className="relative w-full my-auto select-none">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible block" style={{ minHeight: '80px', maxHeight: '110px' }}>
-        <defs>
-          <linearGradient id="adminAiForecastArea" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.28" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.01" />
-          </linearGradient>
-          <linearGradient id="adminAiConfidenceCone" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={color} stopOpacity="0.08" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.24" />
-          </linearGradient>
-        </defs>
+      <div className="grid grid-cols-[1fr_auto] gap-x-2 items-stretch">
+        {/* Plot Area with Grid & Axes */}
+        <div className="relative bg-[#f8fbfc] border-b border-r border-[#cbdbe2] rounded-tl-lg overflow-hidden">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-20 block">
+            <defs>
+              <linearGradient id="adminAiForecastArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity="0.26" />
+                <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+              </linearGradient>
+              <linearGradient id="adminAiConfidenceCone" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={color} stopOpacity="0.08" />
+                <stop offset="100%" stopColor={color} stopOpacity="0.22" />
+              </linearGradient>
+            </defs>
 
-        {/* Subtle horizontal reference grid guides */}
-        <line x1={padX} y1={padY + drawH * 0.3} x2={width - padX} y2={padY + drawH * 0.3} stroke="#fdf4eb" strokeWidth="1" strokeDasharray="3 3" />
-        <line x1={padX} y1={padY + drawH * 0.7} x2={width - padX} y2={padY + drawH * 0.7} stroke="#fdf4eb" strokeWidth="1" strokeDasharray="3 3" />
+            {/* Horizontal Y-axis grid lines (Top, Mid, Bottom) */}
+            <line x1="0" y1={padY} x2={width} y2={padY} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
+            <line x1="0" y1={padY + drawH * 0.5} x2={width} y2={padY + drawH * 0.5} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
+            <line x1="0" y1={padY + drawH} x2={width} y2={padY + drawH} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
 
-        {/* Top Meter Values */}
-        <text x={pt0.x} y={13} textAnchor="start" fontSize="11" fill="#123a54" fontWeight="700">
-          {Number(currentM).toFixed(2)}m (Now)
-        </text>
-        <text x={pt30.x} y={13} textAnchor="middle" fontSize="12" fill={color} fontWeight="800">
-          {Number(p30M).toFixed(2)}m (+30m)
-        </text>
-        <text x={pt60.x} y={13} textAnchor="end" fontSize="11" fill="#6d818d" fontWeight="700">
-          {Number(p60M).toFixed(2)}m (+60m)
-        </text>
+            {/* Vertical X-axis timeframe grid lines (Now, +30m, +60m) */}
+            <line x1={pt0.x} y1="0" x2={pt0.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1={pt30.x} y1="0" x2={pt30.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
+            <line x1={pt60.x} y1="0" x2={pt60.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
 
-        {/* Shaded Confidence Cone */}
-        <path d={coneD} fill="url(#adminAiConfidenceCone)" />
+            {/* Shaded Confidence Cone */}
+            <path d={coneD} fill="url(#adminAiConfidenceCone)" />
 
-        {/* Under-line gradient */}
-        <path d={areaD} fill="url(#adminAiForecastArea)" />
+            {/* Under-line gradient */}
+            <path d={areaD} fill="url(#adminAiForecastArea)" />
 
-        {/* Forecast Trajectory Line */}
-        <path
-          d={lineD}
-          fill="none"
-          stroke={color}
-          strokeWidth="3"
-          strokeDasharray="6 4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+            {/* Forecast Trajectory Line */}
+            <path
+              d={lineD}
+              fill="none"
+              stroke={color}
+              strokeWidth="2.6"
+              strokeDasharray="6 4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
 
-        {/* Point: Now */}
-        <circle cx={pt0.x} cy={pt0.y} r="3.5" fill="#123a54" stroke="#ffffff" strokeWidth="1.5" />
+            {/* Point: Now */}
+            <circle cx={pt0.x} cy={pt0.y} r="3.5" fill="#123a54" stroke="#ffffff" strokeWidth="1.5" />
 
-        {/* Point: +30m */}
-        <circle cx={pt30.x} cy={pt30.y} r="4.2" fill={color} stroke="#ffffff" strokeWidth="2" />
+            {/* Point: +30m */}
+            <circle cx={pt30.x} cy={pt30.y} r="4" fill={color} stroke="#ffffff" strokeWidth="1.8" />
 
-        {/* Point: +60m */}
-        <circle cx={pt60.x} cy={pt60.y} r="4.2" fill="#ffffff" stroke={color} strokeWidth="2.5" />
+            {/* Point: +60m */}
+            <circle cx={pt60.x} cy={pt60.y} r="4" fill="#ffffff" stroke={color} strokeWidth="2.2" />
+          </svg>
+        </div>
 
-        {/* Bottom Actual Timestamps */}
-        <text x={pt0.x} y={height - 2} textAnchor="start" fontSize="10" fill="#6d818d" fontWeight="500">
-          {timeNow}
-        </text>
-        <text x={pt30.x} y={height - 2} textAnchor="middle" fontSize="10.5" fill={color} fontWeight="700">
-          {time30m}
-        </text>
-        <text x={pt60.x} y={height - 2} textAnchor="end" fontSize="10" fill="#6d818d" fontWeight="500">
-          {time60m}
-        </text>
-      </svg>
+        {/* Right Side: Y-Axis Meter Scale */}
+        <div className="flex flex-col justify-between text-[10.5px] font-mono font-semibold text-[#5a7180] py-1 text-right min-w-[44px]">
+          <span className="leading-none" style={{ color }}>{maxV.toFixed(2)} m</span>
+          <span className="leading-none">{midV.toFixed(2)} m</span>
+          <span className="leading-none text-[#123a54]">{minV.toFixed(2)} m</span>
+        </div>
+
+        {/* Bottom: X-Axis Timeframe Scale */}
+        <div className="grid grid-cols-3 items-center text-[10.5px] text-[#5a7180] pt-1.5">
+          <span className="text-left font-medium text-[#123a54]">{timeNow} (Now)</span>
+          <span className="text-center font-bold" style={{ color }}>{time30m}</span>
+          <span className="text-right font-medium">{time60m}</span>
+        </div>
+
+        {/* Bottom-Right Empty Corner */}
+        <div />
+      </div>
     </div>
   );
 }
@@ -452,22 +479,21 @@ function AnimatedStatCard({
   rainRate = 0,
 }) {
   const validNum = (numericValue != null && !Number.isNaN(Number(numericValue))) ? Number(numericValue) : 0;
+  const valid30m = (predicted30m != null && !Number.isNaN(Number(predicted30m))) ? Number(predicted30m) : 0;
+  const valid60m = (predicted60m != null && !Number.isNaN(Number(predicted60m))) ? Number(predicted60m) : 0;
   const displayed = useCountUp(validNum, 900, decimals);
+  const displayed30m = useCountUp(valid30m, 900, decimals);
+  const displayed60m = useCountUp(valid60m, 900, decimals);
   const cleanVal = (value || '').replace(/NaN/g, '').trim();
 
   return (
     <div
-      className={`bg-white rounded-2xl p-4 sm:p-5 border border-[#e4edf0] shadow-sm flex flex-col justify-between card-enter card-enter-d${delay} hover:shadow-md transition-shadow duration-300 min-h-[176px]`}
+      className={`bg-white rounded-2xl p-4 sm:p-5 border border-[#e4edf0] shadow-sm flex flex-col gap-2.5 card-enter card-enter-d${delay} hover:shadow-md transition-shadow duration-300`}
       title={tooltip}
     >
       {/* Top Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1.5">
-          <div className="w-6 h-6 rounded-md flex items-center justify-center transition-transform hover:scale-110 flex-shrink-0" style={{ background: `${color}18`, color }}>
-            <Icon size={13} />
-          </div>
-          <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#6d818d]">{label}</span>
-        </div>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[#6d818d]">{label}</span>
         {badge && (
           <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#123a54]/5 text-[#123a54] border border-[#123a54]/10">
             {badge}
@@ -476,24 +502,41 @@ function AnimatedStatCard({
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-[200px_1fr] gap-4 items-center my-auto">
+      <div className="grid grid-cols-[200px_1fr] gap-4 items-start">
         {/* Left: Big number + metadata */}
-        <div className="flex flex-col justify-center flex-shrink-0">
-          <div className="mb-1">
-            <span className="font-display text-3xl font-bold text-[#123a54] tracking-tight leading-none inline-block">
-              {numericValue != null && !Number.isNaN(Number(numericValue))
-                ? `${displayed}${cleanVal.replace(/^[\d.\s-]+/, ' ')}`
-                : (cleanVal || '—')}
-            </span>
-            {trendText && (
-              <span className="block text-[10.5px] font-semibold mt-0.5" style={{ color }}>
-                {trendText}
+        <div className="flex flex-col justify-start flex-shrink-0 pt-0.5">
+          {variant === 'ai' ? (
+            <div className="flex flex-col gap-1.5 mb-1.5">
+              <div className="flex items-baseline justify-between bg-[#f8fbfc] px-2.5 py-1.5 rounded-lg border border-[#eef4f6]">
+                <span className="text-xs font-semibold text-[#5a7180]">In 30 mins:</span>
+                <span className="font-display text-lg font-bold text-[#123a54] tracking-tight leading-none">
+                  {displayed30m} m
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between bg-[#f8fbfc] px-2.5 py-1.5 rounded-lg border border-[#eef4f6]">
+                <span className="text-xs font-semibold text-[#5a7180]">In 60 mins:</span>
+                <span className="font-display text-lg font-bold text-[#123a54] tracking-tight leading-none">
+                  {displayed60m} m
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-1">
+              <span className="font-display text-3xl font-bold text-[#123a54] tracking-tight leading-none inline-block">
+                {numericValue != null && !Number.isNaN(Number(numericValue))
+                  ? `${displayed}${cleanVal.replace(/^[\d.\s-]+/, ' ')}`
+                  : (cleanVal || '—')}
               </span>
-            )}
-          </div>
-          <p className="text-[11px] font-bold text-[#123a54] leading-tight mb-1">{sub}</p>
-          {detailLine1 && <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight">{detailLine1}</p>}
-          {detailLine2 && <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight mt-0.5">{detailLine2}</p>}
+              {trendText && (
+                <span className="block text-[10.5px] font-semibold mt-0.5" style={{ color }}>
+                  {trendText}
+                </span>
+              )}
+            </div>
+          )}
+          {variant !== 'ai' && sub && <p className="text-[11px] font-bold text-[#123a54] leading-tight mb-1">{sub}</p>}
+          {variant !== 'ai' && detailLine1 && <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight">{detailLine1}</p>}
+          {variant !== 'ai' && detailLine2 && <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight mt-0.5">{detailLine2}</p>}
         </div>
 
         {/* Right: Chart or Vitals */}
@@ -1278,27 +1321,7 @@ export default function FloodMonitoringDashboard() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
-              {/* WS status */}
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
-                wsConnected
-                  ? 'bg-[#2f9463]/25 border border-[#2f9463]/50 text-emerald-300'
-                  : 'bg-amber-500/25 border border-amber-500/50 text-amber-300'
-              }`}>
-                <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-[#2f9463] animate-ping' : 'bg-amber-400'}`} />
-                {wsConnected ? 'LIVE WS' : 'CONNECTING WS'}
-              </div>
-
-              {/* Email Alerts Modal Button */}
-              <button
-                onClick={() => setShowEmailModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-sky-500/25 border border-sky-400/50 text-sky-200 hover:bg-sky-500/40 active:scale-95 transition-all shadow-sm cursor-pointer"
-                title="Manage Community Email Subscribers and Broadcast Alerts"
-              >
-                <Mail size={13} />
-                <span>Email Alerts</span>
-              </button>
-
-              <div className="text-right hidden lg:block border-l border-white/20 pl-3 sm:pl-4">
+              <div className="text-right hidden sm:block">
                 <p className="text-[9px] text-sky-200 uppercase tracking-wide">Local time</p>
                 <p className="text-base font-mono font-semibold leading-tight">{pst}</p>
                 <p className="text-[10px] text-sky-100/80">{date}</p>
@@ -1350,32 +1373,19 @@ export default function FloodMonitoringDashboard() {
             <div className="grid grid-cols-1 gap-3">
 
               {/* Card 1: Water Level — side-by-side layout with timeframe + export */}
-              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#e4edf0] shadow-sm flex flex-col gap-3 card-enter card-enter-d2 hover:shadow-md transition-shadow duration-300">
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#e4edf0] shadow-sm flex flex-col gap-2.5 card-enter card-enter-d2 hover:shadow-md transition-shadow duration-300">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: `${floodLevel.color}18`, color: floodLevel.color }}>
-                      <Droplets size={13} />
-                    </div>
-                    <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#6d818d]">Water Level</span>
-                  </div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#6d818d]">Water Level</span>
                   <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#123a54]/5 text-[#123a54] border border-[#123a54]/10">JSN-SR04T</span>
                 </div>
 
                 {/* Side-by-side: metric left, sparkline right */}
-                <div className="grid grid-cols-[200px_1fr] gap-4 items-center">
-                  <div className="flex flex-col justify-center">
-                    <span className="font-display text-3xl font-bold text-[#123a54] tracking-tight leading-none">
+                <div className="grid grid-cols-[140px_1fr] gap-4 items-start">
+                  <div className="flex flex-col justify-start pt-1">
+                    <span className="font-display text-3xl sm:text-4xl font-bold text-[#123a54] tracking-tight leading-none">
                       {telemetry.waterLevelM.toFixed(2)} m
                     </span>
-                    <span className="block text-[10.5px] font-semibold mt-0.5" style={{ color: floodLevel.color }}>
-                      {floodLevel.id === 0 ? '▼ Normal' : floodLevel.id === 1 ? '▲ Watch' : floodLevel.id === 2 ? '▲▲ Warning' : '▲▲▲ DANGER'}
-                    </span>
-                    <p className="text-[11px] font-bold text-[#123a54] leading-tight mt-1">
-                      {telemetry.waterDistanceCm <= 25 ? '⚠ Transducer Limit' : `${telemetry.waterDistanceCm} cm to transducer`}
-                    </p>
-                    <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight mt-0.5">L1: {thresholds.level1_watch}m · L2: {thresholds.level2_alarm}m</p>
-                    <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight">L3 Danger: {thresholds.level3_danger}m</p>
                   </div>
                   <div className="min-w-0">
                     <WaterLevelSparkline history={activeHistory.map(h => h.waterLevel)} currentLevel={telemetry.waterLevelM} color={floodLevel.color} />
@@ -1537,37 +1547,57 @@ export default function FloodMonitoringDashboard() {
             {/* Interactive Dynamic Leaflet Weather Map Card with severity beacon */}
             <WeatherMapCard severity={floodLevel.id} />
 
-            {/* ── ESP32 SYSTEM & THRESHOLD CONTROLS CARD ────────────────────── */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-4">
-              <div className="flex items-center justify-between border-b border-[#f1f5f6] pb-3">
-                <div className="flex items-center gap-2">
-                  <Cpu size={16} className="text-[#2b6e8f]" />
-                  <h2 className="text-sm font-semibold text-[#123a54]">ESP32 Node &amp; System Controls</h2>
+            {/* ── SYSTEM CONTROLS & ALERTS CARD ─────────────────────────────── */}
+            <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-5">
+              {/* Card Header */}
+              <div className="flex items-start justify-between gap-2 border-b border-[#f1f5f6] pb-3">
+                <div>
+                  <h2 className="text-base font-bold text-[#123a54] leading-tight">System Controls &amp; Alerts</h2>
+                  <p className="text-[11px] text-[#6d818d] mt-0.5">Manage flood warning levels, siren broadcast, and resident alerts</p>
                 </div>
-                <span className="text-[10px] bg-[#2f9463]/15 text-[#2f9463] font-bold px-2 py-0.5 rounded-full border border-[#2f9463]/30">
-                  ADMIN MONITORING
+                <span className="text-[10px] bg-[#e5f6ec] text-[#2f9463] font-bold px-2.5 py-1 rounded-full border border-[#bfe6cf] flex-shrink-0">
+                  Admin Control
                 </span>
               </div>
 
-              {/* Alert Threshold Sliders */}
-              <div>
-                <h3 className="text-xs font-bold text-[#123a54] mb-1 flex items-center gap-1.5">
-                  <Sliders size={14} className="text-[#2b6e8f]" /> Alert Threshold Settings (Meters)
-                </h3>
-                <p className="text-[10px] text-[#6d818d] mb-3">Adjust trigger levels for automated siren &amp; warnings.</p>
-                <div className="space-y-3.5 text-xs bg-[#fbfdfe] rounded-xl p-3 border border-[#eef2f3]">
+              {/* Flood Alert Threshold Sliders */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#5a7180]">
+                    Flood Alert Thresholds
+                  </h3>
+                  <span className="text-[10.5px] font-medium text-[#8fa3b0]">Scale: 0.50 m – 2.40 m</span>
+                </div>
+
+                <div className="space-y-2.5">
                   {[
-                    { key: 'level1_watch', label: 'Level 1 — Advisory Watch', min: 0.5, max: 1.5, color: '#2b6e8f' },
-                    { key: 'level2_alarm', label: 'Level 2 — Siren Warning Alarm', min: 1.2, max: 1.9, color: '#e69138' },
-                    { key: 'level3_danger', label: 'Level 3 — Emergency Danger', min: 1.6, max: 2.5, color: '#e0522f' },
-                  ].map(({ key, label, min, max, color }) => {
-                    const val = thresholds[key] || min;
+                    { key: 'level1_watch', badge: 'Level 1', label: 'Advisory Watch', desc: 'Early water rise notice', min: 0.5, max: 2.4, color: '#2b6e8f', soft: '#e6f2f8' },
+                    { key: 'level2_alarm', badge: 'Level 2', label: 'Warning Alarm', desc: 'Triggers automated warning siren', min: 0.5, max: 2.4, color: '#e69138', soft: '#fdf1de' },
+                    { key: 'level3_danger', badge: 'Level 3', label: 'Danger Level', desc: 'Critical threshold', min: 0.5, max: 2.4, color: '#e0522f', soft: '#fce7e0' },
+                  ].map(({ key, badge, label, desc, min, max, color, soft }) => {
+                    const val = Number(thresholds[key] || min);
                     const pct = Math.min(100, Math.max(0, ((val - min) / (max - min)) * 100));
                     return (
-                      <div key={key}>
-                        <div className="flex justify-between mb-1 text-[11px]">
-                          <span className="text-[#3f5361] font-semibold">{label}</span>
-                          <span className="font-bold font-mono" style={{ color }}>{val} m</span>
+                      <div key={key} className="bg-[#f8fbfc] rounded-xl p-3 border border-[#eef4f6] space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0"
+                              style={{ backgroundColor: soft, color }}
+                            >
+                              {badge}
+                            </span>
+                            <div className="truncate">
+                              <span className="text-xs font-bold text-[#123a54]">{label}</span>
+                              <span className="hidden sm:inline text-[10.5px] text-[#6d818d] ml-1.5">· {desc}</span>
+                            </div>
+                          </div>
+                          <span
+                            className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-white border border-[#e4edf0] flex-shrink-0"
+                            style={{ color }}
+                          >
+                            {val.toFixed(2)} m
+                          </span>
                         </div>
                         <input
                           type="range"
@@ -1577,10 +1607,10 @@ export default function FloodMonitoringDashboard() {
                           value={val}
                           onChange={e => setThresholds({ ...thresholds, [key]: parseFloat(e.target.value) })}
                           style={{
-                            background: `linear-gradient(to right, ${color} 0%, ${color} ${pct}%, #eef4f6 ${pct}%, #eef4f6 100%)`,
+                            background: `linear-gradient(to right, ${color} 0%, ${color} ${pct}%, #e2ecef ${pct}%, #e2ecef 100%)`,
                             '--thumb-color': color,
                           }}
-                          className="w-full h-2 rounded-lg cursor-pointer transition-all"
+                          className="w-full h-2 rounded-full cursor-pointer block"
                         />
                       </div>
                     );
@@ -1588,50 +1618,77 @@ export default function FloodMonitoringDashboard() {
                 </div>
               </div>
 
-              {/* Manual Siren Relay Controls */}
-              <div className="pt-2 border-t border-[#f1f5f6]">
-                <h3 className="text-xs font-bold text-[#123a54] mb-2 flex items-center gap-1.5">
-                  <Volume2 size={14} className="text-[#e0522f]" /> Manual Siren Relay Override
+              {/* Station Operations & Maintenance */}
+              <div className="space-y-2.5 pt-2 border-t border-[#f1f5f6]">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#5a7180]">
+                  Station Operations &amp; Maintenance
                 </h3>
-                <button
-                  onClick={toggleSiren}
-                  title={sirenActive ? 'Click to silence siren relay (S)' : 'Click to test / activate siren relay (S)'}
-                  className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all border hover:scale-[1.01] active:scale-95 ${
-                    sirenActive
-                      ? 'bg-rose-600 hover:bg-rose-700 text-white border-rose-700'
-                      : 'bg-[#2b6e8f] hover:bg-[#1f6f94] text-white border-[#245e7b]'
-                  }`}
-                >
-                  {sirenActive ? (
-                    <>
-                      <VolumeX size={14} />
-                      <span>SIREN IS ACTIVE — CLICK TO SILENCE</span>
-                      <kbd className="text-[8px] bg-black/20 rounded px-1.5 py-0.5 ml-1">S</kbd>
-                    </>
-                  ) : (
-                    <>
-                      <Volume2 size={14} />
-                      <span>TEST / ACTIVATE SIREN (TOGGLE ON)</span>
-                      <kbd className="text-[8px] bg-white/20 rounded px-1.5 py-0.5 ml-1">S</kbd>
-                    </>
-                  )}
-                </button>
-              </div>
 
-              {/* Reset Telemetry Data */}
-              <div className="pt-2 border-t border-[#f1f5f6]">
-                <h3 className="text-xs font-bold text-[#123a54] mb-1.5 flex items-center gap-1.5">
-                  <RotateCcw size={14} className="text-gray-500" /> Database &amp; Telemetry Maintenance
-                </h3>
-                <button
-                  onClick={handleResetTestTelemetry}
-                  disabled={isResetting}
-                  className="w-full py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#3f5361] font-bold text-xs border border-gray-300 flex items-center justify-center gap-1.5 shadow-sm transition hover:scale-[1.01] active:scale-95 disabled:opacity-50"
-                  title="Purge database logs and reset telemetry baseline"
-                >
-                  <RotateCcw size={13} className={isResetting ? 'animate-spin' : ''} />
-                  {isResetting ? 'RESETTING TELEMETRY...' : 'RESET TELEMETRY LOGS'}
-                </button>
+                {/* 1. Emergency Siren Override */}
+                <div className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-colors ${
+                  sirenActive ? 'bg-rose-50/70 border-rose-200' : 'bg-[#f8fbfc] border-[#eef4f6]'
+                }`}>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-bold text-[#123a54]">Emergency Siren</p>
+                      <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full ${
+                        sirenActive ? 'bg-rose-100 text-rose-700' : 'bg-[#e4edf0] text-[#5a7180]'
+                      }`}>
+                        {sirenActive ? 'Active' : 'Standby'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#6d818d] mt-0.5">
+                      {sirenActive ? 'Siren is currently sounding at the station' : 'Manually test or activate the station siren'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={toggleSiren}
+                    title={sirenActive ? 'Click to silence siren (Shortcut: S)' : 'Click to activate siren (Shortcut: S)'}
+                    className={`w-36 h-9 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border shadow-2xs transition-all flex-shrink-0 cursor-pointer active:scale-95 ${
+                      sirenActive
+                        ? 'bg-rose-600 hover:bg-rose-700 text-white border-rose-700'
+                        : 'bg-[#2b6e8f] hover:bg-[#1f6f94] text-white border-[#245e7b]'
+                    }`}
+                  >
+                    {sirenActive ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                    <span>{sirenActive ? 'Silence Siren' : 'Activate Siren'}</span>
+                  </button>
+                </div>
+
+                {/* 2. Community Email Alerts */}
+                <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#f8fbfc] border border-[#eef4f6]">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-[#123a54]">Community Email Alerts</p>
+                    <p className="text-[11px] text-[#6d818d] mt-0.5">
+                      View subscribed residents and send email advisories
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowEmailModal(true)}
+                    className="w-36 h-9 rounded-xl bg-white hover:bg-[#e6f2f8] text-[#123a54] font-bold text-xs border border-[#cbdbe2] flex items-center justify-center gap-1.5 shadow-2xs transition-all flex-shrink-0 cursor-pointer active:scale-95"
+                  >
+                    <Mail size={14} className="text-[#2b6e8f]" />
+                    <span>Manage Alerts</span>
+                  </button>
+                </div>
+
+                {/* 3. Reset Telemetry Data */}
+                <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#f8fbfc] border border-[#eef4f6]">
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-[#123a54]">Reset Sensor Logs</p>
+                    <p className="text-[11px] text-[#6d818d] mt-0.5">
+                      Clear test history and reset water level baseline
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleResetTestTelemetry}
+                    disabled={isResetting}
+                    className="w-36 h-9 rounded-xl bg-white hover:bg-gray-100 text-[#5a7180] hover:text-[#123a54] font-bold text-xs border border-[#cbdbe2] flex items-center justify-center gap-1.5 shadow-2xs transition-all flex-shrink-0 cursor-pointer active:scale-95 disabled:opacity-50"
+                  >
+                    <RotateCcw size={13} className={isResetting ? 'animate-spin' : ''} />
+                    <span>{isResetting ? 'Resetting...' : 'Reset Logs'}</span>
+                  </button>
+                </div>
               </div>
             </div>
 
