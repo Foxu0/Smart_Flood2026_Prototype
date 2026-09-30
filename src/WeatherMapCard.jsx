@@ -204,18 +204,18 @@ export default function WeatherMapCard() {
           : 'h-[340px] sm:h-[460px] bg-[#05131e]'
       }`}>
 
-        {/* 🌧️ Sleek Modern Glassmorphic Radar Scale Capsule */}
+        {/* 🌧️ Ultra-Transparent Glassmorphic Radar Scale Capsule */}
         {mapViewMode === 'doppler' && (
-          <div className="absolute bottom-3 right-3 z-[1000] bg-slate-900/80 hover:bg-slate-900/90 backdrop-blur-md border border-white/15 text-white px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2.5 transition-all select-none">
-            <div className="flex items-center gap-1.5 text-[9px] font-semibold text-slate-300 uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="absolute bottom-3 right-3 z-[1000] bg-black/20 hover:bg-black/35 backdrop-blur-md border border-white/20 text-white px-3 py-1.5 rounded-full shadow-md flex items-center gap-2.5 transition-all select-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+            <div className="flex items-center gap-1.5 text-[9px] font-semibold text-white/90 uppercase tracking-wider drop-shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]" />
               <span>Rain Intensity</span>
             </div>
-            <div className="h-3 w-px bg-white/20" />
-            <div className="flex items-center gap-1.5 text-[9px] font-medium text-slate-400">
+            <div className="h-3 w-px bg-white/25" />
+            <div className="flex items-center gap-1.5 text-[9px] font-medium text-white/80 drop-shadow-sm">
               <span>Light</span>
               <div
-                className="h-1.5 w-16 sm:w-20 rounded-full shadow-inner"
+                className="h-1.5 w-16 sm:w-20 rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.5)] border border-black/20"
                 style={{
                   background: 'linear-gradient(90deg, #38bdf8 0%, #22c55e 28%, #eab308 55%, #f97316 78%, #ef4444 100%)',
                 }}
