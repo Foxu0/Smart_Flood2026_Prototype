@@ -980,47 +980,7 @@ export default function FloodMonitoringDashboard() {
               </div>
             </div>
 
-            {/* Predictive AI Flood Projection */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 flex flex-col justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-[#123a54] mb-3 flex items-center gap-2">
-                  <Zap size={16} className="text-[#e69138]" /> Predictive AI Flood Projection
-                </h2>
-                <div className="space-y-2.5">
-                  {[
-                    { label: '30-Minute AI Horizon', value: `${aiPrediction.predicted30m.toFixed(2)} m`, delta: `+${(aiPrediction.predicted30m - telemetry.waterLevelM).toFixed(2)}m`, margin: 'MAE ±1.5 cm', r2: '82.6%', level: getFloodLevel(aiPrediction.predicted30m) },
-                    { label: '60-Minute AI Horizon', value: `${aiPrediction.predicted60m.toFixed(2)} m`, delta: `+${(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2)}m`, margin: 'MAE ±2.2 cm', r2: '62.9%', level: getFloodLevel(aiPrediction.predicted60m) },
-                  ].map(({ label, value, delta, margin, r2, level }) => (
-                    <div key={label} className="flex items-center justify-between p-3 rounded-xl border" style={{ background: level.soft, borderColor: level.border }}>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-[11px] font-bold text-[#6d818d]">{label}</p>
-                          <span className="text-[9px] font-mono font-medium text-[#2b6e8f] bg-white/80 px-1.5 py-0.5 rounded border border-[#2b6e8f]/20 shadow-2xs">
-                            {margin}
-                          </span>
-                        </div>
-                        <div className="flex items-baseline gap-2 mt-0.5">
-                          <p className="font-display text-lg font-bold" style={{ color: level.color }}>{value}</p>
-                          <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-white/90 border border-black/5 shadow-2xs" style={{ color: level.color }}>
-                            ▲ {delta} delta
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: `${level.color}20`, color: level.color }}>
-                          {level.label}
-                        </span>
-                        <p className="text-[9px] text-[#6d818d] font-mono mt-1">R²: {r2}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="pt-2 border-t border-[#f1f5f6] flex items-center justify-between text-[11px] text-[#6d818d] flex-wrap gap-1">
-                <span>Model Test Validation:</span>
-                <span>MAE <b className="text-[#123a54]">±1.5 cm</b> (+30m) / <b className="text-[#123a54]">±2.2 cm</b> (+60m) · R² <b className="text-[#123a54]">82.6%</b></span>
-              </div>
-            </div>
+
 
             {/* Activity feed */}
             <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 flex-1 flex flex-col justify-between">
