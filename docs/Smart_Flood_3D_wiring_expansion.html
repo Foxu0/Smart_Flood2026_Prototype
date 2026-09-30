@@ -35,6 +35,7 @@ ol.n{padding-left:20px;max-width:80ch}
 <div class="bar" id="bar">
   <button data-t="" class="act">All wires</button><button data-t="AWG">22 AWG solid</button><button data-t="MM">M-M jumpers</button><button data-t="FM">F-M jumpers</button>
   <button id="bl">Labels</button><button id="bi">Angled view</button><button id="bt">Top view</button>
+  <a id="btnSim" href="#" target="_blank" style="text-decoration:none;display:inline-flex;align-items:center;padding:5px 14px;border:1px solid var(--ac);background:var(--ac);color:var(--bg);border-radius:999px;font-size:13px;font-weight:600;margin-left:auto;">📡 ESP32 Simulator</a>
 </div>
 <div class="lg">
   <span><i class="dot" style="background:#d62828"></i>+12V</span><span><i class="dot" style="background:#ef8a1c"></i>+5V</span><span><i class="dot" style="background:#222"></i>GND</span><span><i class="dot" style="background:#2f6fdb"></i>Signal</span>
@@ -588,6 +589,14 @@ document.querySelector('ol.n').innerHTML=
 [['TRIG joint (col 19)',19],['IN joint (col 26)',26]].forEach(([t,c])=>{const p=P(X(c),Y.a,0);lab(t,.4,p.x,2.3,p.z-1.2,'rgba(255,240,180,.95)')});
 lab('MB-102 Split Rail Bridge (Cols 29 → 31)', .42, P(X(30), 280, 0).x, 2.3, P(X(30), 280, 0).z-1.2, 'rgba(255,225,180,.95)');
 
+const simLink = document.getElementById('btnSim');
+if (simLink) {
+  if (window.location.port === '5174') {
+    simLink.href = '/';
+  } else {
+    simLink.href = window.location.protocol + '//' + window.location.hostname + ':5174/';
+  }
+}
 </script>
 </body>
 </html>

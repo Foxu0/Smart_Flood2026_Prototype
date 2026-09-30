@@ -55,16 +55,18 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Send a real welcome confirmation email immediately upon subscription
-    let dispatchResult = null;
-    try {
-      dispatchResult = await sendWelcomeConfirmationEmail({
-        toEmail: cleanEmail,
-        unsubscribeToken: subscriber.unsubscribeToken,
-      });
-    } catch (err) {
-      console.warn(`[Subscribers] Welcome email trigger notice:`, err.message);
-    }
+    // Dispatch welcome confirmation email asynchronously in background
+    // Do NOT block the user's registration response waiting for SMTP/Ethereal network roundtrips
+    setImmediate(async () => {
+      try {
+        await sendWelcomeConfirmationEmail({
+          toEmail: cleanEmail,
+          unsubscribeToken: subscriber.unsubscribeToken,
+        });
+      } catch (err) {
+        console.warn(`[Subscribers] Background welcome email trigger notice:`, err.message);
+      }
+    });
 
     return res.status(201).json({
       success: true,

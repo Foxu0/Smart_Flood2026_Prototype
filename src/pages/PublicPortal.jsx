@@ -802,9 +802,10 @@ export default function PublicPortal() {
             <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-3 card-enter card-enter-d5">
               <div className="flex items-center justify-between border-b border-[#f1f5f6] pb-2">
                 <h3 className="text-sm font-semibold text-[#123a54]">{friendly.actionTitle}</h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1"
                   style={{ background: `${floodLevel.color}15`, color: floodLevel.color }}>
-                  {friendly.badge}
+                  <friendly.icon size={11} className="flex-shrink-0" />
+                  <span>{friendly.badge}</span>
                 </span>
               </div>
 

@@ -32,16 +32,21 @@ export default function EmailSubscriptionCard({ onNotification }) {
     }
 
     setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/subscribers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           email,
           minAlertLevel: 1,
           subscriberRole: 'RESIDENT',
         }),
       });
+      clearTimeout(timeoutId);
 
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -63,7 +68,12 @@ export default function EmailSubscriptionCard({ onNotification }) {
         });
       }
     } catch (err) {
-      setErrorMsg(err.message || 'Subscription failed. Please try again.');
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        setErrorMsg('The server took too long to respond. Please try again in a few moments.');
+      } else {
+        setErrorMsg(err.message || 'Subscription failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

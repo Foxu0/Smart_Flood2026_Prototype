@@ -95,9 +95,9 @@ function ToastItem({ toast, onDismiss }) {
       {/* Content */}
       <div className="flex-1 min-w-0">
         <p className={`text-xs font-bold ${cfg.text}`}>
-          {toast.severity === 'danger' ? '⚠ FLOOD ALERT' :
-           toast.severity === 'warning' ? '⚠ WARNING' :
-           toast.severity === 'success' ? '✓ STATUS UPDATE' : 'ℹ INFO'}
+          {toast.severity === 'danger' ? 'FLOOD ALERT' :
+           toast.severity === 'warning' ? 'WARNING' :
+           toast.severity === 'success' ? 'STATUS UPDATE' : 'INFO'}
         </p>
         <p className="text-[11px] text-[#3f5361] leading-snug mt-0.5 font-medium">
           {toast.message}

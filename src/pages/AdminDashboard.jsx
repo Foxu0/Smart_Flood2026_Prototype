@@ -691,7 +691,7 @@ export default function FloodMonitoringDashboard() {
       });
       const json = await res.json();
       if (json.success) {
-        pushToast('warning', '⏹️ Scenario Stopped', 'Scenario playback halted.');
+        pushToast('warning', 'Scenario Stopped', 'Scenario playback halted.');
         setScenarioState(prev => ({ ...prev, isRunning: false }));
       }
     } catch (err) {
@@ -1174,8 +1174,8 @@ export default function FloodMonitoringDashboard() {
       const msgs = [
         '',
         'Water level has entered WATCH range (>1.2 m). Stay alert.',
-        '⚠ Water is rising fast — now in ALARM range (>1.6 m). Prepare to act.',
-        '🚨 DANGER LEVEL reached (>2.0 m). Move to higher ground immediately!',
+        'Water is rising fast — now in ALARM range (>1.6 m). Prepare to act.',
+        'DANGER LEVEL reached (>2.0 m). Move to higher ground immediately!',
       ];
       const severityMap = ['info', 'info', 'warning', 'danger'];
       pushToast({

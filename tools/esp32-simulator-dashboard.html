@@ -152,17 +152,21 @@
         </div>
       </div>
 
-      <!-- Target Server Endpoint Selector -->
-      <div class="flex items-center gap-2.5 w-full md:w-auto justify-end">
+      <!-- Target Server Endpoint Selector & 3D Wiring Link -->
+      <div class="flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap">
+        <a href="/wiring" target="_blank" class="px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-semibold text-xs rounded-xl shadow-lg shadow-teal-500/20 transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m16 6-4 4-4-4"/><path d="M16 18a4 4 0 0 0-8 0"/></svg>
+          <span>3D Wiring Model</span>
+        </a>
         <div class="text-right text-xs text-sky-200/80 hidden sm:block">
           <span class="block text-[9px] uppercase font-bold text-sky-400">Target Ingestion Server</span>
           <span class="font-mono text-[11px] text-sky-100">POST /api/v1/telemetry</span>
         </div>
         <select id="targetEndpointSelect" onchange="handleEndpointChange()" class="bg-[#0b2030] text-sky-100 border border-sky-500/30 text-xs rounded-xl px-3 py-2 font-mono outline-none focus:border-sky-400 transition cursor-pointer">
-          <option value="https://smart-flood2026-prototype.onrender.com/api/v1/telemetry">☁️ Render Cloud Production</option>
-          <option value="http://localhost:3001/api/v1/telemetry">💻 Localhost (Port 3001)</option>
-          <option value="http://localhost:5000/api/v1/telemetry">💻 Localhost (Port 5000)</option>
-          <option value="custom">✏️ Custom Endpoint URL...</option>
+          <option value="https://smart-flood2026-prototype.onrender.com/api/v1/telemetry">Render Cloud Production</option>
+          <option value="http://localhost:3001/api/v1/telemetry">Localhost (Port 3001)</option>
+          <option value="http://localhost:5000/api/v1/telemetry">Localhost (Port 5000)</option>
+          <option value="custom">Custom Endpoint URL...</option>
         </select>
         <input id="customEndpointInput" type="text" placeholder="https://..." class="hidden bg-[#0b2030] text-sky-100 border border-sky-500/30 text-xs rounded-xl px-3 py-2 font-mono outline-none w-56" />
       </div>
@@ -197,7 +201,7 @@
         <div class="bg-[#081b29] rounded-xl p-4 border border-cyan-500/30 flex flex-col justify-between shadow-lg relative overflow-hidden group">
           <div class="flex items-center justify-between border-b border-cyan-500/20 pb-2">
             <div class="flex items-center gap-1.5">
-              <span class="text-cyan-400 text-sm">🌊</span>
+              <svg class="w-3.5 h-3.5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20M2 6h20M2 18h20"/></svg>
               <span class="text-xs font-bold text-cyan-200 tracking-wide uppercase">JSN-SR04T Transducer</span>
             </div>
             <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/50">
@@ -274,7 +278,7 @@
         <div class="pcb-board rounded-xl p-4 flex flex-col justify-between shadow-lg relative group">
           <div class="flex items-center justify-between border-b border-cyan-700/50 pb-2">
             <div class="flex items-center gap-1.5">
-              <span class="text-emerald-400 text-sm">🔲</span>
+              <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
               <span class="text-xs font-bold text-emerald-200 tracking-wide uppercase">ESP32-WROOM-32 MCU</span>
             </div>
             <div class="flex items-center gap-1 text-[9px] font-mono text-emerald-300">
@@ -289,7 +293,7 @@
             <!-- Wi-Fi PCB Meander Antenna -->
             <div class="flex items-center justify-between bg-amber-900/40 px-2 py-1 rounded border border-amber-600/40">
               <div class="flex items-center gap-1.5">
-                <span class="text-[10px] text-amber-300">📡</span>
+                <svg class="w-3.5 h-3.5 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M12 12h.01"/></svg>
                 <span class="text-[10px] font-mono text-amber-200 font-bold">2.4 GHz Antenna</span>
               </div>
               <span id="wifiRssiBadge" class="text-[10px] font-mono font-bold text-emerald-400">-56 dBm</span>
@@ -345,7 +349,7 @@
         <div id="actuatorCard" class="bg-[#121824] rounded-xl p-4 border border-slate-700 flex flex-col justify-between shadow-lg relative transition-all duration-300">
           <div class="flex items-center justify-between border-b border-slate-700 pb-2">
             <div class="flex items-center gap-1.5">
-              <span class="text-amber-400 text-sm">🚨</span>
+              <svg class="w-3.5 h-3.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
               <span class="text-xs font-bold text-slate-200 tracking-wide uppercase">Relay &amp; Siren Actuator</span>
             </div>
             <span id="relayStatusTag" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-gray-400 border border-gray-700">
@@ -368,7 +372,7 @@
                 </div>
               </div>
               <div id="relayContactState" class="text-[10px] font-mono font-bold text-gray-400">
-                [COM ⚡ NO: OPEN]
+                [COM ➔ NO: OPEN]
               </div>
             </div>
 
@@ -376,7 +380,7 @@
             <div id="sirenGraphicBox" class="p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 flex items-center justify-between transition-all duration-200">
               <div class="flex items-center gap-2.5">
                 <div id="sirenHornIcon" class="w-10 h-10 rounded-full bg-slate-800 text-gray-400 flex items-center justify-center text-xl transition-all">
-                  📢
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
                 </div>
                 <div>
                   <div class="text-xs font-bold text-white">12V High-dB Siren</div>
@@ -385,7 +389,7 @@
               </div>
               <!-- Alarm Beacon Strobe Indicator -->
               <div id="strobeBeacon" class="w-7 h-7 rounded-full bg-red-950 border border-red-800/60 flex items-center justify-center text-red-500 text-xs">
-                🚨
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
               </div>
             </div>
 
@@ -412,7 +416,7 @@
         <div class="bg-[#0f1d2e] rounded-xl p-4 border border-indigo-500/30 flex flex-col justify-between shadow-lg relative group">
           <div class="flex items-center justify-between border-b border-indigo-500/20 pb-2">
             <div class="flex items-center gap-1.5">
-              <span class="text-indigo-400 text-sm">🤖</span>
+              <svg class="w-3.5 h-3.5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
               <span class="text-xs font-bold text-indigo-200 tracking-wide uppercase">Node.js &amp; ONNX AI</span>
             </div>
             <span id="lastHttpStatusBadge" class="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
@@ -443,11 +447,11 @@
           <!-- Downstream Dispatches -->
           <div class="bg-[#050c14] p-2.5 rounded border border-indigo-950 text-[10px] font-mono space-y-1 text-sky-200/80">
             <div class="flex items-center justify-between">
-              <span>📧 Email Alert:</span>
+              <span class="flex items-center gap-1.5"><svg class="w-3 h-3 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Email Alert:</span>
               <span id="emailDispatchStatus" class="font-bold text-gray-400">Standby (L1+ req.)</span>
             </div>
             <div class="flex items-center justify-between">
-              <span>📡 WebSocket Stream:</span>
+              <span class="flex items-center gap-1.5"><svg class="w-3 h-3 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M12 12h.01"/></svg> WebSocket Stream:</span>
               <span class="font-bold text-emerald-400">Broadcasting (/ws)</span>
             </div>
           </div>
@@ -462,7 +466,7 @@
       <!-- ── INTERACTIVE COMMUNICATION BUS VISUALIZER WIRE ────────────────── -->
       <div class="bg-[#050f17] rounded-xl p-3 border border-sky-500/20 text-xs font-mono flex items-center justify-between flex-wrap gap-2">
         <div class="flex items-center gap-2">
-          <span class="text-sky-400">⚡</span>
+          <svg class="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           <span class="font-bold text-sky-200">Live Communication Pipeline:</span>
           <span id="pipelineStatusStep" class="text-sky-300 font-sans text-xs">
             [JSN-SR04T Echo: 240cm] ➔ [ESP32 ADC / GPIO 18] ➔ [Wi-Fi HTTP POST] ➔ [Node.js ONNX Server]
@@ -483,7 +487,8 @@
       <div class="lg:col-span-6 glass-card rounded-2xl p-5 space-y-4 shadow-xl">
         <div class="flex items-center justify-between border-b border-white/10 pb-3">
           <h3 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2">
-            <span>🎛️</span> Manual Hardware Transducer Controls
+            <svg class="w-4 h-4 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+            Manual Hardware Transducer Controls
           </h3>
           <span class="text-xs font-mono text-sky-400 font-bold" id="levelSliderDisplay">0.00 m</span>
         </div>
@@ -507,8 +512,8 @@
           <div class="flex justify-between text-[10px] text-sky-200/70 font-mono pt-1">
             <span>0.00m (Dry)</span>
             <span class="text-sky-300">1.20m (L1 Advisory)</span>
-            <span class="text-amber-400">1.60m (L2 Siren 🚨)</span>
-            <span class="text-red-400">2.00m (L3 Danger 🚨)</span>
+            <span class="text-amber-400">1.60m (L2 Siren)</span>
+            <span class="text-red-400">2.00m (L3 Danger)</span>
           </div>
         </div>
 
@@ -518,7 +523,8 @@
             onclick="transmitManualPacket()" 
             class="w-full py-3 bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-sky-500/25 transition flex items-center justify-center gap-2 cursor-pointer active:scale-98"
           >
-            <span>📡 Transmit Hardware Telemetry Packet (ESP32 ➔ API)</span>
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M12 12h.01"/></svg>
+            <span>Transmit Hardware Telemetry Packet (ESP32 ➔ API)</span>
           </button>
 
           <!-- Quick Jump Buttons for Key Calibrated Thresholds -->
@@ -530,10 +536,10 @@
               1.20m (L1)
             </button>
             <button onclick="setStagePreset(1.60)" class="py-1.5 px-2 rounded-lg bg-[#0b2030] hover:bg-[#123147] border border-amber-600 text-amber-300 transition cursor-pointer">
-              1.60m (L2 🚨)
+              1.60m (L2)
             </button>
             <button onclick="setStagePreset(2.00)" class="py-1.5 px-2 rounded-lg bg-[#0b2030] hover:bg-[#123147] border border-red-600 text-red-300 transition cursor-pointer">
-              2.00m (L3 🚨)
+              2.00m (L3)
             </button>
           </div>
         </div>
@@ -543,7 +549,8 @@
       <div class="lg:col-span-6 glass-card rounded-2xl p-5 space-y-4 shadow-xl">
         <div class="flex items-center justify-between border-b border-white/10 pb-3">
           <h3 class="text-sm font-bold text-sky-300 uppercase tracking-wider flex items-center gap-2">
-            <span>⚡</span> Automated Hydrograph Storm Scenarios
+            <svg class="w-4 h-4 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Automated Hydrograph Storm Scenarios
           </h3>
           <span class="text-[10px] font-mono text-sky-400">Pre-programmed Test Streams</span>
         </div>
@@ -551,7 +558,9 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <button onclick="runScenario('surge')" class="p-3 bg-[#0a1e2d] hover:bg-[#102d42] border border-red-500/30 hover:border-red-400 rounded-xl text-left transition space-y-1 cursor-pointer">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-red-300">🌊 Flash Flood Storm Surge</span>
+              <span class="text-xs font-bold text-red-300 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20M2 6h20M2 18h20"/></svg> Flash Flood Storm Surge
+              </span>
               <span class="text-[10px] font-mono text-red-400">48 Steps</span>
             </div>
             <p class="text-[11px] text-sky-200/70 leading-snug">Rises through 1.20m (L1) &amp; 1.60m (L2 Siren) up to 2.05m (L3 Danger Crest) then recedes.</p>
@@ -559,7 +568,9 @@
 
           <button onclick="runScenario('moderate')" class="p-3 bg-[#0a1e2d] hover:bg-[#102d42] border border-sky-500/30 hover:border-sky-400 rounded-xl text-left transition space-y-1 cursor-pointer">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-sky-300">💧 Moderate Stream Rise</span>
+              <span class="text-xs font-bold text-sky-300 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg> Moderate Stream Rise
+              </span>
               <span class="text-[10px] font-mono text-sky-400">24 Steps</span>
             </div>
             <p class="text-[11px] text-sky-200/70 leading-snug">Rises steadily to 1.35m Level 1 Advisory, holding plateau before gradual recession.</p>
@@ -567,7 +578,9 @@
 
           <button onclick="runScenario('calm')" class="p-3 bg-[#0a1e2d] hover:bg-[#102d42] border border-emerald-500/30 hover:border-emerald-400 rounded-xl text-left transition space-y-1 cursor-pointer">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-emerald-300">🍃 Calm Dry Baseline</span>
+              <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Calm Dry Baseline
+              </span>
               <span class="text-[10px] font-mono text-emerald-400">12 Steps</span>
             </div>
             <p class="text-[11px] text-sky-200/70 leading-snug">Transmits steady 0.35m normal baseflow with realistic ultrasonic acoustic jitter.</p>
@@ -575,11 +588,15 @@
 
           <button id="autoStreamBtn" onclick="toggleAutoStream()" class="p-3 bg-[#0a1e2d] hover:bg-[#102d42] border border-purple-500/30 hover:border-purple-400 rounded-xl text-left transition space-y-1 cursor-pointer">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-purple-300">🔄 Auto Stream Loop (5s)</span>
+              <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg> Auto Stream Loop (5s)
+              </span>
               <span id="autoStreamBadge" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">OFF</span>
             </div>
             <p class="text-[11px] text-sky-200/70 leading-snug">Continuously streams telemetry packets every 5 seconds until toggled OFF.</p>
           </button>
+        </div>
+      </div>
         </div>
       </div>
 
@@ -589,7 +606,7 @@
     <div class="glass-card rounded-2xl p-5 space-y-3 shadow-xl">
       <div class="flex items-center justify-between border-b border-white/10 pb-3 flex-wrap gap-2">
         <div class="flex items-center gap-2">
-          <span class="text-sky-400">📟</span>
+          <svg class="w-4 h-4 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
           <h3 class="text-xs sm:text-sm font-bold text-sky-300 uppercase tracking-wider">
             ESP32 Virtual Serial Monitor (COM Port 115200 Baud)
           </h3>
@@ -667,7 +684,7 @@
       // 3. Blind spot check (<25cm)
       const blindEl = document.getElementById('blindSpotBadge');
       if (distanceCm <= 25) {
-        blindEl.innerText = '⚠️ BLIND SPOT (<25cm)';
+        blindEl.innerText = 'BLIND SPOT (<25cm)';
         blindEl.className = 'text-amber-400 font-bold';
       } else {
         blindEl.innerText = 'Clear (>25cm)';
@@ -692,18 +709,18 @@
       const gpio34 = document.getElementById('gpio34Voltage');
 
       if (sirenActive) {
-        relayTag.innerText = 'ARMED (ENERGIZED 🚨)';
+        relayTag.innerText = 'ARMED (ENERGIZED)';
         relayTag.className = 'text-[9px] font-mono px-2 py-0.5 rounded-full bg-red-950 text-red-300 border border-red-500/50 animate-pulse';
-        relayContact.innerText = '[COM ⚡ NO: CLOSED 🚨]';
+        relayContact.innerText = '[COM ➔ NO: CLOSED]';
         relayContact.className = 'text-[10px] font-mono font-bold text-red-400';
-        gpio26.innerText = 'HIGH (3.3V ⚡)';
+        gpio26.innerText = 'HIGH (3.3V)';
         gpio26.className = 'text-red-400 font-bold';
 
         sirenBox.className = 'p-3 rounded-xl bg-red-950/40 border border-red-500/80 flex items-center justify-between siren-flashing';
-        sirenDecibel.innerText = '110 dB (HIGH ALERT 🚨)';
+        sirenDecibel.innerText = '110 dB (HIGH ALERT)';
         sirenDecibel.className = 'text-[10px] font-mono font-bold text-red-300';
-        sirenHorn.className = 'w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center text-xl shadow-lg shadow-red-500/50';
-        strobe.className = 'w-7 h-7 rounded-full bg-red-500 border border-white text-white text-xs flex items-center justify-center animate-ping';
+        sirenHorn.className = 'w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-500/50';
+        strobe.className = 'w-7 h-7 rounded-full bg-red-500 border border-white text-white flex items-center justify-center animate-ping';
 
         batteryDrain.innerText = 'High Load (12.1V)';
         batteryDrain.className = 'font-bold text-amber-400 text-sm';
@@ -825,19 +842,19 @@
         const emailEl = document.getElementById('emailDispatchStatus');
 
         if (alertCode.includes('L3')) {
-          alertEl.innerText = '🚨 L3 DANGER (≥2.00m)';
+          alertEl.innerText = 'L3 DANGER (≥2.00m)';
           alertEl.className = 'font-bold text-red-400 text-xs';
-          emailEl.innerText = 'Dispatched 🚨 (Level 3)';
+          emailEl.innerText = 'Dispatched (Level 3)';
           emailEl.className = 'font-bold text-red-400';
         } else if (alertCode.includes('L2')) {
-          alertEl.innerText = '⚠️ L2 WARNING (≥1.60m)';
+          alertEl.innerText = 'L2 WARNING (≥1.60m)';
           alertEl.className = 'font-bold text-amber-300 text-xs';
-          emailEl.innerText = 'Dispatched ⚠️ (Level 2)';
+          emailEl.innerText = 'Dispatched (Level 2)';
           emailEl.className = 'font-bold text-amber-300';
         } else if (alertCode.includes('L1')) {
-          alertEl.innerText = 'ℹ️ L1 ADVISORY (≥1.20m)';
+          alertEl.innerText = 'L1 ADVISORY (≥1.20m)';
           alertEl.className = 'font-bold text-yellow-300 text-xs';
-          emailEl.innerText = 'Dispatched ℹ️ (Level 1)';
+          emailEl.innerText = 'Dispatched (Level 1)';
           emailEl.className = 'font-bold text-yellow-300';
         } else {
           alertEl.innerText = 'NORMAL (<1.20m)';
@@ -848,7 +865,7 @@
 
         // Serial Print Log in Monitor
         logMessage(
-          `[HTTP ${res.status}] Echo: ${rawDistance}cm | Stage: <b>${stageM}m</b> | Alert: <span class="${alertCode.includes('L') ? 'text-amber-300 font-bold' : 'text-emerald-400'}">${alertCode}</span> | AI +30m: ${ai30m}m (${aiConf}) | Siren: ${relayActive ? 'ACTIVE 🚨' : 'OFF'} | Latency: ${latencyMs}ms ${comment ? `(${comment})` : ''}`
+          `[HTTP ${res.status}] Echo: ${rawDistance}cm | Stage: <b>${stageM}m</b> | Alert: <span class="${alertCode.includes('L') ? 'text-amber-300 font-bold' : 'text-emerald-400'}">${alertCode}</span> | AI +30m: ${ai30m}m (${aiConf}) | Siren: ${relayActive ? 'ACTIVE' : 'OFF'} | Latency: ${latencyMs}ms ${comment ? `(${comment})` : ''}`
         );
 
       } catch (err) {
@@ -879,10 +896,10 @@
         { stage: 1.25, delay: 3000, desc: "BREACH: LEVEL 1 ADVISORY (Email Alert Dispatched)" },
         { stage: 1.42, delay: 2800, desc: "Torrential Runoff Accelerating" },
         // Phase 4: Level 2 Warning & Siren (1.60m+)
-        { stage: 1.62, delay: 2500, desc: "BREACH: LEVEL 2 WARNING (GPIO 26 HIGH -> SIREN ON 🚨)" },
+        { stage: 1.62, delay: 2500, desc: "BREACH: LEVEL 2 WARNING (GPIO 26 HIGH -> SIREN ON)" },
         { stage: 1.80, delay: 2500, desc: "Severe Storm Surge Rising" },
         // Phase 5: Level 3 Danger Crest (2.00m+)
-        { stage: 2.05, delay: 3000, desc: "BREACH: LEVEL 3 DANGER (Peak Hydrograph Crest 🚨)" },
+        { stage: 2.05, delay: 3000, desc: "BREACH: LEVEL 3 DANGER (Peak Hydrograph Crest)" },
         { stage: 2.02, delay: 3000, desc: "Peak Crest Plateau (Evacuation Active)" },
         // Phase 6: Drainage & Recession Limb
         { stage: 1.85, delay: 3500, desc: "Inflow Peaked, Drainage Commencing" },
@@ -935,7 +952,7 @@
         badge.className = 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300';
         logMessage('[AUTO STREAM] Continuous loop stopped.', 'text-amber-300');
       } else {
-        badge.innerText = 'ACTIVE 🔄';
+        badge.innerText = 'ACTIVE';
         badge.className = 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 animate-pulse';
         logMessage('[AUTO STREAM] Started continuous streaming (1 packet every 5s)...', 'text-emerald-400 font-bold');
 

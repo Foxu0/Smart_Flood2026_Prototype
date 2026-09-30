@@ -57,6 +57,9 @@ async function getTransporter() {
       isGmail
         ? {
             service: 'gmail',
+            connectionTimeout: 5000,
+            greetingTimeout: 5000,
+            socketTimeout: 10000,
             auth: {
               user: SMTP_USER.trim(),
               pass: SMTP_PASS.replace(/\s+/g, ''),
@@ -66,6 +69,9 @@ async function getTransporter() {
             host: SMTP_HOST.trim(),
             port: Number(SMTP_PORT) || 587,
             secure: SMTP_SECURE === 'true' || Number(SMTP_PORT) === 465,
+            connectionTimeout: 5000,
+            greetingTimeout: 5000,
+            socketTimeout: 10000,
             auth: {
               user: SMTP_USER.trim(),
               pass: SMTP_PASS.trim(),
@@ -76,12 +82,18 @@ async function getTransporter() {
     console.log(`[Email] Configured SMTP transporter (${isGmail ? 'Gmail Service' : `${SMTP_HOST}:${SMTP_PORT}`}) with user ${SMTP_USER}`);
   } else {
     try {
-      console.log('[Email] No SMTP credentials in .env — creating Ethereal test account for preview links...');
-      const testAccount = await nodemailer.createTestAccount();
+      console.log('[Email] No SMTP credentials in .env — creating Ethereal test account (with 3s timeout)...');
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Ethereal account creation timed out after 3s')), 3000)
+      );
+      const testAccount = await Promise.race([nodemailer.createTestAccount(), timeoutPromise]);
       transporterCache = nodemailer.createTransport({
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,
+        connectionTimeout: 4000,
+        greetingTimeout: 4000,
+        socketTimeout: 6000,
         auth: {
           user: testAccount.user,
           pass: testAccount.pass,
@@ -90,7 +102,7 @@ async function getTransporter() {
       isEthereal = true;
       console.log(`[Email] Ethereal test mailbox created: ${testAccount.user}`);
     } catch (err) {
-      console.error('[Email] Failed to create Ethereal test account, using json transport mock:', err.message);
+      console.warn('[Email] Falling back to instant JSON mock transporter:', err.message);
       transporterCache = nodemailer.createTransport({ jsonTransport: true });
       isEthereal = false;
     }

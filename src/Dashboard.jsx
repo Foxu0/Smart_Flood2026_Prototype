@@ -572,8 +572,8 @@ export default function FloodMonitoringDashboard() {
       const msgs = [
         '',
         'Water level has entered WATCH range (>1.2 m). Stay alert.',
-        '⚠ Water is rising fast — now in ALARM range (>1.6 m). Prepare to act.',
-        '🚨 DANGER LEVEL reached (>2.0 m). Move to higher ground immediately!',
+        'Water is rising fast — now in ALARM range (>1.6 m). Prepare to act.',
+        'DANGER LEVEL reached (>2.0 m). Move to higher ground immediately!',
       ];
       const severityMap = ['info', 'info', 'warning', 'danger'];
       pushToast({
@@ -774,7 +774,7 @@ export default function FloodMonitoringDashboard() {
                 value={`${telemetry.waterLevelM.toFixed(2)} m`}
                 numericValue={telemetry.waterLevelM}
                 decimals={2}
-                sub={telemetry.waterDistanceCm <= 25 ? '⚠️ Transducer Limit (25cm blind spot)' : `${telemetry.waterDistanceCm} cm to sensor transducer`}
+                sub={telemetry.waterDistanceCm <= 25 ? 'Transducer Limit (25cm blind spot)' : `${telemetry.waterDistanceCm} cm to sensor transducer`}
                 bar={Math.min(100, (telemetry.waterLevelM / 1.8) * 100)}
                 color={floodLevel.color}
                 tooltip="JSN-SR04T ultrasonic sensor measured water column height"
