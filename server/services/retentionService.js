@@ -10,6 +10,10 @@ export async function purgeOldData(retentionDays = 30) {
   const days = Math.max(1, parseInt(retentionDays) || 30);
   const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
+  if (!process.env.DATABASE_URL) {
+    return { success: true, message: 'Database retention skipped (in-memory mode).' };
+  }
+
   try {
     console.log(`[Retention] Running database purge for records older than ${days} days (cutoff: ${cutoffDate.toISOString()})...`);
 

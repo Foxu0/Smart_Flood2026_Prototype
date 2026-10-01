@@ -6,6 +6,10 @@ import { purgeOldData } from '../services/retentionService.js';
 import { broadcastEmailAlert } from '../services/emailService.js';
 import { recordPrediction, recordActualAndEvaluate, getEvaluationMetrics } from '../services/aiEvaluationService.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
+import { memoryEvents } from './events.js';
+
+export const memoryTelemetryLogs = [];
+let memoryLatestProjection = null;
 
 const router = express.Router();
 
@@ -85,8 +89,24 @@ router.post('/', async (req, res) => {
 
     // ── 6. Persist telemetry log ───────────────────────────────────────────
     // Maintain backward-compatibility with DB schemas where rainfall fields were NOT NULL
-    const log = await prisma.telemetryLog.create({
-      data: {
+    let log;
+    try {
+      log = await prisma.telemetryLog.create({
+        data: {
+          waterLevelM: water_level_m,
+          rawDistanceCm: raw_distance_cm,
+          rainfallRateMmh: 0,
+          tipCount: 0,
+          rssiDbm: rssi_dbm,
+          supplyVoltageV: supply_voltage,
+          uptimeSec: uptime_sec,
+          sensorStatus: sensor_status,
+        },
+      });
+    } catch (_dbErr) {
+      log = {
+        id: memoryTelemetryLogs.length + 1,
+        recordedAt: now,
         waterLevelM: water_level_m,
         rawDistanceCm: raw_distance_cm,
         rainfallRateMmh: 0,
@@ -95,8 +115,10 @@ router.post('/', async (req, res) => {
         supplyVoltageV: supply_voltage,
         uptimeSec: uptime_sec,
         sensorStatus: sensor_status,
-      },
-    });
+      };
+    }
+    memoryTelemetryLogs.unshift(log);
+    if (memoryTelemetryLogs.length > 500) memoryTelemetryLogs.pop();
 
     // Evaluate actual reading against past predictions
     recordActualAndEvaluate(log);
@@ -127,25 +149,45 @@ router.post('/', async (req, res) => {
 
     let event = null;
     if (eventCode) {
-      event = await prisma.systemEvent.create({
-        data: {
+      try {
+        event = await prisma.systemEvent.create({
+          data: {
+            eventCode,
+            message: eventMsg,
+            severity,
+            telemetryLogId: log.id,
+          },
+        });
+      } catch (_e) {
+        event = {
+          id: memoryEvents.length + 1,
+          createdAt: now.toISOString(),
+          timestamp: now.toISOString(),
+          event_code: eventCode,
           eventCode,
           message: eventMsg,
           severity,
           telemetryLogId: log.id,
-        },
-      });
+        };
+      }
+      memoryEvents.unshift(event);
+      if (memoryEvents.length > 100) memoryEvents.pop();
     }
 
     // ── 8. Build history buffer for inline LSTM inference ─────────────────
-    // Fetch last 5 DB records + the new reading = sliding window of 6
+    // Fetch last 5 records + the new reading = sliding window of 6
     let projection = null;
     try {
-      const recentLogs = await prisma.telemetryLog.findMany({
-        orderBy: { recordedAt: 'desc' },
-        take: 5,
-        select: { waterLevelM: true },
-      });
+      let recentLogs = [];
+      try {
+        recentLogs = await prisma.telemetryLog.findMany({
+          orderBy: { recordedAt: 'desc' },
+          take: 5,
+          select: { waterLevelM: true },
+        });
+      } catch (_e) {
+        recentLogs = memoryTelemetryLogs.slice(1, 6).map(r => ({ waterLevelM: r.waterLevelM }));
+      }
 
       // Combine: older records first, newest (current) last
       const chronological = [
@@ -156,6 +198,7 @@ router.post('/', async (req, res) => {
       const historyBuffer = buildHistoryBuffer(chronological);
       projection = await getPrediction(historyBuffer);
       if (projection) {
+        memoryLatestProjection = projection;
         recordPrediction(projection);
       }
     } catch (inferErr) {
@@ -228,15 +271,24 @@ router.post('/', async (req, res) => {
 // Returns latest MLProjection row; triggers a fresh DB-backed inference if stale.
 router.get('/projection', async (req, res) => {
   try {
-    const latest = await prisma.mLProjection.findFirst({
-      orderBy: { generatedAt: 'desc' },
-    });
+    let latest = null;
+    try {
+      latest = await prisma.mLProjection.findFirst({
+        orderBy: { generatedAt: 'desc' },
+      });
+    } catch (_e) {
+      latest = memoryLatestProjection;
+    }
 
     if (!latest) {
       // No projection yet — run one on demand
-      const fresh = await runPredictionInference();
-      if (!fresh) return res.json({ success: true, data: null, message: 'No telemetry data available for projection.' });
-      return res.json({ success: true, data: fresh });
+      try {
+        const fresh = await runPredictionInference();
+        if (!fresh) return res.json({ success: true, data: null, message: 'No telemetry data available for projection.' });
+        return res.json({ success: true, data: fresh });
+      } catch (_e) {
+        return res.json({ success: true, data: memoryLatestProjection });
+      }
     }
 
     res.json({ success: true, data: latest });
@@ -249,18 +301,30 @@ router.get('/projection', async (req, res) => {
 // ── GET /api/v1/telemetry/latest ─────────────────────────────────────────────
 router.get('/latest', async (req, res) => {
   try {
-    const latest = await prisma.telemetryLog.findFirst({
-      orderBy: { recordedAt: 'desc' },
-    });
+    let latest = null;
+    try {
+      latest = await prisma.telemetryLog.findFirst({
+        orderBy: { recordedAt: 'desc' },
+      });
+    } catch (_e) {
+      latest = memoryTelemetryLogs[0] || null;
+    }
 
     if (!latest) return res.json({ success: true, data: null, message: 'No telemetry data recorded yet.' });
 
     // 15-minute surge rate
-    const fifteenMinsAgo = new Date(latest.recordedAt.getTime() - 15 * 60 * 1000);
-    const baseline = await prisma.telemetryLog.findFirst({
-      where:   { recordedAt: { lte: fifteenMinsAgo } },
-      orderBy: { recordedAt: 'desc' },
-    });
+    const recordedTime = latest.recordedAt instanceof Date ? latest.recordedAt.getTime() : new Date(latest.recordedAt).getTime();
+    const fifteenMinsAgo = new Date(recordedTime - 15 * 60 * 1000);
+    
+    let baseline = null;
+    try {
+      baseline = await prisma.telemetryLog.findFirst({
+        where:   { recordedAt: { lte: fifteenMinsAgo } },
+        orderBy: { recordedAt: 'desc' },
+      });
+    } catch (_e) {
+      baseline = memoryTelemetryLogs.find(l => new Date(l.recordedAt).getTime() <= fifteenMinsAgo.getTime()) || null;
+    }
 
     const surgeRate_m_per_hour = baseline
       ? parseFloat(((latest.waterLevelM - baseline.waterLevelM) * 4).toFixed(3))
@@ -310,11 +374,16 @@ router.get('/history', async (req, res) => {
       if (to)   where.recordedAt.lte = new Date(to);
     }
 
-    const logs = await prisma.telemetryLog.findMany({
-      where,
-      orderBy: { recordedAt: 'asc' },
-      take: Math.min(parseInt(limit), 1000),
-    });
+    let logs = [];
+    try {
+      logs = await prisma.telemetryLog.findMany({
+        where,
+        orderBy: { recordedAt: 'asc' },
+        take: Math.min(parseInt(limit), 1000),
+      });
+    } catch (_e) {
+      logs = [...memoryTelemetryLogs].reverse().slice(0, Math.min(parseInt(limit), 1000));
+    }
 
     const mappedLogs = logs.map(row => ({
       ...row,

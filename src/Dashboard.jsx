@@ -193,7 +193,7 @@ export default function FloodMonitoringDashboard() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const res = await fetch('http://localhost:3001/api/v1/settings');
+        const res = await fetch(`${API_BASE_URL}/api/v1/settings`);
         if (!res.ok) return;
         const json = await res.json();
         if (json.success && json.data) {
@@ -215,7 +215,7 @@ export default function FloodMonitoringDashboard() {
   useEffect(() => {
     const timer = setTimeout(async () => {
       try {
-        await fetch('http://localhost:3001/api/v1/settings', {
+        await fetch(`${API_BASE_URL}/api/v1/settings`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
