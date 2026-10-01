@@ -43,6 +43,16 @@ let transporterCache = null;
 let isEthereal = false;
 
 /**
+ * Clears the cached SMTP transporter so it is re-created on the next send.
+ * Call this after updating SMTP credentials at runtime.
+ */
+export function resetTransporter() {
+  transporterCache = null;
+  isEthereal = false;
+  console.log('[Email] Transporter cache cleared — will reinitialise on next send.');
+}
+
+/**
  * Lazily initialize and return a Nodemailer transporter.
  * If SMTP credentials are missing from .env, automatically creates an Ethereal test inbox.
  */
