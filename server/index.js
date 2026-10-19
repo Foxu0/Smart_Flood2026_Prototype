@@ -15,8 +15,11 @@ import subscribersRouter from './routes/subscribers.js';
 import testRouter from './routes/testRoutes.js';
 import { startWeatherPoller } from './services/weatherService.js';
 import { startRetentionScheduler } from './services/retentionService.js';
-import { login, logout } from './controllers/authController.js';
+import usersRouter from './routes/users.js';
+import devicesRouter from './routes/devices.js';
+import { login, logout, me, updateMe } from './controllers/authController.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
+import { seedAccounts } from './services/accountStore.js';
 import { prisma } from './db.js';
 
 const app = express();
@@ -40,7 +43,7 @@ app.use(cors({
     callback(new Error(`CORS blocked: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Key'],
   credentials: true,
 }));
 app.use(express.json());
@@ -56,6 +59,8 @@ app.use((req, _res, next) => {
 // ── Auth Routes (public — issues JWT) ──────────────────────────────────────
 app.post('/api/v1/auth/login', login);
 app.post('/api/v1/auth/logout', authMiddleware, logout);
+app.get('/api/v1/auth/me', authMiddleware, me);
+app.put('/api/v1/auth/me', authMiddleware, updateMe);
 
 // ── REST Routes ─────────────────────────────────────────────────────────────
 app.use('/api/v1/telemetry', telemetryRouter);
@@ -65,6 +70,8 @@ app.use('/api/v1/settings', settingsRouter);
 app.use('/api/v1/weather', weatherRouter);
 app.use('/api/v1/subscribers', subscribersRouter);
 app.use('/api/v1/test', testRouter);
+app.use('/api/v1/users', usersRouter);
+app.use('/api/v1/devices', devicesRouter);
 
 // ── Health Check ─────────────────────────────────────────────────────────────
 app.get('/api/v1/health', (_req, res) => {
@@ -129,7 +136,7 @@ async function verifyDatabaseSchema() {
     console.warn('[DB] Schema check notice:', err.message);
   }
 }
-verifyDatabaseSchema();
+verifyDatabaseSchema().then(() => seedAccounts()).catch((err) => console.error('[Accounts] Seed failed:', err.message));
 
 server.listen(PORT, () => {
   console.log(`\n🌊 SmartFlood API Server running`);

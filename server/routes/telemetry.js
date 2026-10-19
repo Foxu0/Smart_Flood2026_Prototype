@@ -5,8 +5,9 @@ import { buildHistoryBuffer, getPrediction, runPredictionInference } from '../se
 import { purgeOldData } from '../services/retentionService.js';
 import { broadcastEmailAlert } from '../services/emailService.js';
 import { recordPrediction, recordActualAndEvaluate, getEvaluationMetrics } from '../services/aiEvaluationService.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { requirePermission } from '../middleware/authMiddleware.js';
 import { memoryEvents } from './events.js';
+import { authenticateDeviceKey, touchDevice, findDefaultNode, getGlobalMaintenance } from '../services/deviceStore.js';
 
 export const memoryTelemetryLogs = [];
 let memoryLatestProjection = null;
@@ -53,6 +54,24 @@ router.post('/', async (req, res) => {
     const body = req.body;
     const now  = new Date();
 
+    // ── 0. Identify the board ──────────────────────────────────────────────
+    // Registered boards send their API key in the X-Device-Key header.
+    // Unkeyed posts are still accepted (simulators / legacy firmware) unless
+    // REQUIRE_DEVICE_KEY=true, and are attributed to the default site (is_default)
+    // so its maintenance mode and mount height still apply.
+    const deviceKey = req.get('X-Device-Key') || body.deviceKey || null;
+    let device = null;
+    if (deviceKey) {
+      device = await authenticateDeviceKey(deviceKey);
+      if (!device) return res.status(401).json({ error: 'Unknown, retired or invalid device key.' });
+    } else if (process.env.REQUIRE_DEVICE_KEY === 'true') {
+      return res.status(401).json({ error: 'Missing X-Device-Key header.' });
+    } else {
+      device = await findDefaultNode();
+    }
+    const mountHeightCm = device?.mountHeightCm ?? MOUNT_HEIGHT_CM;
+    const inMaintenance = device?.status === 'MAINTENANCE' || Boolean(await getGlobalMaintenance());
+
     // ── 1. Resolve raw distance ────────────────────────────────────────────
     // ESP32 sends centimetres from sensor face to water surface.
     const rawDistance = body.rawDistance ?? body.raw_distance_cm ?? null;
@@ -64,7 +83,7 @@ router.post('/', async (req, res) => {
       // Legacy direct format — accept as-is
       water_level_m = parseFloat(body.water_level_m);
     } else if (rawDistance != null) {
-      water_level_m = Math.max(0, (MOUNT_HEIGHT_CM - parseFloat(rawDistance)) / 100);
+      water_level_m = Math.max(0, (mountHeightCm - parseFloat(rawDistance)) / 100);
       water_level_m = parseFloat(water_level_m.toFixed(3));
     } else {
       return res.status(400).json({
@@ -74,16 +93,20 @@ router.post('/', async (req, res) => {
 
     const raw_distance_cm = rawDistance != null
       ? parseFloat(rawDistance)
-      : parseFloat(((MOUNT_HEIGHT_CM - water_level_m * 100)).toFixed(1));
+      : parseFloat(((mountHeightCm - water_level_m * 100)).toFixed(1));
 
     // ── 3. Map remaining ESP32 fields ─────────────────────────────────────────
     const rssi_dbm       = parseInt(body.wifiRssi        ?? body.rssi_dbm       ?? -65);
     const supply_voltage = parseFloat(body.batteryVoltage ?? body.supply_voltage ?? body.batteryLevel ?? 12.0);
     const uptime_sec     = parseInt(body.uptime           ?? body.uptime_sec     ?? 0);
     const relay_state    = body.relayState != null ? Boolean(body.relayState) : null;
+    const rawSpeed       = body.currentSpeed ?? body.flowSpeedMs ?? body.flow_speed_ms ?? body.current_speed_mps ?? null;
+    const current_speed_mps = rawSpeed != null && !isNaN(parseFloat(rawSpeed)) ? parseFloat(rawSpeed) : null;
 
     // ── 5. Determine sensor status ─────────────────────────────────────────
-    const sensor_status = raw_distance_cm <= BLIND_SPOT_CM
+    const sensor_status = inMaintenance
+      ? 'MAINTENANCE'
+      : raw_distance_cm <= BLIND_SPOT_CM
       ? 'BLIND_SPOT'
       : (body.sensor_status ?? body.sensorStatus ?? 'OK');
 
@@ -101,6 +124,9 @@ router.post('/', async (req, res) => {
           supplyVoltageV: supply_voltage,
           uptimeSec: uptime_sec,
           sensorStatus: sensor_status,
+          flowSpeedMs: current_speed_mps,
+          inMaintenance,
+          nodeId: device?.id ?? null,
         },
       });
     } catch (_dbErr) {
@@ -115,8 +141,12 @@ router.post('/', async (req, res) => {
         supplyVoltageV: supply_voltage,
         uptimeSec: uptime_sec,
         sensorStatus: sensor_status,
+        flowSpeedMs: current_speed_mps,
+        inMaintenance,
+        nodeId: device?.id ?? null,
       };
     }
+    if (device) touchDevice(device.id, body.firmwareVersion).catch(() => {});
     memoryTelemetryLogs.unshift(log);
     if (memoryTelemetryLogs.length > 500) memoryTelemetryLogs.pop();
 
@@ -129,7 +159,9 @@ router.post('/', async (req, res) => {
     let eventMsg  = null;
     let severity  = 'INFO';
 
-    if (water_level_m >= thresholds.level3_danger) {
+    if (inMaintenance) {
+      // Board under maintenance: readings are stored but never raise alerts
+    } else if (water_level_m >= thresholds.level3_danger) {
       eventCode = 'ALERT_L3';
       eventMsg  = `ALERT_L3: EMERGENCY — Water level critical at ${water_level_m.toFixed(2)} m. Immediate evacuation required.`;
       severity  = 'CRITICAL';
@@ -156,6 +188,7 @@ router.post('/', async (req, res) => {
             message: eventMsg,
             severity,
             telemetryLogId: log.id,
+            nodeId: device?.id ?? null,
           },
         });
       } catch (_e) {
@@ -213,6 +246,7 @@ router.post('/', async (req, res) => {
            : 0,
       thresholds,
       eventCode,
+      maintenance: inMaintenance,
     };
 
     // ── 10. Broadcast over WebSocket ──────────────────────────────────────
@@ -223,7 +257,9 @@ router.post('/', async (req, res) => {
         relay_state,
         water_level_m,
         raw_distance_cm,
-        mount_height_cm: MOUNT_HEIGHT_CM,
+        mount_height_cm: mountHeightCm,
+        current_speed_mps,
+        device_node_id: device?.nodeCode ?? null,
         blind_spot_warning: sensor_status === 'BLIND_SPOT',
       },
     });
@@ -237,7 +273,7 @@ router.post('/', async (req, res) => {
     // Level 1 (Advisory) → email advisory only (no siren)
     // Level 2 (Warning)  → email + siren activated on ESP32
     // Level 3 (Danger)   → email + siren activated on ESP32
-    if (alertStatus.level >= 1) {
+    if (alertStatus.level >= 1 && !inMaintenance) {
       const alertTitle = alertStatus.level === 3
         ? 'Danger Level Reached'
         : alertStatus.level === 2
@@ -420,11 +456,11 @@ router.get('/export/csv', async (req, res) => {
 
     const headers = [
       'id', 'recordedAt', 'waterLevelM', 'rawDistanceCm',
-      'rssiDbm', 'supplyVoltageV', 'uptimeSec', 'sensorStatus',
+      'flowSpeedMs', 'rssiDbm', 'supplyVoltageV', 'uptimeSec', 'sensorStatus', 'inMaintenance', 'nodeId',
     ];
 
     const csvRows = [
-      'ID,Recorded At,Water Level (m),Raw Distance (cm),RSSI (dBm),Supply Voltage (V),Uptime (s),Sensor Status',
+      'ID,Recorded At,Water Level (m),Raw Distance (cm),Current Speed (m/s),RSSI (dBm),Supply Voltage (V),Uptime (s),Sensor Status,In Maintenance,Node ID',
       ...logs.map((row) =>
         headers.map((h) => {
           const val = row[h];
@@ -446,7 +482,7 @@ router.get('/export/csv', async (req, res) => {
 // ── POST /api/v1/telemetry/purge ─────────────────────────────────────────────
 // Admin-authenticated endpoint to trigger database log purge older than N days.
 // Body: { days?: number } (default: 30 days)
-router.post('/purge', authMiddleware, async (req, res) => {
+router.post('/purge', requirePermission('system.maintenance'), async (req, res) => {
   try {
     const days = parseInt(req.body.days) || 30;
     const stats = await purgeOldData(days);

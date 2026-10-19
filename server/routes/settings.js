@@ -1,6 +1,6 @@
 import express from 'express';
 import { prisma } from '../db.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { requirePermission } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -25,7 +25,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/v1/settings — Upsert system settings (🔒 Admin only)
 // Body: { level1_advisory?: float, level2_siren?: float, level3_danger?: float, ... }
-router.post('/', authMiddleware, async (req, res) => {
+router.post('/', requirePermission('settings.system'), async (req, res) => {
   try {
     const body = req.body || {};
     

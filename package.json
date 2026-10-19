@@ -16,7 +16,9 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "account:reset-password": "node server/scripts/resetPassword.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

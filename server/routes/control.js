@@ -1,7 +1,7 @@
 import express from 'express';
 import { prisma } from '../db.js';
 import { broadcast } from '../websocket.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { requirePermission } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ const router = express.Router();
 //   ENABLE   — Manually turn siren ON (alias for persistent activation)
 //   DISABLE  — Turn siren OFF (alias for MUTE without critical log)
 // ---------------------------------------------------------------------------
-router.post('/siren', authMiddleware, async (req, res) => {
+router.post('/siren', requirePermission('control.siren'), async (req, res) => {
   try {
     const { action, durationMs } = req.body;
     const operator = req.operator?.username || 'EOC Operator';

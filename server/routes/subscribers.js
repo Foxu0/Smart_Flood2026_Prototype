@@ -1,7 +1,7 @@
 import express from 'express';
 import { prisma } from '../db.js';
 import { broadcastEmailAlert, sendTestEmail, sendWelcomeConfirmationEmail } from '../services/emailService.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { requirePermission } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -181,7 +181,7 @@ router.get('/', async (req, res) => {
 });
 
 // ── DELETE /api/v1/subscribers/:id (Admin Deletion) ──────────────────────────
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', requirePermission('subscribers.manage'), async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) {
@@ -224,7 +224,7 @@ router.post('/test-email', async (req, res) => {
 });
 
 // ── POST /api/v1/subscribers/broadcast (Manual Admin Broadcast) ──────────────
-router.post('/broadcast', authMiddleware, async (req, res) => {
+router.post('/broadcast', requirePermission('alerts.manage'), async (req, res) => {
   try {
     const { title, message, level = 2, waterLevelM = 1.5, force = true } = req.body;
 

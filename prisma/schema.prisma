@@ -6,6 +6,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// NOTE: This schema mirrors the live Supabase database (tables created Oct 2026 for the
+// post-defense revisions). Keep every existing table/column here — `prisma db push`
+// drops anything that is missing from this file.
+
 model TelemetryLog {
   id              Int              @id @default(autoincrement())
   recordedAt      DateTime         @default(now()) @map("recorded_at")
@@ -17,11 +21,16 @@ model TelemetryLog {
   supplyVoltageV  Float            @map("supply_voltage_v")
   uptimeSec       Int              @map("uptime_sec")
   sensorStatus    String           @default("OK") @map("sensor_status")
+  flowSpeedMs     Float?           @map("flow_speed_ms")       // Water current (surface velocity), m/s
+  inMaintenance   Boolean          @default(false) @map("in_maintenance")
+  nodeId          Int?             @map("node_id")
+  node            HardwareNode?    @relation(fields: [nodeId], references: [id])
 
   systemEvents    SystemEvent[]
   alertBroadcasts AlertBroadcast[]
 
   @@index([recordedAt])
+  @@index([nodeId, recordedAt])
   @@map("telemetry_logs")
 }
 
@@ -31,9 +40,13 @@ model SystemEvent {
   eventCode      String        @map("event_code")
   message        String
   severity       String
+  acknowledgedAt DateTime?     @map("acknowledged_at")
+  acknowledgedBy String?       @map("acknowledged_by")
 
   telemetryLogId Int?          @map("telemetry_log_id")
-  telemetryLog   TelemetryLog? @relation(fields: [telemetryLogId], references: [id], onDelete: SetNull)
+  telemetryLog   TelemetryLog? @relation(fields: [telemetryLogId], references: [id])
+  nodeId         Int?          @map("node_id")
+  node           HardwareNode? @relation(fields: [nodeId], references: [id])
 
   @@index([createdAt])
   @@index([telemetryLogId])
@@ -89,7 +102,9 @@ model AlertBroadcast {
   broadcastSource String             @default("AUTOMATED_SENSOR") @map("broadcast_source")
 
   triggerLogId    Int?               @map("trigger_log_id")
-  triggerLog      TelemetryLog?      @relation(fields: [triggerLogId], references: [id], onDelete: SetNull)
+  triggerLog      TelemetryLog?      @relation(fields: [triggerLogId], references: [id])
+  nodeId          Int?               @map("node_id")
+  node            HardwareNode?      @relation(fields: [nodeId], references: [id])
 
   dispatchLogs    EmailDispatchLog[]
 
@@ -109,9 +124,211 @@ model EmailDispatchLog {
   sentAt         DateTime?        @map("sent_at")
   createdAt      DateTime         @default(now()) @map("created_at")
 
-  broadcast      AlertBroadcast?  @relation(fields: [broadcastId], references: [id], onDelete: SetNull)
-  subscriber     EmailSubscriber? @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
+  broadcast      AlertBroadcast?  @relation(fields: [broadcastId], references: [id])
+  subscriber     EmailSubscriber? @relation(fields: [subscriberId], references: [id])
 
   @@index([status, createdAt])
   @@map("email_dispatch_logs")
+}
+
+// ── Barangays (16 Antipolo barangays, used by accounts, boards and the heat map) ──
+model Barangay {
+  id                   Int            @id @default(autoincrement())
+  name                 String         @unique
+  latitude             Float
+  longitude            Float
+  susceptibility       Float          @default(0.5)
+  susceptibilitySource String         @default("PLACEHOLDER") @map("susceptibility_source")
+
+  users                User[]
+  nodes                HardwareNode[]
+  notifications        Notification[]
+
+  @@map("barangays")
+}
+
+// ── Accounts & Roles ─────────────────────────────────────────────────────────
+// role: SUPERADMIN | MDRRMO | BARANGAY   (see shared/roles.js)
+// Residents have no accounts — they use the public dashboard anonymously.
+// Automated actions are written to the audit log with actorType "SYSTEM".
+// status: ACTIVE | DISABLED
+model User {
+  id           Int        @id @default(autoincrement())
+  username     String     @unique
+  email        String?    @unique
+  phone        String?
+  fullName     String     @map("full_name")
+  passwordHash String     @map("password_hash")
+  role         String
+  barangayId   Int?       @map("barangay_id")
+  barangay     Barangay?  @relation(fields: [barangayId], references: [id])
+  status       String     @default("ACTIVE")
+  lastLoginAt  DateTime?  @map("last_login_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  notificationReads NotificationRead[]
+
+  @@index([role, status])
+  @@map("users")
+}
+
+// ── Hardware Registry ────────────────────────────────────────────────────────
+// A node is a monitoring SITE. Replacing the physical board keeps the node (and its
+// history); the swap is recorded in hardware_change_logs and the key is rotated.
+// status: ACTIVE | MAINTENANCE | OFFLINE | RETIRED
+// sensors: comma-separated, e.g. "WATER_LEVEL,FLOW_SPEED"
+model HardwareNode {
+  id              Int            @id @default(autoincrement())
+  nodeCode        String         @unique @map("node_code")
+  name            String
+  barangayId      Int?           @map("barangay_id")
+  barangay        Barangay?      @relation(fields: [barangayId], references: [id])
+  locationLabel   String?        @map("location_label")
+  latitude        Float
+  longitude       Float
+  mountHeightCm   Float          @default(240) @map("mount_height_cm")
+  bankHeightM     Float?         @map("bank_height_m")
+  sensors         String         @default("WATER_LEVEL,FLOW_SPEED")
+  boardSerial     String?        @map("board_serial")
+  firmwareVersion String?        @map("firmware_version")
+  status          String         @default("ACTIVE")
+  deviceKeyHash   String?        @map("device_key_hash")
+  deviceKeyPrefix String?        @map("device_key_prefix")
+  notes           String?
+  isDefault       Boolean        @default(false) @map("is_default")
+  installedAt     DateTime       @default(now()) @map("installed_at")
+  lastSeenAt      DateTime?      @map("last_seen_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  telemetryLogs   TelemetryLog[]
+  systemEvents    SystemEvent[]
+  alertBroadcasts AlertBroadcast[]
+  changeLogs      HardwareChangeLog[]
+  maintenance     MaintenanceWindow[]
+  thresholds      NodeThreshold?
+
+  @@index([status])
+  @@map("hardware_nodes")
+}
+
+model HardwareChangeLog {
+  id          Int          @id @default(autoincrement())
+  nodeId      Int          @map("node_id")
+  node        HardwareNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  action      String
+  details     String?
+  performedBy String       @map("performed_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  @@index([nodeId, createdAt])
+  @@map("hardware_change_logs")
+}
+
+// scope: NODE | GLOBAL
+model MaintenanceWindow {
+  id            Int           @id @default(autoincrement())
+  scope         String
+  nodeId        Int?          @map("node_id")
+  node          HardwareNode? @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  reason        String
+  startedAt     DateTime      @default(now()) @map("started_at")
+  endsAt        DateTime?     @map("ends_at")
+  endedAt       DateTime?     @map("ended_at")
+  active        Boolean       @default(true)
+  createdByName String        @map("created_by_name")
+
+  @@index([active, scope])
+  @@map("maintenance_windows")
+}
+
+model NodeThreshold {
+  id           Int          @id @default(autoincrement())
+  nodeId       Int          @unique @map("node_id")
+  node         HardwareNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  level1Watch  Float?       @map("level1_watch")
+  level2Alarm  Float?       @map("level2_alarm")
+  level3Danger Float?       @map("level3_danger")
+  flowWarnMs   Float?       @map("flow_warn_ms")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  @@map("node_thresholds")
+}
+
+// ── Audit Trail ──────────────────────────────────────────────────────────────
+// actorType: the user's role (SUPERADMIN / MDRRMO / BARANGAY), "SYSTEM", or legacy "USER"
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  createdAt  DateTime @default(now()) @map("created_at")
+  actorType  String   @default("USER") @map("actor_type")
+  actorName  String   @map("actor_name")
+  action     String
+  targetType String?  @map("target_type")
+  targetId   String?  @map("target_id")
+  details    String?
+
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ── Notifications & SMS (Phase 2) ────────────────────────────────────────────
+model Notification {
+  id            Int                @id @default(autoincrement())
+  createdAt     DateTime           @default(now()) @map("created_at")
+  title         String
+  message       String
+  level         Int                @default(0)
+  audience      String             @default("PUBLIC")
+  barangayId    Int?               @map("barangay_id")
+  barangay      Barangay?          @relation(fields: [barangayId], references: [id])
+  source        String             @default("SYSTEM")
+  createdByName String?            @map("created_by_name")
+  reads         NotificationRead[]
+
+  @@index([audience, barangayId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model NotificationRead {
+  notificationId Int          @map("notification_id")
+  userId         Int          @map("user_id")
+  readAt         DateTime     @default(now()) @map("read_at")
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([notificationId, userId])
+  @@map("notification_reads")
+}
+
+model SmsSubscriber {
+  id               Int      @id @default(autoincrement())
+  phone            String   @unique
+  fullName         String?  @map("full_name")
+  barangay         String   @default("Antipolo")
+  minAlertLevel    Int      @default(1) @map("min_alert_level")
+  status           String   @default("ACTIVE")
+  unsubscribeToken String   @unique @default(uuid()) @map("unsubscribe_token")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  logs             SmsLog[]
+
+  @@index([status, minAlertLevel])
+  @@map("sms_subscribers")
+}
+
+model SmsLog {
+  id           Int            @id @default(autoincrement())
+  subscriberId Int?           @map("subscriber_id")
+  subscriber   SmsSubscriber? @relation(fields: [subscriberId], references: [id])
+  phone        String
+  message      String
+  provider     String         @default("LOG_ONLY")
+  status       String         @default("SIMULATED")
+  errorMessage String?        @map("error_message")
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("sms_logs")
 }
