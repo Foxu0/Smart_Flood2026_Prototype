@@ -2,20 +2,16 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { BellRing, Trash2, Plus } from 'lucide-react';
 import { api } from '../../lib/session.js';
+import { LEVEL_TAG } from '../../lib/floodLevels.js';
 import { BARANGAYS, BARANGAY_SCOPED_ROLES } from '../../../shared/roles.js';
 import { Page, PageHeader, Card, Button, Field, inputClass, Modal, ErrorNote, EmptyState } from '../../components/console/ui.jsx';
 
-// Level 3 is the spill level (CDRRMO: water spills at about 2.0 m)
-export const LEVEL_INFO = {
-  1: { name: 'Level 1 · Advisory', style: 'bg-sky-50 text-sky-800 border-sky-200' },
-  2: { name: 'Level 2 · Warning',  style: 'bg-amber-50 text-amber-800 border-amber-200' },
-  3: { name: 'Level 3 · Spill',    style: 'bg-red-50 text-red-700 border-red-200' },
-};
 
 function LevelPill({ level }) {
-  const info = LEVEL_INFO[level];
-  if (!info) return null;
-  return <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wide whitespace-nowrap ${info.style}`}>{info.name}</span>;
+  const tag = LEVEL_TAG[level];
+  if (!tag || level === 0) return null;
+  // e.g. "Level 3 · Spill" (Level 3 is the spill level)
+  return <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wide whitespace-nowrap ${tag.style}`}>Level {level} · {tag.name}</span>;
 }
 
 const plural = (n, word, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
@@ -81,6 +77,7 @@ export default function AlertsPage() {
   const [sent, setSent] = useState([]);
   const [subs, setSubs] = useState({ subscribers: [], stats: {} });
   const [sms, setSms] = useState({ data: [], mode: '' });
+  const [stationAreas, setStationAreas] = useState([]); // barangays that have a station
   const [adding, setAdding] = useState(false);
   const [tab, setTab] = useState('sms'); // sms | email
   const [area, setArea] = useState(''); // CDRRMO: barangay picked in the list
@@ -89,12 +86,14 @@ export default function AlertsPage() {
 
   const load = useCallback(async () => {
     try {
-      const [b, c, t] = await Promise.all([
+      const [b, st, c, t] = await Promise.all([
         api('/subscribers/broadcasts'),
+        api('/devices/summary'),
         api('/subscribers'),
         api('/sms-residents'),
       ]);
       setSms({ data: t.data || [], mode: t.mode });
+      setStationAreas([...new Set((st.data || []).map((d) => d.barangay))]);
       setSent(b.broadcasts || []);
       setSubs({ subscribers: c.subscribers || [], stats: c.stats || {} });
       setError('');
@@ -111,7 +110,9 @@ export default function AlertsPage() {
     email: subs.subscribers.filter((s) => s.barangay === b).length,
   });
   // The 16 barangays, plus any old entry saved under another name (e.g. "Antipolo") so no one is hidden
-  const areas = [...BARANGAYS, ...new Set([...sms.data, ...subs.subscribers].map((p) => p.barangay).filter((b) => !BARANGAYS.includes(b)))];
+  // Barangays with a station (residents there can get alerts), plus any that already have registered residents
+  const areas = [...new Set([...stationAreas, ...[...sms.data, ...subs.subscribers].map((p) => p.barangay)])]
+    .sort((a, b) => (BARANGAYS.includes(b) - BARANGAYS.includes(a)) || a.localeCompare(b));
   const firstWithResidents = areas.find((b) => countIn(b).sms + countIn(b).email > 0);
   const shown = scoped ? user?.barangay : (area || firstWithResidents || areas[0]);
   const counts = countIn(shown);

@@ -1,19 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { API_BASE_URL } from '../../config.js';
+import { LEVEL_TAG, OFF_TAG } from '../../lib/floodLevels.js';
 
 // CDRRMO overview: one small card per barangay station with the numbers only —
 // water level now, and the forecast for 30 and 60 minutes.
 // Most urgent first: Spill → Warning → Advisory → Normal → No data → Off, then A–Z.
 
-// Level names and colours (Level 3 = spill)
-export const LEVEL_TAG = {
-  0: { name: 'Normal',   style: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  1: { name: 'Advisory', style: 'bg-sky-50 text-sky-800 border-sky-200' },
-  2: { name: 'Warning',  style: 'bg-amber-50 text-amber-800 border-amber-200' },
-  3: { name: 'Spill',    style: 'bg-red-50 text-red-700 border-red-200' },
-};
-export const OFF_TAG = { name: 'Off', style: 'bg-gray-100 text-gray-600 border-gray-200' };
 const NO_DATA_TAG = { name: 'No data yet', style: 'bg-gray-50 text-gray-500 border-gray-200' };
 const EDGE = { 0: 'border-t-emerald-400', 1: 'border-t-sky-400', 2: 'border-t-amber-400', 3: 'border-t-red-500' };
 const FILL = { 0: 'bg-emerald-500', 1: 'bg-sky-500', 2: 'bg-amber-500', 3: 'bg-red-500' };

@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { api } from '../../lib/session.js';
 import AdminDashboard from '../AdminDashboard.jsx';
-import StationOverview, { LEVEL_TAG, OFF_TAG } from '../../components/console/StationOverview.jsx';
+import StationOverview from '../../components/console/StationOverview.jsx';
+import { LEVEL_TAG, OFF_TAG } from '../../lib/floodLevels.js';
 
 /**
  * River monitoring.

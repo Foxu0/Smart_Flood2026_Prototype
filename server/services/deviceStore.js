@@ -77,6 +77,11 @@ export async function listChangeLogs(nodeId) {
   }
 }
 
+/** True when the barangay has at least one station (not retired) — residents there can get alerts. */
+export async function barangayHasStation(barangay) {
+  return (await listDevices({ barangay })).some((n) => n.status !== 'RETIRED');
+}
+
 export async function listDevices({ barangay } = {}) {
   const barangayId = barangay ? await barangayIdByName(barangay) : undefined;
   const where = barangayId ? { barangayId } : {};

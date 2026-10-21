@@ -8,26 +8,9 @@ import ToastContainer, { useToast } from '../components/ToastNotification.jsx';
 import SkeletonDashboard from '../components/SkeletonDashboard.jsx';
 import useCountUp from '../hooks/useCountUp.js';
 import { API_BASE_URL, WS_BASE_URL } from '../config.js';
+import { getFloodLevel } from '../lib/floodLevels.js';
+import { WaterLevelSparkline, AiForecastSparkline } from '../components/dashboard/Sparklines.jsx';
 
-const logIdRef = { current: 100 };
-
-// ─── Flood level thresholds (kept for the underlying logic) ──────────────────
-const FLOOD_LEVELS = [
-  { id: 0, min: 0, max: 1.2, color: '#2f9463', soft: '#e5f6ec', border: '#bfe6cf' },
-  { id: 1, min: 1.2, max: 1.6, color: '#2b6e8f', soft: '#e6f2f8', border: '#bfdbe8' },
-  { id: 2, min: 1.6, max: 2.0, color: '#e69138', soft: '#fdf1de', border: '#f4d6a4' },
-  { id: 3, min: 2.0, max: 2.4, color: '#e0522f', soft: '#fce7e0', border: '#f2bfab' },
-];
-function getFloodLevel(waterM, thresholds) {
-  const l1 = thresholds?.level1_watch ?? 1.2;
-  const l2 = thresholds?.level2_alarm ?? 1.6;
-  const l3 = thresholds?.level3_danger ?? 2.0;
-
-  if (waterM < l1) return { ...FLOOD_LEVELS[0], min: 0.0, max: l1 };
-  if (waterM < l2) return { ...FLOOD_LEVELS[1], min: l1, max: l2 };
-  if (waterM < l3) return { ...FLOOD_LEVELS[2], min: l2, max: l3 };
-  return { ...FLOOD_LEVELS[3], min: l3, max: 2.4 };
-}
 
 // ─── Plain-language content, keyed by flood level id ─────────────────────────
 function getFriendlyContent(level, telemetry, aiPrediction) {
@@ -87,239 +70,6 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── Time Offset Helper ──────────────────────────────────────────────────────
-function formatTimeOffset(minutesOffset = 0) {
-  const d = new Date(Date.now() + minutesOffset * 60000);
-  return new Intl.DateTimeFormat('en-PH', {
-    timeZone: 'Asia/Manila',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(d);
-}
-
-// ─── Line Graph for Water Level (Bottom: Timeframe, Right: Meter Scale) ──────
-function WaterLevelSparkline({ history = [], currentLevel = 0.35, color = '#2f9463' }) {
-  const width = 260;
-  const height = 72;
-  const padY = 8;
-  const padX = 8;
-  const drawW = width - padX * 2;
-  const drawH = height - padY * 2;
-
-  const pts = Array.isArray(history) && history.length >= 2
-    ? history
-    : [
-        +(currentLevel * 0.96).toFixed(2),
-        +(currentLevel * 0.98).toFixed(2),
-        +(currentLevel * 0.97).toFixed(2),
-        +(currentLevel * 0.99).toFixed(2),
-        +(currentLevel * 1.0).toFixed(2),
-        +currentLevel.toFixed(2),
-      ];
-
-  const dataMin = Math.min(...pts);
-  const dataMax = Math.max(...pts);
-  const rawSpan = dataMax - dataMin;
-  const minVal = rawSpan >= 0.02 ? dataMin : Math.max(0, dataMin - 0.02);
-  const maxVal = rawSpan >= 0.02 ? dataMax : dataMax + 0.02;
-  const range = (maxVal - minVal) || 0.04;
-  const midVal = (minVal + maxVal) / 2;
-
-  const coords = pts.map((val, idx) => {
-    const x = padX + (idx / Math.max(1, pts.length - 1)) * drawW;
-    const y = padY + drawH - ((val - minVal) / range) * drawH;
-    return { x, y, val };
-  });
-
-  let pathD = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
-  for (let i = 0; i < coords.length - 1; i++) {
-    const p0 = coords[i];
-    const p1 = coords[i + 1];
-    const mx = (p0.x + p1.x) / 2;
-    pathD += ` C ${mx.toFixed(1)} ${p0.y.toFixed(1)}, ${mx.toFixed(1)} ${p1.y.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
-  }
-
-  const last = coords[coords.length - 1];
-  const first = coords[0];
-  const areaD = `${pathD} L ${last.x.toFixed(1)} ${height} L ${first.x.toFixed(1)} ${height} Z`;
-  const gradId = `adminWaterSparkGrad_${color.replace(/[^a-zA-Z0-9]/g, '')}`;
-
-  const time30mAgo = formatTimeOffset(-30);
-  const time15mAgo = formatTimeOffset(-15);
-  const timeNow = formatTimeOffset(0);
-
-  return (
-    <div className="relative w-full my-auto select-none">
-      <div className="grid grid-cols-[1fr_auto] gap-x-2 items-stretch">
-        {/* Plot Area with Grid & Axes */}
-        <div className="relative bg-[#f8fbfc] border-b border-r border-[#cbdbe2] rounded-tl-lg overflow-hidden">
-          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-20 block">
-            <defs>
-              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity="0.28" />
-                <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-              </linearGradient>
-            </defs>
-
-            {/* Horizontal Y-axis grid lines (Top, Mid, Bottom) */}
-            <line x1="0" y1={padY} x2={width} y2={padY} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-            <line x1="0" y1={padY + drawH * 0.5} x2={width} y2={padY + drawH * 0.5} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-            <line x1="0" y1={padY + drawH} x2={width} y2={padY + drawH} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-
-            {/* Vertical X-axis timeframe grid lines (Left, Center, Right) */}
-            <line x1={padX} y1="0" x2={padX} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-            <line x1={width * 0.5} y1="0" x2={width * 0.5} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-            <line x1={width - padX} y1="0" x2={width - padX} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-
-            {/* Gradient fill under curve */}
-            <path d={areaD} fill={`url(#${gradId})`} />
-
-            {/* Line graph stroke */}
-            <path d={pathD} fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-
-            {/* Start & Live endpoint markers */}
-            <circle cx={first.x} cy={first.y} r="2.8" fill="#ffffff" stroke={color} strokeWidth="1.8" />
-            <circle cx={last.x} cy={last.y} r="3.8" fill={color} stroke="#ffffff" strokeWidth="1.6" />
-          </svg>
-        </div>
-
-        {/* Right Side: Y-Axis Meter Scale */}
-        <div className="flex flex-col justify-between text-[10.5px] font-mono font-semibold text-[#5a7180] py-1 text-right min-w-[44px]">
-          <span className="leading-none" style={{ color }}>{maxVal.toFixed(2)} m</span>
-          <span className="leading-none">{midVal.toFixed(2)} m</span>
-          <span className="leading-none">{minVal.toFixed(2)} m</span>
-        </div>
-
-        {/* Bottom: X-Axis Timeframe Scale */}
-        <div className="flex items-center justify-between text-[10.5px] text-[#5a7180] pt-1.5">
-          <span className="font-medium">{time30mAgo}</span>
-          <span className="font-medium text-[#7b909d]">{time15mAgo}</span>
-          <span className="font-bold text-[#123a54]">{timeNow} (Now)</span>
-        </div>
-
-        {/* Bottom-Right Empty Corner */}
-        <div />
-      </div>
-    </div>
-  );
-}
-
-// ─── AI Forecast Line Graph (Bottom: Timeframe, Right: Meter Scale) ──────────
-function AiForecastSparkline({ currentM = 0.35, p30M = 0.38, p60M = 0.41, color = '#e69138' }) {
-  const width = 260;
-  const height = 72;
-  const padY = 8;
-  const padX = 10;
-  const drawW = width - padX * 2;
-  const drawH = height - padY * 2;
-
-  const vals = [Number(currentM) || 0, Number(p30M) || 0, Number(p60M) || 0];
-  const dataMin = Math.min(...vals);
-  const dataMax = Math.max(...vals);
-  const rawSpan = dataMax - dataMin;
-  const minV = rawSpan >= 0.02 ? dataMin : Math.max(0, dataMin - 0.02);
-  const maxV = rawSpan >= 0.02 ? dataMax : dataMax + 0.02;
-  const range = (maxV - minV) || 0.04;
-  const midV = (minV + maxV) / 2;
-
-  const getY = (val) => padY + drawH - ((val - minV) / range) * drawH;
-
-  const pt0 = { x: padX, y: getY(vals[0]) };
-  const pt30 = { x: width * 0.5, y: getY(vals[1]) };
-  const pt60 = { x: width - padX, y: getY(vals[2]) };
-
-  // Error band = the model's average test error (MAE ±1.7 cm at 30 min, ±2.3 cm at 60 min)
-  const offset30 = Math.min(12, Math.max(4, (0.017 / range) * drawH));
-  const offset60 = Math.min(16, Math.max(5, (0.023 / range) * drawH));
-
-  const coneD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} ` +
-    `L ${pt30.x.toFixed(1)} ${Math.max(2, pt30.y - offset30).toFixed(1)} ` +
-    `L ${pt60.x.toFixed(1)} ${Math.max(2, pt60.y - offset60).toFixed(1)} ` +
-    `L ${pt60.x.toFixed(1)} ${Math.min(height - 2, pt60.y + offset60).toFixed(1)} ` +
-    `L ${pt30.x.toFixed(1)} ${Math.min(height - 2, pt30.y + offset30).toFixed(1)} Z`;
-
-  const lineD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} L ${pt30.x.toFixed(1)} ${pt30.y.toFixed(1)} L ${pt60.x.toFixed(1)} ${pt60.y.toFixed(1)}`;
-  const areaD = `${lineD} L ${pt60.x.toFixed(1)} ${height} L ${pt0.x.toFixed(1)} ${height} Z`;
-
-  const timeNow = formatTimeOffset(0);
-  const time30m = formatTimeOffset(30);
-  const time60m = formatTimeOffset(60);
-
-  return (
-    <div className="relative w-full my-auto select-none">
-      <div className="grid grid-cols-[1fr_auto] gap-x-2 items-stretch">
-        {/* Plot Area with Grid & Axes */}
-        <div className="relative bg-[#f8fbfc] border-b border-r border-[#cbdbe2] rounded-tl-lg overflow-hidden">
-          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-20 block">
-            <defs>
-              <linearGradient id="adminAiForecastArea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity="0.26" />
-                <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-              </linearGradient>
-              <linearGradient id="adminAiConfidenceCone" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor={color} stopOpacity="0.08" />
-                <stop offset="100%" stopColor={color} stopOpacity="0.22" />
-              </linearGradient>
-            </defs>
-
-            {/* Horizontal Y-axis grid lines (Top, Mid, Bottom) */}
-            <line x1="0" y1={padY} x2={width} y2={padY} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-            <line x1="0" y1={padY + drawH * 0.5} x2={width} y2={padY + drawH * 0.5} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-            <line x1="0" y1={padY + drawH} x2={width} y2={padY + drawH} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-
-            {/* Vertical X-axis timeframe grid lines (Now, +30m, +60m) */}
-            <line x1={pt0.x} y1="0" x2={pt0.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-            <line x1={pt30.x} y1="0" x2={pt30.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-            <line x1={pt60.x} y1="0" x2={pt60.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-
-            {/* Shaded error band (test MAE) */}
-            <path d={coneD} fill="url(#adminAiConfidenceCone)" />
-
-            {/* Under-line gradient */}
-            <path d={areaD} fill="url(#adminAiForecastArea)" />
-
-            {/* Forecast Trajectory Line */}
-            <path
-              d={lineD}
-              fill="none"
-              stroke={color}
-              strokeWidth="2.6"
-              strokeDasharray="6 4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-
-            {/* Point: Now */}
-            <circle cx={pt0.x} cy={pt0.y} r="3.5" fill="#123a54" stroke="#ffffff" strokeWidth="1.5" />
-
-            {/* Point: +30m */}
-            <circle cx={pt30.x} cy={pt30.y} r="4" fill={color} stroke="#ffffff" strokeWidth="1.8" />
-
-            {/* Point: +60m */}
-            <circle cx={pt60.x} cy={pt60.y} r="4" fill="#ffffff" stroke={color} strokeWidth="2.2" />
-          </svg>
-        </div>
-
-        {/* Right Side: Y-Axis Meter Scale */}
-        <div className="flex flex-col justify-between text-[10.5px] font-mono font-semibold text-[#5a7180] py-1 text-right min-w-[44px]">
-          <span className="leading-none" style={{ color }}>{maxV.toFixed(2)} m</span>
-          <span className="leading-none">{midV.toFixed(2)} m</span>
-          <span className="leading-none text-[#123a54]">{minV.toFixed(2)} m</span>
-        </div>
-
-        {/* Bottom: X-Axis Timeframe Scale */}
-        <div className="grid grid-cols-3 items-center text-[10.5px] text-[#5a7180] pt-1.5">
-          <span className="text-left font-medium text-[#123a54]">{timeNow} (Now)</span>
-          <span className="text-center font-bold" style={{ color }}>{time30m}</span>
-          <span className="text-right font-medium">{time60m}</span>
-        </div>
-
-        {/* Bottom-Right Empty Corner */}
-        <div />
-      </div>
-    </div>
-  );
-}
 
 // ─── Stat Card component (Detailed Admin Version) ──────────────────────────────
 function AnimatedStatCard({
@@ -425,9 +175,7 @@ export default function FloodMonitoringDashboard({ nodeId = null }) {
   const otherBoard = (d) => nodeId != null && d?.nodeId != null && Number(d.nodeId) !== Number(nodeId);
   const { toasts, pushToast, dismissToast } = useToast();
 
-  const [isLive, setIsLive] = useState(true);
   const [sirenActive, setSirenActive] = useState(false);
-  const [manualOverride, setManualOverride] = useState(false);
 
   const [telemetry, setTelemetry] = useState({
     waterLevelM: 0.00,
@@ -515,11 +263,9 @@ export default function FloodMonitoringDashboard({ nodeId = null }) {
 
   // Real Database History State
   const [dbHistory, setDbHistory] = useState([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Fetch real PostgreSQL telemetry logs from GET /api/v1/telemetry/history
   const fetchHistory = useCallback(async () => {
-    setHistoryLoading(true);
     try {
       const rangeParam = timeFrame;
 
@@ -549,7 +295,6 @@ export default function FloodMonitoringDashboard({ nodeId = null }) {
     } catch (err) {
       console.error('[History Fetch Error]', err);
     } finally {
-      setHistoryLoading(false);
     }
   }, [timeFrame]);
 
@@ -621,7 +366,6 @@ export default function FloodMonitoringDashboard({ nodeId = null }) {
   }, []);
 
   // ── Real-Time WebSocket Connection ─────────────────────────────────────────
-  const [wsConnected, setWsConnected] = useState(false);
 
   useEffect(() => {
     let ws;
@@ -631,7 +375,6 @@ export default function FloodMonitoringDashboard({ nodeId = null }) {
       ws = new WebSocket(WS_BASE_URL);
 
       ws.onopen = () => {
-        setWsConnected(true);
       };
 
       ws.onmessage = (event) => {
@@ -671,15 +414,12 @@ export default function FloodMonitoringDashboard({ nodeId = null }) {
             const { sirenState } = message.data;
             if (sirenState === 'ON' || sirenState === 'TEST') {
               setSirenActive(true);
-              setManualOverride(false);
             }
             if (sirenState === 'MUTED') {
               setSirenActive(false);
-              setManualOverride(true);
             }
             if (sirenState === 'OFF') {
               setSirenActive(false);
-              setManualOverride(false);
             }
           }
         } catch (e) {
@@ -688,7 +428,6 @@ export default function FloodMonitoringDashboard({ nodeId = null }) {
       };
 
       ws.onclose = () => {
-        setWsConnected(false);
         reconnectTimer = setTimeout(connectWS, 3000);
       };
 
@@ -733,12 +472,10 @@ export default function FloodMonitoringDashboard({ nodeId = null }) {
         testTimeoutRef.current = null;
       }
       setSirenActive(false);
-      setManualOverride(true);
       addLog('override', 'MUTE ALARM: Operator silenced acoustic siren (Manual Override active).');
       sendSirenControl('MUTE');
     } else {
       setSirenActive(true);
-      setManualOverride(false);
       addLog('system', 'SIREN ACTIVATED: Operator manually triggered acoustic relay.');
       sendSirenControl('ENABLE');
       if (telemetry.waterLevelM < thresholds.level2_alarm) {
@@ -790,7 +527,6 @@ export default function FloodMonitoringDashboard({ nodeId = null }) {
     system: { badge: 'bg-[#f1f5f2] text-[#6d818d] border border-[#dbe4de]', dot: '#6d818d' },
   }[type] || { badge: 'bg-gray-100 text-gray-600', dot: '#6d818d' });
 
-  const AdviceIcon = friendly.icon;
 
   const surgeDelta = +(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2);
   const surgeRateText = surgeDelta > 0.01 ? `+${surgeDelta.toFixed(2)} m/h` : '0.00 m/h (Steady)';

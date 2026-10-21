@@ -5,6 +5,7 @@ import { requirePermission } from '../middleware/authMiddleware.js';
 import { audit } from '../services/auditService.js';
 import { BARANGAYS, BARANGAY_SCOPED_ROLES } from '../../shared/roles.js';
 import { signupLimit } from '../middleware/signupLimit.js';
+import { barangayHasStation } from '../services/deviceStore.js';
 
 const router = express.Router();
 
@@ -24,6 +25,9 @@ router.post('/', signupLimit, async (req, res) => {
 
     if (!BARANGAYS.includes(barangay)) {
       return res.status(400).json({ success: false, error: 'Choose your barangay.' });
+    }
+    if (!(await barangayHasStation(barangay))) {
+      return res.status(400).json({ success: false, error: 'There is no flood station in your barangay yet.' });
     }
 
     const cleanEmail = email.trim().toLowerCase();

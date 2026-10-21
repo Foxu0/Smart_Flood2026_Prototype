@@ -1,19 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bell, CheckCircle2, Loader2, MessageSquare, Mail } from 'lucide-react';
 import { API_BASE_URL } from '../config.js';
-import { BARANGAYS } from '../../shared/roles.js';
 
-// Residents sign up for flood alerts by SMS or email. They only get alerts from their own barangay's board.
+// Residents sign up for flood alerts by SMS or email. They only get alerts from their own barangay's board,
+// so only barangays that have a station are listed.
 const inputCls = 'w-full text-xs px-3 py-2 rounded-xl bg-[#f8fafc] border border-[#d9e2ec] focus:outline-none focus:ring-2 focus:ring-[#2b6e8f] text-[#123a54] placeholder-gray-400';
 const labelCls = 'block text-[10px] font-bold uppercase tracking-wider text-[#6d818d] mb-1';
 
-export default function AlertSignupCard() {
+export default function AlertSignupCard({ barangays = [], defaultBarangay = '' }) {
   const [via, setVia] = useState('sms'); // sms | email
   const [form, setForm] = useState({ fullName: '', phone: '', email: '', barangay: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(null); // { via, contact, barangay }
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Follow the barangay the resident is looking at (they can still change it here)
+  useEffect(() => {
+    if (defaultBarangay) setForm((f) => ({ ...f, barangay: defaultBarangay }));
+  }, [defaultBarangay]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -33,7 +38,7 @@ export default function AlertSignupCard() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) throw new Error(data.error || 'Sign-up failed. Please try again.');
       setDone({ via, contact: isSms ? form.phone : form.email, barangay: form.barangay });
-      setForm({ fullName: '', phone: '', email: '', barangay: '' });
+      setForm({ fullName: '', phone: '', email: '', barangay: defaultBarangay || '' });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -85,7 +90,7 @@ export default function AlertSignupCard() {
             <label className={labelCls}>Barangay <span className="text-red-500">*</span></label>
             <select required value={form.barangay} onChange={set('barangay')} className={inputCls}>
               <option value="" disabled>Choose your barangay</option>
-              {BARANGAYS.map((b) => <option key={b}>{b}</option>)}
+              {[...barangays].sort().map((b) => <option key={b}>{b}</option>)}
             </select>
           </div>
 

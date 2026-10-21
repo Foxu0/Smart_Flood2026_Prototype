@@ -6,7 +6,8 @@ import { getThresholds } from '../services/thresholdStore.js';
 import { broadcastEmailAlert } from '../services/emailService.js';
 import { requirePermission } from '../middleware/authMiddleware.js';
 import { memoryEvents } from './events.js';
-import { authenticateDeviceKey, touchDevice, findDefaultNode } from '../services/deviceStore.js';
+import { authenticateDeviceKey, touchDevice, findDefaultNode, listDevices } from '../services/deviceStore.js';
+import { barangayNameById } from '../services/barangayStore.js';
 
 export const memoryTelemetryLogs = [];
 let memoryLatestProjection = null;
@@ -279,6 +280,25 @@ router.post('/', async (req, res) => {
   } catch (err) {
     console.error('[POST /telemetry]', err);
     res.status(500).json({ error: 'Internal server error', detail: err.message });
+  }
+});
+
+// ── GET /api/v1/telemetry/stations (public) ─────────────────────────────────
+// Which barangays have a station, so residents can pick theirs on the public page.
+// Only the name and barangay are shared — no keys or settings.
+router.get('/stations', async (_req, res) => {
+  try {
+    const nodes = (await listDevices()).filter((n) => n.status !== 'RETIRED');
+    const data = await Promise.all(nodes.map(async (n) => ({
+      id: n.id,
+      name: n.name,
+      barangay: await barangayNameById(n.barangayId),
+      off: n.status === 'MAINTENANCE',
+    })));
+    data.sort((a, b) => a.barangay.localeCompare(b.barangay));
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Could not load stations.' });
   }
 });
 
