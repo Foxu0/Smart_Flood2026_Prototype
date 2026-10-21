@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  AlertTriangle, CheckCircle2, Info, CloudRain,
+  AlertTriangle, CheckCircle2, Info,
   Droplets, Phone, MapPin, ChevronDown, ChevronUp,
   Zap, Shield, Timer, Lock,
   LifeBuoy
 } from 'lucide-react';
-import RainOverlay from '../RainOverlay.jsx';
 import WeatherMapCard from '../WeatherMapCard.jsx';
 import WaterTankGauge from '../components/WaterTankGauge.jsx';
 import SkeletonDashboard from '../components/SkeletonDashboard.jsx';
-import EmailSubscriptionCard from '../components/EmailSubscriptionCard.jsx';
+import AlertSignupCard from '../components/AlertSignupCard.jsx';
 import useCountUp from '../hooks/useCountUp.js';
 import { API_BASE_URL, WS_BASE_URL } from '../config.js';
 
@@ -47,11 +46,16 @@ const FLOOD_LEVELS = [
   { id: 0, min: 0, max: 1.2, label: 'All Clear', color: '#2f9463', soft: '#e5f6ec', border: '#bfe6cf' },
   { id: 1, min: 1.2, max: 1.6, label: 'Advisory', color: '#2b6e8f', soft: '#e6f2f8', border: '#bfdbe8' },
   { id: 2, min: 1.6, max: 2.0, label: 'Watch Closely', color: '#e69138', soft: '#fdf1de', border: '#f4d6a4' },
-  { id: 3, min: 2.0, max: 2.4, label: 'EVACUATE NOW', color: '#e0522f', soft: '#fce7e0', border: '#f2bfab' },
+  { id: 3, min: 2.0, max: 2.4, label: 'SPILL · EVACUATE', color: '#e0522f', soft: '#fce7e0', border: '#f2bfab' },
 ];
 
-function getFloodLevel(waterM) {
-  return FLOOD_LEVELS.find(l => waterM >= l.min && waterM < l.max) || FLOOD_LEVELS[3];
+// Thresholds come with each reading (every board has its own); defaults = manuscript values
+function getFloodLevel(waterM, t = {}) {
+  const l1 = t.level1_watch ?? 1.2, l2 = t.level2_alarm ?? 1.6, l3 = t.level3_danger ?? 2.0;
+  if (waterM < l1) return FLOOD_LEVELS[0];
+  if (waterM < l2) return FLOOD_LEVELS[1];
+  if (waterM < l3) return FLOOD_LEVELS[2];
+  return FLOOD_LEVELS[3];
 }
 
 function getFriendlyContent(level, telemetry, aiPrediction) {
@@ -72,7 +76,7 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
       return {
         badge: 'Water Rising', icon: Info,
         heroTitle: 'Water Level Rising',
-        heroMsg: 'Rainfall has increased upstream water levels. The river channel is slightly elevated but remains within monitored advisory limits.',
+        heroMsg: 'The river is rising. The water level is slightly elevated but remains within monitored advisory limits.',
         actionTitle: 'Precautionary Steps',
         actionItems: [
           'Charge your phones, power banks, and emergency flashlights.',
@@ -94,9 +98,9 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
       };
     case 3:
       return {
-        badge: 'DANGER LEVEL', icon: AlertTriangle,
-        heroTitle: 'Danger Level Reached',
-        heroMsg: 'Water levels have reached critical danger thresholds. Please move immediately to designated high-ground evacuation shelters.',
+        badge: 'SPILL LEVEL', icon: AlertTriangle,
+        heroTitle: 'River Is Spilling Over',
+        heroMsg: 'The water has reached the spill level and may overflow onto roads and homes. Please move immediately to designated high-ground evacuation shelters.',
         actionTitle: 'Immediate Evacuation Order',
         actionItems: [
           'Evacuate immediately — do not wait for floodwaters to enter your home.',
@@ -107,21 +111,6 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
     default:
       return getFriendlyContent(FLOOD_LEVELS[0], telemetry, aiPrediction);
   }
-}
-
-function rainDescription(mmHr) {
-  if (mmHr < 2.5) return 'No rain / Dry';
-  if (mmHr < 7.5) return 'Light rain';
-  if (mmHr < 15) return 'Moderate rain';
-  if (mmHr < 30) return 'Heavy rain';
-  return 'Torrential rain';
-}
-
-function rainIntensityKey(mmHr) {
-  if (mmHr < 2.5) return 'none';
-  if (mmHr < 8) return 'light';
-  if (mmHr < 25) return 'moderate';
-  return 'heavy';
 }
 
 // ─── Line Graph for Water Level (Bottom: Timeframe, Right: Meter Scale) ──────
@@ -255,9 +244,9 @@ function AiForecastSparkline({ currentM = 0.35, p30M = 0.38, p60M = 0.41, color 
   const pt30 = { x: width * 0.5, y: getY(vals[1]) };
   const pt60 = { x: width - padX, y: getY(vals[2]) };
 
-  // Confidence error margins (±1.5cm at 30m, ±2.2cm at 60m)
-  const offset30 = Math.min(12, Math.max(4, (0.015 / range) * drawH));
-  const offset60 = Math.min(16, Math.max(5, (0.022 / range) * drawH));
+  // Error band = the model's average test error (MAE ±1.7 cm at 30 min, ±2.3 cm at 60 min)
+  const offset30 = Math.min(12, Math.max(4, (0.017 / range) * drawH));
+  const offset60 = Math.min(16, Math.max(5, (0.023 / range) * drawH));
 
   const coneD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} ` +
     `L ${pt30.x.toFixed(1)} ${Math.max(2, pt30.y - offset30).toFixed(1)} ` +
@@ -299,7 +288,7 @@ function AiForecastSparkline({ currentM = 0.35, p30M = 0.38, p60M = 0.41, color 
             <line x1={pt30.x} y1="0" x2={pt30.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
             <line x1={pt60.x} y1="0" x2={pt60.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
 
-            {/* Shaded Confidence Cone */}
+            {/* Shaded error band (test MAE) */}
             <path d={coneD} fill="url(#aiConfidenceCone)" />
 
             {/* Under-line gradient */}
@@ -463,7 +452,6 @@ export default function PublicPortal() {
   const [telemetry, setTelemetry] = useState({
     waterLevelM: 0.00,
     waterDistanceCm: 240,
-    rainRateMmHr: 0.0,
   });
 
   const [aiPrediction, setAiPrediction] = useState({
@@ -471,7 +459,7 @@ export default function PublicPortal() {
     predicted30m: 0.00,
     predicted60m: 0.00,
     timeToCriticalMins: null,
-    modelConfidence: 96.5,
+    methodLabel: 'Loading…', testScores: null,
   });
 
   const [secondsAgo, setSecondsAgo] = useState(0);
@@ -490,6 +478,8 @@ export default function PublicPortal() {
     return () => { if (secRef.current) clearInterval(secRef.current); };
   }, []);
 
+  const [thresholds, setThresholds] = useState({});
+
   // Poll latest telemetry from GET /api/v1/telemetry/latest every 3s
   useEffect(() => {
     async function fetchLatest() {
@@ -501,13 +491,12 @@ export default function PublicPortal() {
           const d = json.data;
           const level = parseFloat(d.water_level_m ?? d.waterLevelM ?? 0.00);
           const dist = parseFloat(d.raw_distance_cm ?? d.rawDistanceCm ?? Math.round((2.4 - level) * 100));
-          const rain = parseFloat(d.rainfallRateMmh ?? d.rainfall_rate_mm_h ?? d.rainfall_rate ?? 0.0);
           setTelemetry(prev => ({
             ...prev,
             waterLevelM: level,
             waterDistanceCm: dist,
-            rainRateMmHr: Number.isNaN(rain) ? 0.0 : rain,
           }));
+          if (d.thresholds) setThresholds(d.thresholds);
           if (!Number.isNaN(level)) {
             setLevelHistory(prev => {
               if (prev.length === 0) return [level];
@@ -521,7 +510,6 @@ export default function PublicPortal() {
           setTelemetry({
             waterLevelM: 0.00,
             waterDistanceCm: 240,
-            rainRateMmHr: 0.0,
           });
           setLevelHistory([0.00]);
           setAiPrediction(prev => ({
@@ -562,13 +550,11 @@ export default function PublicPortal() {
           const msg = JSON.parse(event.data);
           if (msg.type === 'TELEMETRY' && msg.data) {
             const d = msg.data;
-            const rain = parseFloat(d.rainfallRateMmh ?? d.rainfall_rate_mm_h ?? d.rainfall_rate ?? d.rain_rate_mm_hr ?? 0.0);
             const newLevel = parseFloat(d.water_level_m ?? d.waterLevel ?? 0.0);
             setTelemetry(prev => ({
               ...prev,
               waterLevelM: parseFloat(d.water_level_m ?? d.waterLevel ?? prev.waterLevelM),
               waterDistanceCm: parseInt(d.water_distance_cm ?? d.waterDistanceCm ?? prev.waterDistanceCm),
-              rainRateMmHr: Number.isNaN(rain) ? prev.rainRateMmHr : rain,
             }));
             if (!Number.isNaN(newLevel)) {
               setLevelHistory(prev => {
@@ -590,7 +576,7 @@ export default function PublicPortal() {
               predicted30m: 0.00,
               predicted60m: 0.00,
               timeToCriticalMins: null,
-              modelConfidence: 96.5,
+              methodLabel: 'Loading…', testScores: null,
             });
             resetSecondsAgo();
           }
@@ -598,13 +584,12 @@ export default function PublicPortal() {
             const p = msg.data;
             const p30 = parseFloat(p.horizon30mM ?? p.predicted30m ?? p.horizon_30m_m ?? 0.00);
             const p60 = parseFloat(p.horizon60mM ?? p.predicted60m ?? p.horizon_60m_m ?? 0.00);
-            const conf = Math.round(parseFloat(p.confidenceScore ?? p.confidence_score ?? prev.modelConfidence));
             setAiPrediction(prev => ({
               ...prev,
               predicted30m: Number.isNaN(p30) ? 0.00 : p30,
               predicted60m: Number.isNaN(p60) ? 0.00 : p60,
               riskScore: Math.round(parseFloat(p.risk_score ?? prev.riskScore)),
-              modelConfidence: Number.isNaN(conf) ? 96.5 : conf,
+              methodLabel: p.methodLabel ?? prev.methodLabel, testScores: p.testScores ?? prev.testScores,
             }));
           }
         } catch (err) {
@@ -641,13 +626,12 @@ export default function PublicPortal() {
           const p = j.data;
           const p30 = parseFloat(p.horizon30mM ?? p.predicted30m ?? p.horizon_30m_m ?? 0.00);
           const p60 = parseFloat(p.horizon60mM ?? p.predicted60m ?? p.horizon_60m_m ?? 0.00);
-          const conf = Math.round(parseFloat(p.confidenceScore ?? p.confidence_score ?? 96.5));
           setAiPrediction(prev => ({
             ...prev,
             predicted30m: Number.isNaN(p30) ? 0.00 : p30,
             predicted60m: Number.isNaN(p60) ? 0.00 : p60,
             riskScore: Math.round(parseFloat(p.risk_score ?? prev.riskScore)),
-            modelConfidence: Number.isNaN(conf) ? 96.5 : conf,
+            methodLabel: p.methodLabel ?? prev.methodLabel, testScores: p.testScores ?? prev.testScores,
           }));
         }
       }).catch(() => {});
@@ -663,9 +647,8 @@ export default function PublicPortal() {
       }).catch(() => {});
   }, []);
 
-  const floodLevel = getFloodLevel(telemetry.waterLevelM);
+  const floodLevel = getFloodLevel(telemetry.waterLevelM, thresholds);
   const friendly = getFriendlyContent(floodLevel, telemetry, aiPrediction);
-  const rainKey = rainIntensityKey(telemetry.rainRateMmHr);
   const surgeDelta = +(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2);
   const surgeRateText = surgeDelta > 0.01 ? `+${surgeDelta.toFixed(2)} m/h` : '0.00 m/h (Steady)';
 
@@ -718,7 +701,6 @@ export default function PublicPortal() {
             {/* ── HERO STATUS CARD ────────────────────────────────────────── */}
             <div className="relative overflow-hidden rounded-[24px] border shadow-sm p-5 sm:p-7 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-5 items-center card-enter card-enter-d1"
               style={{ background: `linear-gradient(135deg, ${floodLevel.soft}, #ffffff 70%)`, borderColor: floodLevel.border }}>
-              <RainOverlay intensity={rainKey} />
               <div className="relative z-[1]">
                 <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: floodLevel.color }}>
                   <MapPin size={13} /> Resident Status Advisory
@@ -757,15 +739,7 @@ export default function PublicPortal() {
                 value={`${telemetry.waterLevelM.toFixed(2)} m`}
                 numericValue={telemetry.waterLevelM}
                 decimals={2}
-                trendText={
-                  telemetry.waterLevelM < 1.2
-                    ? 'Normal'
-                    : telemetry.waterLevelM < 1.6
-                    ? 'Advisory'
-                    : telemetry.waterLevelM < 2.0
-                    ? 'Warning'
-                    : 'Danger'
-                }
+                trendText={['Normal', 'Advisory', 'Warning', 'Spill'][floodLevel.id]}
                 sub={
                   telemetry.waterDistanceCm <= 25
                     ? 'Sensor Limit Reached'
@@ -789,7 +763,7 @@ export default function PublicPortal() {
                 numericValue={aiPrediction.predicted30m}
                 decimals={2}
                 color="#e69138"
-                tooltip="Antipolo river level forecast for the next 30 and 60 minutes based on real-time upstream conditions"
+                tooltip="Forecast of the river level 30 and 60 minutes from now, based on the last hour of readings from the river sensor"
                 delay={4}
                 variant="ai"
                 currentLevel={telemetry.waterLevelM}
@@ -870,18 +844,18 @@ export default function PublicPortal() {
               )}
             </div>
 
-            {/* Emergency Email Subscription Card */}
-            <div id="email-alerts">
-              <EmailSubscriptionCard />
-            </div>
-
           </div>
 
-          {/* RIGHT COLUMN: Interactive Weather Map Card (5/12 width) */}
+          {/* RIGHT COLUMN: Weather map + flood alert sign-up (5/12 width) */}
           <div className="lg:col-span-5 min-w-0 w-full flex flex-col gap-4">
 
             {/* Weather Map Component */}
             <WeatherMapCard severity={floodLevel.id} />
+
+            {/* Sign up for flood alerts (SMS or email, by barangay) */}
+            <div id="alert-signup">
+              <AlertSignupCard />
+            </div>
 
           </div>
 

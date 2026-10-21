@@ -1,40 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
-  AlertTriangle, Bell, CheckCircle2, CloudRain, Cpu,
-  Droplets, Info, MapPin, RefreshCw,
-  Sliders, Volume2, VolumeX, Wifi, Zap, Activity,
-  Radio, Globe, Send, Download, FileSpreadsheet, Timer, LogOut,
-  Play, RotateCcw, Target, TrendingUp, BarChart3, Square, Mail
+  AlertTriangle, Bell, CheckCircle2, Info, MapPin, Volume2, VolumeX, Zap, Timer, TrendingUp,
 } from 'lucide-react';
-import RainOverlay from '../RainOverlay.jsx';
 import WeatherMapCard from '../WeatherMapCard.jsx';
 import WaterTankGauge from '../components/WaterTankGauge.jsx';
 import ToastContainer, { useToast } from '../components/ToastNotification.jsx';
-import DataSourcesDisclaimerModal from '../components/DataSourcesDisclaimerModal.jsx';
-import EmailSubscribersModal from '../components/EmailSubscribersModal.jsx';
 import SkeletonDashboard from '../components/SkeletonDashboard.jsx';
 import useCountUp from '../hooks/useCountUp.js';
 import { API_BASE_URL, WS_BASE_URL } from '../config.js';
-
-// ─── Helper: live Philippine Standard Time ───────────────────────────────────
-function usePSTClock() {
-  const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const pst = new Intl.DateTimeFormat('en-PH', {
-    timeZone: 'Asia/Manila',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: true,
-  }).format(now);
-  const date = new Intl.DateTimeFormat('en-PH', {
-    timeZone: 'Asia/Manila',
-    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
-  }).format(now);
-  return { pst, date };
-}
 
 const logIdRef = { current: 100 };
 
@@ -67,7 +40,7 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
         adviceTitle: 'Station Status',
         advice: [
           'Station telemetry operating normally within baseline thresholds.',
-          'Continuous automated monitoring of water stage and rainfall active.',
+          'Continuous automated monitoring of the water level is active.',
           'No emergency alerts or manual overrides required at this time.',
         ],
       };
@@ -75,11 +48,11 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
       return {
         badge: 'Keep an Eye Out', icon: Info,
         heroTitle: 'Water Level Rising',
-        heroMsg: 'Rainfall has increased upstream water levels. The river channel is slightly elevated but remains within monitored advisory limits.',
+        heroMsg: 'The river is rising. The water level is slightly elevated but remains within monitored advisory limits.',
         adviceTitle: 'Operational Readiness',
         advice: [
           'Verify telemetry stream continuity and battery supply voltages.',
-          'Keep active surveillance on upstream rainfall accumulation trends.',
+          'Keep watching the water level trend closely.',
           'Notify duty operators to maintain standby alert readiness.',
         ],
       };
@@ -97,9 +70,9 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
       };
     default:
       return {
-        badge: 'EVACUATE NOW', icon: AlertTriangle,
-        heroTitle: 'Danger Level Reached',
-        heroMsg: `Station water level has reached critical danger stage (${telemetry.waterLevelM.toFixed(2)} m). Immediate disaster evacuation protocols in effect.`,
+        badge: 'SPILL · EVACUATE', icon: AlertTriangle,
+        heroTitle: 'Spill Level Reached',
+        heroMsg: `Water has reached the spill level (${telemetry.waterLevelM.toFixed(2)} m) and may overflow the riverbank. Evacuation protocols in effect.`,
         adviceTitle: 'Immediate Emergency Directives',
         advice: [
           'Sound emergency siren if not already activated.',
@@ -108,19 +81,6 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
         ],
       };
   }
-}
-
-function rainDescription(mmHr) {
-  if (mmHr < 5) return 'Just a light drizzle';
-  if (mmHr < 15) return 'Light to moderate rain';
-  if (mmHr < 30) return 'Moderate to heavy rain';
-  return 'Heavy, non-stop rain';
-}
-function rainIntensityKey(mmHr) {
-  if (mmHr < 2) return 'none';
-  if (mmHr < 8) return 'light';
-  if (mmHr < 25) return 'moderate';
-  return 'heavy';
 }
 
 // ─── JarGauge replaced by WaterTankGauge (imported above) ───────────────────
@@ -268,9 +228,9 @@ function AiForecastSparkline({ currentM = 0.35, p30M = 0.38, p60M = 0.41, color 
   const pt30 = { x: width * 0.5, y: getY(vals[1]) };
   const pt60 = { x: width - padX, y: getY(vals[2]) };
 
-  // Confidence error margins (±1.5cm at 30m, ±2.2cm at 60m)
-  const offset30 = Math.min(12, Math.max(4, (0.015 / range) * drawH));
-  const offset60 = Math.min(16, Math.max(5, (0.022 / range) * drawH));
+  // Error band = the model's average test error (MAE ±1.7 cm at 30 min, ±2.3 cm at 60 min)
+  const offset30 = Math.min(12, Math.max(4, (0.017 / range) * drawH));
+  const offset60 = Math.min(16, Math.max(5, (0.023 / range) * drawH));
 
   const coneD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} ` +
     `L ${pt30.x.toFixed(1)} ${Math.max(2, pt30.y - offset30).toFixed(1)} ` +
@@ -312,7 +272,7 @@ function AiForecastSparkline({ currentM = 0.35, p30M = 0.38, p60M = 0.41, color 
             <line x1={pt30.x} y1="0" x2={pt30.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
             <line x1={pt60.x} y1="0" x2={pt60.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
 
-            {/* Shaded Confidence Cone */}
+            {/* Shaded error band (test MAE) */}
             <path d={coneD} fill="url(#adminAiConfidenceCone)" />
 
             {/* Under-line gradient */}
@@ -361,96 +321,6 @@ function AiForecastSparkline({ currentM = 0.35, p30M = 0.38, p60M = 0.41, color 
   );
 }
 
-// ─── Station Vitals Mini-Readout (for health card) ────────────────────────────
-function StationVitalsReadout({ rssi, voltage, wsConnected }) {
-  const rssiPct = Math.max(0, Math.min(100, ((rssi + 100) / 50) * 100));
-  const voltPct = Math.max(0, Math.min(100, ((voltage - 10) / 4) * 100));
-
-  const rssiColor = rssi > -60 ? '#2f9463' : rssi > -75 ? '#e69138' : '#e0522f';
-  const voltColor = voltage >= 12.0 ? '#2f9463' : voltage >= 11.0 ? '#e69138' : '#e0522f';
-
-  const rows = [
-    { label: 'Wi-Fi RSSI', val: `${rssi} dBm`, pct: rssiPct, color: rssiColor },
-    { label: 'Supply V', val: `${voltage.toFixed(1)} V`, pct: voltPct, color: voltColor },
-    { label: 'WS Link', val: wsConnected ? 'LIVE' : 'RECONNECT', pct: wsConnected ? 100 : 0, color: wsConnected ? '#2f9463' : '#e69138' },
-  ];
-
-  return (
-    <div className="flex flex-col gap-2 w-full">
-      {rows.map(({ label, val, pct, color }) => (
-        <div key={label}>
-          <div className="flex justify-between items-center mb-0.5">
-            <span className="text-[9.5px] font-bold text-[#6d818d] uppercase tracking-wide">{label}</span>
-            <span className="text-[10px] font-mono font-bold" style={{ color }}>{val}</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-[#eef4f6] overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${pct}%`, background: color }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Rain Rate Sparkline (bar-chart style) ─────────────────────────────────────
-function RainRateSparkline({ history = [], currentRate = 0, color = '#2b6e8f' }) {
-  const width = 280;
-  const height = 82;
-  const padY = 18;
-  const padX = 10;
-  const drawW = width - padX * 2;
-  const drawH = height - padY * 2;
-
-  // use history waterLevel as proxy for rain intensity, or fallback
-  const pts = Array.isArray(history) && history.length >= 2
-    ? history.slice(-8).map(h => h.waterLevel * 12)
-    : [currentRate * 0.7, currentRate * 0.8, currentRate * 0.9, currentRate * 0.95, currentRate];
-
-  const maxV = Math.max(...pts, 1);
-  const barW = Math.max(4, (drawW / pts.length) - 2);
-
-  return (
-    <div className="relative w-full my-auto select-none">
-      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="w-full h-20 sm:h-24 overflow-visible">
-        <defs>
-          <linearGradient id="rainBarGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.9" />
-            <stop offset="100%" stopColor={color} stopOpacity="0.35" />
-          </linearGradient>
-        </defs>
-
-        <text x={padX} y={13} textAnchor="start" fontSize="10" fill="#6d818d" fontWeight="600">mm/hr</text>
-        <text x={width - padX} y={13} textAnchor="end" fontSize="11" fill={color} fontWeight="700">
-          {currentRate.toFixed(1)} mm/hr ●
-        </text>
-
-        {pts.map((v, i) => {
-          const bh = Math.max(2, (v / maxV) * drawH);
-          const x = padX + (i / pts.length) * drawW + 1;
-          const y = padY + drawH - bh;
-          const isLast = i === pts.length - 1;
-          return (
-            <rect
-              key={i}
-              x={x} y={y}
-              width={barW} height={bh}
-              fill={isLast ? color : `url(#rainBarGrad)`}
-              fillOpacity={isLast ? 1 : 0.6}
-              rx="2"
-            />
-          );
-        })}
-
-        <text x={padX} y={height - 2} textAnchor="start" fontSize="9.5" fill="#6d818d" fontWeight="500">30m ago</text>
-        <text x={width - padX} y={height - 2} textAnchor="end" fontSize="9.5" fill="#6d818d" fontWeight="600">Now</text>
-      </svg>
-    </div>
-  );
-}
-
 // ─── Stat Card component (Detailed Admin Version) ──────────────────────────────
 function AnimatedStatCard({
   icon: Icon,
@@ -472,11 +342,6 @@ function AnimatedStatCard({
   predicted30m = 0,
   predicted60m = 0,
   // for health card
-  rssi = -65,
-  voltage = 12.2,
-  wsConnected = false,
-  // for rain card
-  rainRate = 0,
 }) {
   const validNum = (numericValue != null && !Number.isNaN(Number(numericValue))) ? Number(numericValue) : 0;
   const valid30m = (predicted30m != null && !Number.isNaN(Number(predicted30m))) ? Number(predicted30m) : 0;
@@ -535,8 +400,8 @@ function AnimatedStatCard({
             </div>
           )}
           {variant !== 'ai' && sub && <p className="text-[11px] font-bold text-[#123a54] leading-tight mb-1">{sub}</p>}
-          {variant !== 'ai' && detailLine1 && <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight">{detailLine1}</p>}
-          {variant !== 'ai' && detailLine2 && <p className="text-[9.5px] text-[#6d818d] font-mono leading-tight mt-0.5">{detailLine2}</p>}
+          {detailLine1 && <p className="text-[11px] text-[#6d818d] leading-tight">{detailLine1}</p>}
+          {detailLine2 && <p className="text-[11px] text-[#6d818d] leading-tight mt-0.5">{detailLine2}</p>}
         </div>
 
         {/* Right: Chart or Vitals */}
@@ -547,12 +412,6 @@ function AnimatedStatCard({
           {variant === 'ai' && (
             <AiForecastSparkline currentM={currentLevel} p30M={predicted30m} p60M={predicted60m} color={color} />
           )}
-          {variant === 'rain' && (
-            <RainRateSparkline history={history} currentRate={rainRate} color={color} />
-          )}
-          {variant === 'health' && (
-            <StationVitalsReadout rssi={rssi} voltage={voltage} wsConnected={wsConnected} />
-          )}
         </div>
       </div>
     </div>
@@ -560,56 +419,28 @@ function AnimatedStatCard({
 }
 
 
-export default function FloodMonitoringDashboard() {
-  const { pst, date } = usePSTClock();
+// nodeId: show one board only (each board has its own readings, forecast and thresholds)
+export default function FloodMonitoringDashboard({ nodeId = null }) {
+  const forBoard = (sep) => (nodeId ? `${sep}nodeId=${nodeId}` : '');
+  const otherBoard = (d) => nodeId != null && d?.nodeId != null && Number(d.nodeId) !== Number(nodeId);
   const { toasts, pushToast, dismissToast } = useToast();
-  const navigate = useNavigate();
-
-  // ── Auth helpers ──────────────────────────────────────────────────────────
-  const getAuthHeader = () => ({
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${sessionStorage.getItem('sf_token') || ''}`,
-  });
-
-  const handleLogout = async () => {
-    try {
-      await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
-        method: 'POST',
-        headers: getAuthHeader(),
-      });
-    } catch { /* silent */ }
-    sessionStorage.removeItem('sf_token');
-    sessionStorage.removeItem('sf_operator');
-    navigate('/', { replace: true });
-  };
-
-  const operatorName = sessionStorage.getItem('sf_operator') || 'Operator';
 
   const [isLive, setIsLive] = useState(true);
   const [sirenActive, setSirenActive] = useState(false);
   const [manualOverride, setManualOverride] = useState(false);
-  const [radarTab, setRadarTab] = useState('Satellite');
-  const [radarZoom, setRadarZoom] = useState(1);
-  const [phone, setPhone] = useState('');
-  const [smsConfirmed, setSmsConfirmed] = useState(false);
-  const [showEmailModal, setShowEmailModal] = useState(false);
 
   const [telemetry, setTelemetry] = useState({
     waterLevelM: 0.00,
     waterDistanceCm: 240,
-    rainRateMmHr: 0.0,
-    rainTips: 0,
     wifiRssi: -65,
     gridVoltage: 12.2,
     espUptime: '00:00:00',
   });
 
   const [aiPrediction, setAiPrediction] = useState({
-    riskScore: 0,
     predicted30m: 0.00,
     predicted60m: 0.00,
-    timeToCriticalMins: null,
-    modelConfidence: 96.5,
+    methodLabel: 'Loading…', testScores: null,
   });
 
   const [thresholds, setThresholds] = useState({
@@ -618,167 +449,13 @@ export default function FloodMonitoringDashboard() {
     level3_danger: 2.00,
   });
 
-  const [aiMetrics, setAiMetrics] = useState({
-    totalEvaluated: 0,
-    mae_m: 0.0,
-    rmse_m: 0.0,
-    avgAccuracy_pct: 'Evaluating (+30m in progress...)',
-    methodUsed: 'ONNX_LSTM (flood_lstm.onnx)',
-    history: [],
-  });
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
 
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/api/v1/test/ai-evaluation`)
-      .then(r => r.json())
-      .then(j => {
-        if (j.success && j.data) {
-          setAiMetrics(j.data);
-        }
-      }).catch(() => {});
-  }, []);
-
-  const [selectedScenario, setSelectedScenario] = useState('flash_flood');
-  const [scenarioState, setScenarioState] = useState({
-    isRunning: false,
-    scenarioId: 'flash_flood',
-    currentStep: 0,
-    totalSteps: 25,
-    comment: '',
-  });
-
-  const getToken = () => sessionStorage.getItem('sf_token') || localStorage.getItem('sf_token') || '';
-
-  const handleStartScenario = async () => {
-    try {
-      const token = getToken();
-      const res = await fetch(`${API_BASE_URL}/api/v1/test/run-scenario`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ scenarioId: selectedScenario, stepIntervalMs: 2500 }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        pushToast('info', '▶️ Scenario Started', `Playing '${selectedScenario}' (${json.totalSteps} steps at 2.5s pacing)...`);
-        setScenarioState({
-          isRunning: true,
-          scenarioId: selectedScenario,
-          currentStep: 0,
-          totalSteps: json.totalSteps,
-          comment: 'Initiating scenario playback...',
-        });
-      } else {
-        pushToast('danger', 'Scenario Error', json.error || 'Failed to start scenario');
-      }
-    } catch (err) {
-      pushToast('danger', 'Scenario Error', err.message);
-    }
-  };
-
-  const handleStopScenario = async () => {
-    try {
-      const token = getToken();
-      const res = await fetch(`${API_BASE_URL}/api/v1/test/stop-scenario`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      const json = await res.json();
-      if (json.success) {
-        pushToast('warning', 'Scenario Stopped', 'Scenario playback halted.');
-        setScenarioState(prev => ({ ...prev, isRunning: false }));
-      }
-    } catch (err) {
-      pushToast('danger', 'Stop Error', err.message);
-    }
-  };
-
-  const handleRunSimulation = async () => {
-    setIsSimulating(true);
-    try {
-      const token = getToken();
-      const res = await fetch(`${API_BASE_URL}/api/v1/test/simulate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      const json = await res.json();
-      if (json.success) {
-        pushToast('info', '▶️ Storm Simulation Initiated', '20-step hydrological cycle streaming to ONNX LSTM engine...');
-      } else {
-        pushToast('warning', 'Simulation Notice', json.error || json.message || 'Could not start simulation');
-      }
-    } catch (err) {
-      pushToast('danger', 'Simulation Error', err.message);
-    } finally {
-      setTimeout(() => setIsSimulating(false), 5000);
-    }
-  };
-
-  const handleResetTestTelemetry = async () => {
-    if (!window.confirm('Are you sure you want to reset all test telemetry and event logs?')) return;
-    setIsResetting(true);
-    try {
-      const token = getToken();
-      const res = await fetch(`${API_BASE_URL}/api/v1/test/reset`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      const json = await res.json();
-      if (json.success) {
-        pushToast('success', '🔄 Baseline Reset', 'Database truncated & evaluation metrics reset.');
-        setTelemetry({
-          waterLevelM: 0.00,
-          waterDistanceCm: 240,
-          rainRateMmHr: 0.0,
-          rainTips: 0,
-          wifiRssi: -65,
-          gridVoltage: 12.2,
-          espUptime: '00:00:00',
-        });
-        setAiPrediction({
-          riskScore: 0,
-          predicted30m: 0.00,
-          predicted60m: 0.00,
-          timeToCriticalMins: null,
-          modelConfidence: 96.5,
-        });
-        setDbHistory([]);
-        setLogs([]);
-        setAiMetrics({
-          totalEvaluated: 0,
-          mae_m: 0.0,
-          rmse_m: 0.0,
-          avgAccuracy_pct: 'Evaluating (+30m in progress...)',
-          methodUsed: 'ONNX_LSTM (flood_lstm.onnx)',
-          history: [],
-        });
-      } else {
-        pushToast('danger', 'Reset Failed', json.error || 'Failed to reset test telemetry');
-      }
-    } catch (err) {
-      pushToast('danger', 'Reset Error', err.message);
-    } finally {
-      setIsResetting(false);
-    }
-  };
 
   // Poll latest telemetry from GET /api/v1/telemetry/latest every 3s
   useEffect(() => {
     async function fetchLatest() {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/latest`);
+        const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/latest${forBoard('?')}`);
         if (!res.ok) return;
         const json = await res.json();
         if (json.success && json.data) {
@@ -792,22 +469,21 @@ export default function FloodMonitoringDashboard() {
             wifiRssi: parseInt(d.rssi_dbm ?? -65),
             gridVoltage: parseFloat(d.supply_voltage ?? 12.2),
           }));
+          // Thresholds of the board that sent this reading (each board has its own)
+          if (d.thresholds) setThresholds(d.thresholds);
           fetchHistory();
         } else if (json.success && json.data === null) {
           // Empty database — reset to 0.00m / 0 mm/h
           setTelemetry({
             waterLevelM: 0.00,
             waterDistanceCm: 240,
-            rainRateMmHr: 0.0,
-            rainTips: 0,
             wifiRssi: -65,
             gridVoltage: 12.2,
             espUptime: '00:00:00',
           });
           setAiPrediction(prev => ({
             ...prev,
-            riskScore: 0,
-            predicted30m: 0.00,
+                    predicted30m: 0.00,
             predicted60m: 0.00,
           }));
         }
@@ -821,55 +497,6 @@ export default function FloodMonitoringDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch initial stored settings from GET /api/v1/settings
-  useEffect(() => {
-    async function loadSettings() {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/settings`);
-        if (!res.ok) return;
-        const json = await res.json();
-        if (json.success && json.data) {
-          const d = json.data;
-          setThresholds(prev => ({
-            level1_watch: d.level1_watch ? parseFloat(d.level1_watch) : (d.level1_advisory ? parseFloat(d.level1_advisory) : prev.level1_watch),
-            level2_alarm: d.level2_alarm ? parseFloat(d.level2_alarm) : (d.level2_siren ? parseFloat(d.level2_siren) : prev.level2_alarm),
-            level3_danger: d.level3_danger ? parseFloat(d.level3_danger) : prev.level3_danger,
-          }));
-        }
-      } catch (err) {
-        console.error('[Load Settings Error]', err);
-      }
-    }
-    loadSettings();
-  }, []);
-
-  // Debounced Auto-Save thresholds to POST /api/v1/settings (500ms delay)
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      try {
-        const token = getToken();
-        if (!token) return;
-        await fetch(`${API_BASE_URL}/api/v1/settings`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            level1_watch: thresholds.level1_watch,
-            level2_alarm: thresholds.level2_alarm,
-            level3_danger: thresholds.level3_danger,
-            level1_advisory: thresholds.level1_watch,
-            level2_siren: thresholds.level2_alarm,
-          }),
-        });
-      } catch (err) {
-        console.error('[Auto-Save Settings Error]', err);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [thresholds]);
 
   // ── "Last updated X seconds ago" counter ─────────────────────────────────
   const [secondsAgo, setSecondsAgo] = useState(0);
@@ -884,12 +511,7 @@ export default function FloodMonitoringDashboard() {
     return () => { if (secondsAgoRef.current) clearInterval(secondsAgoRef.current); };
   }, []);
 
-  const [timeFrame, setTimeFrame] = useState('30m');
-  const [customValue, setCustomValue] = useState(2);
-  const [customUnit, setCustomUnit] = useState('hours');
-  const [showCustomModal, setShowCustomModal] = useState(false);
-  const [customRangeText, setCustomRangeText] = useState('2 Hours');
-  const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [timeFrame, setTimeFrame] = useState('1h');
 
   // Real Database History State
   const [dbHistory, setDbHistory] = useState([]);
@@ -899,13 +521,9 @@ export default function FloodMonitoringDashboard() {
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
     try {
-      let rangeParam = timeFrame;
-      if (timeFrame === 'custom') {
-        const unitShort = customUnit === 'minutes' ? 'm' : customUnit === 'days' ? 'd' : 'h';
-        rangeParam = `${customValue}${unitShort}`;
-      }
+      const rangeParam = timeFrame;
 
-      const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/history?range=${rangeParam}`);
+      const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/history?range=${rangeParam}${forBoard('&')}`);
       if (!res.ok) throw new Error('History fetch failed');
       const json = await res.json();
 
@@ -933,7 +551,7 @@ export default function FloodMonitoringDashboard() {
     } finally {
       setHistoryLoading(false);
     }
-  }, [timeFrame, customValue, customUnit]);
+  }, [timeFrame]);
 
   useEffect(() => {
     fetchHistory();
@@ -953,7 +571,7 @@ export default function FloodMonitoringDashboard() {
   useEffect(() => {
     async function loadEvents() {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/events?limit=10`);
+        const res = await fetch(`${API_BASE_URL}/api/v1/events?limit=10${forBoard('&')}`);
         if (!res.ok) return;
         const json = await res.json();
         if (json.success && json.data && json.data.length > 0) {
@@ -981,19 +599,18 @@ export default function FloodMonitoringDashboard() {
   useEffect(() => {
     async function loadProjection() {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/projection`);
+        const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/projection${forBoard('?')}`);
         if (!res.ok) return;
         const json = await res.json();
         if (json.success && json.data) {
           const p = json.data;
           const p30 = parseFloat(p.horizon30mM ?? p.predicted30m ?? p.horizon_30m_m ?? 0.00);
           const p60 = parseFloat(p.horizon60mM ?? p.predicted60m ?? p.horizon_60m_m ?? 0.00);
-          const conf = Math.round(parseFloat(p.confidenceScore ?? p.confidence_score ?? 96.5));
           setAiPrediction(prev => ({
             ...prev,
             predicted30m: Number.isNaN(p30) ? 0.00 : p30,
             predicted60m: Number.isNaN(p60) ? 0.00 : p60,
-            modelConfidence: Number.isNaN(conf) ? 96.5 : conf,
+            methodLabel: p.methodLabel ?? prev.methodLabel, testScores: p.testScores ?? prev.testScores,
           }));
         }
       } catch (err) {
@@ -1020,6 +637,7 @@ export default function FloodMonitoringDashboard() {
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
+          if (otherBoard(message.data)) return; // reading from a different board
           if (message.type === 'TELEMETRY' && message.data) {
             const d = message.data;
             const level = d.waterLevelM ?? d.water_level_m ?? d.waterLevel ?? 1.05;
@@ -1035,23 +653,16 @@ export default function FloodMonitoringDashboard() {
               gridVoltage: parseFloat(voltage),
             }));
 
-            setAiPrediction(prev => {
-              const p30 = Math.min(1.8, level + 0.10);
-              const p60 = Math.min(1.8, level + 0.20);
-              const risk = Math.round((p60 / 1.8) * 100);
-              return { ...prev, riskScore: risk, predicted30m: +p30.toFixed(2), predicted60m: +p60.toFixed(2) };
-            });
             fetchHistory();
           } else if (message.type === 'PROJECTION' && message.data) {
             const p = message.data;
             const p30 = parseFloat(p.horizon30mM ?? p.predicted30m ?? p.horizon_30m_m ?? 0.00);
             const p60 = parseFloat(p.horizon60mM ?? p.predicted60m ?? p.horizon_60m_m ?? 0.00);
-            const conf = Math.round(parseFloat(p.confidenceScore ?? p.confidence_score ?? 96.5));
             setAiPrediction(prev => ({
               ...prev,
               predicted30m: Number.isNaN(p30) ? 0.00 : p30,
               predicted60m: Number.isNaN(p60) ? 0.00 : p60,
-              modelConfidence: Number.isNaN(conf) ? 96.5 : conf,
+              methodLabel: p.methodLabel ?? prev.methodLabel, testScores: p.testScores ?? prev.testScores,
             }));
           } else if (message.type === 'EVENT' && message.data) {
             const ev = message.data;
@@ -1070,19 +681,6 @@ export default function FloodMonitoringDashboard() {
               setSirenActive(false);
               setManualOverride(false);
             }
-          } else if (message.type === 'AI_EVALUATION' && message.data) {
-            setAiMetrics(message.data);
-          } else if (message.type === 'SCENARIO_PROGRESS' && message.data) {
-            const d = message.data;
-            setScenarioState({
-              isRunning: true,
-              scenarioId: d.scenarioId,
-              currentStep: d.currentStep,
-              totalSteps: d.totalSteps,
-              comment: d.comment || '',
-            });
-          } else if (message.type === 'SCENARIO_COMPLETE' || message.type === 'SCENARIO_STOPPED') {
-            setScenarioState(prev => ({ ...prev, isRunning: false }));
           }
         } catch (e) {
           console.error('[WS Error]', e);
@@ -1154,19 +752,6 @@ export default function FloodMonitoringDashboard() {
     }
   }, [sirenActive, telemetry.waterLevelM, thresholds.level2_alarm]);
 
-  // ── Keyboard shortcuts: S = toggle siren (also T / M) ───────────────────
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      if (e.key === 's' || e.key === 'S' || e.key === 't' || e.key === 'T' || e.key === 'm' || e.key === 'M') {
-        e.preventDefault();
-        toggleSiren();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [toggleSiren]);
-
   // ── Toast when flood level rises ─────────────────────────────────────────
   const prevLevelIdRef = useRef(floodLevel.id);
   useEffect(() => {
@@ -1175,7 +760,7 @@ export default function FloodMonitoringDashboard() {
         '',
         'Water level has entered WATCH range (>1.2 m). Stay alert.',
         'Water is rising fast — now in ALARM range (>1.6 m). Prepare to act.',
-        'DANGER LEVEL reached (>2.0 m). Move to higher ground immediately!',
+        'SPILL LEVEL reached: water may overflow the riverbank. Move to higher ground immediately!',
       ];
       const severityMap = ['info', 'info', 'warning', 'danger'];
       pushToast({
@@ -1196,85 +781,6 @@ export default function FloodMonitoringDashboard() {
     }
   }, [telemetry.waterLevelM]);
 
-  const exportTelemetryCsv = () => {
-    const csvRows = [
-      ['Timestamp', 'Water Level (m)', 'Distance to Sensor (cm)', 'Rain Rate (mm/h)', 'System Status'],
-      ...activeHistory.map(h => [
-        h.time,
-        h.waterLevel.toFixed(2),
-        Math.round((1.8 - h.waterLevel) * 100),
-        telemetry.rainRateMmHr,
-        getFloodLevel(h.waterLevel).label
-      ]),
-      [
-        new Date().toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true }),
-        telemetry.waterLevelM.toFixed(2),
-        telemetry.waterDistanceCm,
-        telemetry.rainRateMmHr,
-        floodLevel.label
-      ]
-    ];
-    const csvContent = 'data:text/csv;charset=utf-8,' + csvRows.map(e => e.join(',')).join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `SmartFlood_Telemetry_${timeFrame}_${Date.now()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    addLog('system', 'Exported telemetry log to CSV file.');
-  };
-
-  const tryScenario = (label, level) => {
-    setIsLive(false);
-    setManualOverride(false);
-    setSirenActive(level >= 1.60);
-    setTelemetry(prev => ({
-      ...prev,
-      waterLevelM: level,
-      waterDistanceCm: Math.round((1.8 - level) * 100 * 10) / 10,
-      rainRateMmHr: level < 0.6 ? 2 : level < 1.3 ? 14 : 30,
-    }));
-    setAiPrediction(prev => {
-      const p30 = Math.min(2.4, level + 0.10);
-      const p60 = Math.min(2.4, level + 0.20);
-      return { ...prev, riskScore: Math.round((p60 / 2.4) * 100), predicted30m: +p30.toFixed(2), predicted60m: +p60.toFixed(2), timeToCriticalMins: Math.max(5, Math.round((2.0 - level) * 120)) };
-    });
-    addLog('system', `Preview mode: showing what "${label}" looks like.`);
-  };
-
-  const resumeLive = () => { setIsLive(true); setManualOverride(false); };
-
-  const sendSms = () => {
-    if (phone.trim().length < 7) return;
-    setSmsConfirmed(true);
-    setTimeout(() => setSmsConfirmed(false), 4000);
-  };
-
-  const chartH = 130;
-  const chartW = 560;
-  const maxLevel = 2.4;
-  const histLevels = activeHistory.map(h => h.waterLevel);
-  // Allocate 88% width for historical telemetry, reserving rightmost 12% for +60m ML forecast projection
-  const telemetryW = chartW * 0.88;
-  const toChartPt = (v, i, arr) => ({
-    x: (i / Math.max(arr.length - 1, 1)) * telemetryW,
-    y: chartH - (v / maxLevel) * chartH,
-  });
-  const buildPath = (arr) => arr.map((v, i, a) => {
-    const { x, y } = toChartPt(v, i, a);
-    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-  }).join(' ');
-  const areaPath = (() => {
-    const pts = histLevels.map((v, i, a) => toChartPt(v, i, a));
-    return pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ` L ${telemetryW} ${chartH} L 0 ${chartH} Z`;
-  })();
-
-  const lastMeasuredPt = toChartPt(telemetry.waterLevelM, activeHistory.length - 1, activeHistory);
-  const forecastPt = {
-    x: chartW - 10,
-    y: chartH - (aiPrediction.predicted60m / maxLevel) * chartH,
-  };
 
   const logStyle = (type) => ({
     alarm: { badge: 'bg-[#fce7e0] text-[#e0522f] border border-[#f2bfab]', dot: '#e0522f' },
@@ -1285,12 +791,9 @@ export default function FloodMonitoringDashboard() {
   }[type] || { badge: 'bg-gray-100 text-gray-600', dot: '#6d818d' });
 
   const AdviceIcon = friendly.icon;
-  const rainKey = rainIntensityKey(telemetry.rainRateMmHr);
 
   const surgeDelta = +(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2);
   const surgeRateText = surgeDelta > 0.01 ? `+${surgeDelta.toFixed(2)} m/h` : '0.00 m/h (Steady)';
-  const displayRainRate = useCountUp(telemetry.rainRateMmHr, 900, 1);
-  const displayRiskScore = useCountUp(aiPrediction.riskScore, 900, 0);
 
   const [initialLoading, setInitialLoading] = useState(true);
   useEffect(() => {
@@ -1304,34 +807,12 @@ export default function FloodMonitoringDashboard() {
 
   return (
     <>
-    <div className="min-h-screen w-full font-sans text-[#3f5361] py-0 md:py-6 px-0 sm:px-3 md:px-6 lg:px-8 xl:px-12 flex flex-col justify-start items-center">
+    <div className="w-full font-sans text-[#3f5361] px-4 sm:px-6 lg:px-8 py-4 flex flex-col items-center">
 
-      <div className="w-full max-w-7xl bg-[#123a54] backdrop-blur-xl shadow-2xl rounded-none md:rounded-[28px] border-none overflow-hidden min-h-screen md:min-h-0">
-
-        {/* ── HEADER ─────────────────────────────────────────────────────── */}
-        <header className="bg-gradient-to-r from-[#123a54] to-[#1f6f94] text-white">
-          <div className="max-w-full px-3 sm:px-6 py-3.5 flex flex-col md:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 sm:gap-4 text-center sm:text-left flex-wrap justify-center sm:justify-start">
-              <img src="/PUBMAT3.png" alt="PUBMAT 3 logo"
-                className="w-11 h-11 sm:w-14 sm:h-14 rounded-full border-2 border-white/60 object-cover bg-white p-0.5 shadow-md flex-shrink-0" />
-              <div>
-                <h1 className="font-display text-lg sm:text-2xl font-bold leading-tight tracking-wide">Smart Flood</h1>
-                <p className="text-[11px] sm:text-xs text-sky-100/90">EOC Admin Dashboard · Real-Time Monitoring &amp; Control</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
-              <div className="text-right hidden sm:block">
-                <p className="text-[9px] text-sky-200 uppercase tracking-wide">Local time</p>
-                <p className="text-base font-mono font-semibold leading-tight">{pst}</p>
-                <p className="text-[10px] text-sky-100/80">{date}</p>
-              </div>
-            </div>
-          </div>
-        </header>
+      <div className="w-full max-w-7xl">
 
         {/* ── MAIN GRID ───────────────────────────────────────────────────── */}
-        <main className="bg-white/75 px-3 sm:px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <main className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
 
           {/* LEFT COLUMN: Current Status, Water Level Gauge, Metrics, Graphs, & Logs (7/12 width) */}
           <div className="lg:col-span-7 min-w-0 w-full flex flex-col justify-start space-y-4">
@@ -1339,7 +820,6 @@ export default function FloodMonitoringDashboard() {
             {/* ── HERO STATUS CARD ────────────────────────────────────────── */}
             <div className="relative overflow-hidden rounded-[24px] border shadow-sm p-5 sm:p-7 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-5 items-center card-enter card-enter-d1"
               style={{ background: `linear-gradient(135deg, ${floodLevel.soft}, #ffffff 70%)`, borderColor: floodLevel.border }}>
-              <RainOverlay intensity={rainKey} />
               <div className="relative z-[1]">
                 <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: floodLevel.color }}>
                   <MapPin size={13} /> Current status
@@ -1395,69 +875,32 @@ export default function FloodMonitoringDashboard() {
                 {/* Footer: timeframe + export */}
                 <div className="flex items-center justify-between pt-2 border-t border-[#f1f5f6] gap-2 flex-wrap">
                   <div className="relative flex items-center gap-0.5 bg-[#eef4f6] p-0.5 rounded-lg border border-[#e4edf0]">
-                    {[{ id: '30m', label: '30m' }, { id: '1h', label: '1h' }, { id: '6h', label: '6h' }, { id: '24h', label: '24h' }].map(({ id, label }) => (
+                    {[{ id: '1h', label: '1h' }, { id: '6h', label: '6h' }, { id: '24h', label: '24h' }].map(({ id, label }) => (
                       <button key={id}
-                        onClick={() => { setTimeFrame(id); setShowCustomModal(false); }}
+                        onClick={() => setTimeFrame(id)}
                         className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
                           timeFrame === id ? 'bg-white text-[#2b6e8f] shadow-sm' : 'text-[#6d818d] hover:text-[#123a54]'
                         }`}>
                         {label}
                       </button>
                     ))}
-                    <button
-                      onClick={() => { setTimeFrame('custom'); setShowCustomModal(!showCustomModal); }}
-                      className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all flex items-center gap-1 ${
-                        timeFrame === 'custom' ? 'bg-[#2b6e8f] text-white shadow-sm' : 'text-[#6d818d] hover:text-[#123a54]'
-                      }`}>
-                      <Sliders size={9} /> Custom
-                    </button>
-                    {showCustomModal && (
-                      <div className="absolute bottom-full left-0 mb-2 z-30 bg-white rounded-xl shadow-xl border border-[#e4edf0] p-3 w-52 space-y-2 text-xs">
-                        <div className="flex items-center justify-between font-bold text-[#123a54] pb-1 border-b border-[#f1f5f6]">
-                          <span>Custom Range</span>
-                          <button onClick={() => setShowCustomModal(false)} className="text-[#6d818d] hover:text-red-500">×</button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input type="number" min="1" max="100" value={customValue}
-                            onChange={(e) => setCustomValue(e.target.value)}
-                            className="w-14 px-2 py-1 border border-[#d1e0e8] rounded-lg text-center font-bold text-[#123a54]" />
-                          <select value={customUnit} onChange={(e) => setCustomUnit(e.target.value)}
-                            className="flex-1 px-2 py-1 border border-[#d1e0e8] rounded-lg font-semibold text-[#123a54] bg-white cursor-pointer">
-                            <option value="minutes">Minutes</option>
-                            <option value="hours">Hours</option>
-                            <option value="days">Days</option>
-                          </select>
-                        </div>
-                        <button
-                          onClick={() => { setCustomRangeText(`${customValue} ${customUnit.charAt(0).toUpperCase()}${customUnit.slice(1)}`); setTimeFrame('custom'); setShowCustomModal(false); }}
-                          className="w-full py-1.5 rounded-lg bg-[#2b6e8f] text-white font-bold hover:bg-[#1f6f94] transition text-center">
-                          Apply Range
-                        </button>
-                      </div>
-                    )}
                   </div>
-                  <button onClick={exportTelemetryCsv}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2b6e8f]/10 text-[#2b6e8f] font-bold text-[10px] hover:bg-[#2b6e8f]/20 transition border border-[#2b6e8f]/30"
-                    title="Export telemetry log to CSV">
-                    <Download size={11} /> Export CSV
-                  </button>
                 </div>
               </div>
 
               {/* Card 2: AI 30 & 60 Minute Forecast */}
               <AnimatedStatCard
                 icon={TrendingUp}
-                label="AI 30 and 60 Minute Forecast"
-                badge="ONNX LSTM"
+                label="Forecast"
+                badge={aiPrediction.methodLabel}
                 value={`${aiPrediction.predicted30m.toFixed(2)} m`}
                 numericValue={aiPrediction.predicted30m}
                 decimals={2}
                 trendText={`+${(aiPrediction.predicted30m - telemetry.waterLevelM).toFixed(2)} m delta`}
-                sub={`Risk Score: ${aiPrediction.riskScore}%`}
-                detailLine1={`Conf: ${aiPrediction.modelConfidence}% · MAE ±1.5cm · R² 82.6%`}
-                detailLine2={`+60m: ${aiPrediction.predicted60m.toFixed(2)} m · ±2.2 cm`}
+                sub={`+60 min: ${aiPrediction.predicted60m.toFixed(2)} m`}
+                detailLine1="Based on the last hour of readings"
                 color="#e69138"
-                tooltip="ONNX LSTM 30 & 60-minute forecast with confidence cone"
+                tooltip="Expected water level in 30 and 60 minutes, based on how the river changed in the last hour"
                 delay={3}
                 variant="ai"
                 currentLevel={telemetry.waterLevelM}
@@ -1511,77 +954,11 @@ export default function FloodMonitoringDashboard() {
               {/* Card Header */}
               <div className="flex items-start justify-between gap-2 border-b border-[#f1f5f6] pb-3">
                 <div>
-                  <h2 className="text-base font-bold text-[#123a54] leading-tight">System Controls &amp; Alerts</h2>
-                  <p className="text-[11px] text-[#6d818d] mt-0.5">Manage flood warning levels, siren broadcast, and resident alerts</p>
+                  <h2 className="text-base font-bold text-[#123a54] leading-tight">Station siren</h2>
                 </div>
-                <span className="text-[10px] bg-[#e5f6ec] text-[#2f9463] font-bold px-2.5 py-1 rounded-full border border-[#bfe6cf] flex-shrink-0">
-                  Admin Control
-                </span>
               </div>
 
-              {/* Flood Alert Threshold Sliders */}
               <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#5a7180]">
-                    Flood Alert Thresholds
-                  </h3>
-                  <span className="text-[10.5px] font-medium text-[#8fa3b0]">Scale: 0.50 m – 2.40 m</span>
-                </div>
-
-                <div className="space-y-2.5">
-                  {[
-                    { key: 'level1_watch', badge: 'Level 1', label: 'Advisory Watch', desc: 'Early water rise notice', min: 0.5, max: 2.4, color: '#2b6e8f', soft: '#e6f2f8' },
-                    { key: 'level2_alarm', badge: 'Level 2', label: 'Warning Alarm', desc: 'Triggers automated warning siren', min: 0.5, max: 2.4, color: '#e69138', soft: '#fdf1de' },
-                    { key: 'level3_danger', badge: 'Level 3', label: 'Danger Level', desc: 'Critical threshold', min: 0.5, max: 2.4, color: '#e0522f', soft: '#fce7e0' },
-                  ].map(({ key, badge, label, desc, min, max, color, soft }) => {
-                    const val = Number(thresholds[key] || min);
-                    const pct = Math.min(100, Math.max(0, ((val - min) / (max - min)) * 100));
-                    return (
-                      <div key={key} className="bg-[#f8fbfc] rounded-xl p-3 border border-[#eef4f6] space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className="text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0"
-                              style={{ backgroundColor: soft, color }}
-                            >
-                              {badge}
-                            </span>
-                            <div className="truncate">
-                              <span className="text-xs font-bold text-[#123a54]">{label}</span>
-                              <span className="hidden sm:inline text-[10.5px] text-[#6d818d] ml-1.5">· {desc}</span>
-                            </div>
-                          </div>
-                          <span
-                            className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-white border border-[#e4edf0] flex-shrink-0"
-                            style={{ color }}
-                          >
-                            {val.toFixed(2)} m
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min={min}
-                          max={max}
-                          step="0.05"
-                          value={val}
-                          onChange={e => setThresholds({ ...thresholds, [key]: parseFloat(e.target.value) })}
-                          style={{
-                            background: `linear-gradient(to right, ${color} 0%, ${color} ${pct}%, #e2ecef ${pct}%, #e2ecef 100%)`,
-                            '--thumb-color': color,
-                          }}
-                          className="w-full h-2 rounded-full cursor-pointer block"
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Station Operations & Maintenance */}
-              <div className="space-y-2.5 pt-2 border-t border-[#f1f5f6]">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#5a7180]">
-                  Station Operations &amp; Maintenance
-                </h3>
 
                 {/* 1. Emergency Siren Override */}
                 <div className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-colors ${
@@ -1614,76 +991,17 @@ export default function FloodMonitoringDashboard() {
                   </button>
                 </div>
 
-                {/* 2. Community Email Alerts */}
-                <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#f8fbfc] border border-[#eef4f6]">
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-[#123a54]">Community Email Alerts</p>
-                    <p className="text-[11px] text-[#6d818d] mt-0.5">
-                      View subscribed residents and send email advisories
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setShowEmailModal(true)}
-                    className="w-36 h-9 rounded-xl bg-white hover:bg-[#e6f2f8] text-[#123a54] font-bold text-xs border border-[#cbdbe2] flex items-center justify-center gap-1.5 shadow-2xs transition-all flex-shrink-0 cursor-pointer active:scale-95"
-                  >
-                    <Mail size={14} className="text-[#2b6e8f]" />
-                    <span>Manage Alerts</span>
-                  </button>
-                </div>
-
-                {/* 3. Reset Telemetry Data */}
-                <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[#f8fbfc] border border-[#eef4f6]">
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-[#123a54]">Reset Sensor Logs</p>
-                    <p className="text-[11px] text-[#6d818d] mt-0.5">
-                      Clear test history and reset water level baseline
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleResetTestTelemetry}
-                    disabled={isResetting}
-                    className="w-36 h-9 rounded-xl bg-white hover:bg-gray-100 text-[#5a7180] hover:text-[#123a54] font-bold text-xs border border-[#cbdbe2] flex items-center justify-center gap-1.5 shadow-2xs transition-all flex-shrink-0 cursor-pointer active:scale-95 disabled:opacity-50"
-                  >
-                    <RotateCcw size={13} className={isResetting ? 'animate-spin' : ''} />
-                    <span>{isResetting ? 'Resetting...' : 'Reset Logs'}</span>
-                  </button>
-                </div>
               </div>
             </div>
 
           </div>
         </main>
 
-        {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-        <footer className="bg-gradient-to-r from-[#123a54] to-[#1f6f94] text-sky-200/90 text-center text-[10px] sm:text-xs py-3.5 px-4 flex items-center justify-between gap-2 flex-wrap border-t border-white/10">
-          <div className="flex items-center gap-2">
-            <img src="/PUBMAT3.png" alt="logo" className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white p-0.5" />
-            <span>Smart Flood · Real-Time Monitoring &amp; Early Warning System · Capstone 2026</span>
-          </div>
-          <button
-            onClick={() => setShowDisclaimer(true)}
-            className="flex items-center gap-1.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-400/30 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold transition cursor-pointer"
-          >
-            <Info size={13} />
-            <span>Data Sources &amp; Disclaimers</span>
-          </button>
-        </footer>
 
       </div>
     </div>
 
-    {/* Data Sources & Disclaimers Modal */}
-    <DataSourcesDisclaimerModal
-      isOpen={showDisclaimer}
-      onClose={() => setShowDisclaimer(false)}
-    />
 
-    {/* Email Subscribers & Broadcast Center Modal */}
-    <EmailSubscribersModal
-      isOpen={showEmailModal}
-      onClose={() => setShowEmailModal(false)}
-      onNotification={({ type, msg }) => pushToast(type, 'Email Alert', msg)}
-    />
 
     {/* ── TOAST NOTIFICATIONS (portal, fixed bottom-right) ─────────────── */}
     <ToastContainer toasts={toasts} onDismiss={dismissToast} />

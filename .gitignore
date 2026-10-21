@@ -28,3 +28,6 @@ dist-ssr
 
 # scratch
 .tmp-pull/
+
+# Private account list
+ACCOUNTS.md

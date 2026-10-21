@@ -1,20 +1,29 @@
 import express from 'express';
+import { prisma } from '../db.js';
 import { requirePermission } from '../middleware/authMiddleware.js';
 import {
-  listDevices, findDeviceById, createDevice, updateDevice, replaceBoard, rotateDeviceKey,
-  deleteDevice, toPublicDevice, setNodeMaintenance, getGlobalMaintenance, setGlobalMaintenance,
+  listDevices, findDeviceById, createDevice, updateDevice, replaceBoard,
+  toPublicDevice, setNodeMaintenance,
   listChangeLogs, logChange,
 } from '../services/deviceStore.js';
 import { audit } from '../services/auditService.js';
+import { getThresholds, setNodeThresholds, clearNodeThresholds, validateThresholds } from '../services/thresholdStore.js';
 import { broadcast } from '../websocket.js';
-import { BARANGAYS, BARANGAY_SCOPED_ROLES, DEVICE_STATUSES, SENSOR_TYPES } from '../../shared/roles.js';
+import { BARANGAYS, BARANGAY_SCOPED_ROLES, SENSOR_TYPES } from '../../shared/roles.js';
 
 const router = express.Router();
 
 // Barangay staff only see / manage boards in their own barangay
 const scopeBarangay = (req) => (BARANGAY_SCOPED_ROLES.includes(req.operator.role) ? req.operator.barangay : null);
 
-const publicList = (rows) => Promise.all(rows.map(toPublicDevice));
+// Public device shape + the alert thresholds that apply to it
+async function withThresholds(device) {
+  const pub = await toPublicDevice(device);
+  return pub && { ...pub, thresholds: await getThresholds(device.id) };
+}
+const publicList = (rows) => Promise.all(rows.map(withThresholds));
+
+const BLIND_SPOT_M = parseFloat(process.env.SENSOR_BLIND_SPOT_CM ?? 25) / 100;
 
 async function loadScopedDevice(req, res) {
   const device = await findDeviceById(parseInt(req.params.id));
@@ -66,21 +75,67 @@ function notifyRegistryChanged() {
 // GET /api/v1/devices — list boards (barangay-scoped for BARANGAY role)
 router.get('/', requirePermission('devices.view'), async (req, res) => {
   const devices = await listDevices({ barangay: scopeBarangay(req) });
-  res.json({ success: true, data: await publicList(devices), globalMaintenance: await getGlobalMaintenance() });
+  res.json({ success: true, data: await publicList(devices) });
 });
 
-// POST /api/v1/devices/maintenance/global — Body: { enabled, reason?, endsAt? } (SUPERADMIN)
-router.post('/maintenance/global', requirePermission('system.maintenance'), async (req, res) => {
-  const { enabled, reason, endsAt } = req.body || {};
-  const win = await setGlobalMaintenance(Boolean(enabled), { reason, endsAt }, req.operator.username);
-  audit(req.operator, enabled ? 'maintenance.global_on' : 'maintenance.global_off', null, reason || null);
-  notifyRegistryChanged();
-  res.json({ success: true, data: win });
+// GET /api/v1/devices/summary — every board with its latest water level and alert level
+// (used by the dashboards; barangay staff only get their barangay)
+router.get('/summary', requirePermission('devices.view'), async (req, res) => {
+  const devices = (await listDevices({ barangay: scopeBarangay(req) })).filter((d) => d.status !== 'RETIRED');
+  const data = await Promise.all(devices.map(async (d) => {
+    const base = await withThresholds(d);
+    let latest = null;
+    try {
+      latest = await prisma.telemetryLog.findFirst({
+        where: { nodeId: d.id },
+        orderBy: { recordedAt: 'desc' },
+        select: { waterLevelM: true, recordedAt: true },
+      });
+    } catch (_e) { /* no database */ }
+    const t = base.thresholds;
+    const level = !latest ? null
+      : latest.waterLevelM >= t.level3_danger ? 3
+      : latest.waterLevelM >= t.level2_alarm ? 2
+      : latest.waterLevelM >= t.level1_watch ? 1 : 0;
+    return { ...base, latest, level };
+  }));
+  res.json({ success: true, data });
 });
 
 router.get('/:id', requirePermission('devices.view'), async (req, res) => {
   const device = await loadScopedDevice(req, res);
-  if (device) res.json({ success: true, data: await toPublicDevice(device), history: await listChangeLogs(device.id) });
+  if (device) res.json({ success: true, data: await withThresholds(device), history: await listChangeLogs(device.id) });
+});
+
+// PUT /api/v1/devices/:id/thresholds — this board's own alert levels (metres)
+// Body: { level1_watch, level2_alarm, level3_danger }   (Level 3 = spill level)
+router.put('/:id/thresholds', requirePermission('thresholds.manage'), async (req, res) => {
+  const device = await loadScopedDevice(req, res);
+  if (!device) return;
+  const t = {
+    level1_watch:  parseFloat(req.body?.level1_watch),
+    level2_alarm:  parseFloat(req.body?.level2_alarm),
+    level3_danger: parseFloat(req.body?.level3_danger),
+  };
+  const maxStage = device.mountHeightCm / 100 - BLIND_SPOT_M;
+  const err = validateThresholds(t, maxStage);
+  if (err) return res.status(400).json({ success: false, error: err });
+  const thresholds = await setNodeThresholds(device.id, t);
+  await logChange(device.id, 'THRESHOLDS_UPDATED', JSON.stringify(t), req.operator.username);
+  audit(req.operator, 'device.thresholds', device.nodeCode, t);
+  notifyRegistryChanged();
+  res.json({ success: true, data: thresholds });
+});
+
+// DELETE /api/v1/devices/:id/thresholds — go back to the default levels
+router.delete('/:id/thresholds', requirePermission('thresholds.manage'), async (req, res) => {
+  const device = await loadScopedDevice(req, res);
+  if (!device) return;
+  const thresholds = await clearNodeThresholds(device.id);
+  await logChange(device.id, 'THRESHOLDS_RESET', null, req.operator.username);
+  audit(req.operator, 'device.thresholds_reset', device.nodeCode);
+  notifyRegistryChanged();
+  res.json({ success: true, data: thresholds });
 });
 
 // POST /api/v1/devices — register ("add board"). Returns the API key ONCE.
@@ -117,15 +172,15 @@ router.put('/:id', requirePermission('devices.manage'), async (req, res) => {
   } catch (e) { fail(res, e); }
 });
 
-// POST /api/v1/devices/:id/maintenance — Body: { enabled: boolean, reason?: string }
-// While in MAINTENANCE, telemetry is still stored but automated alerts are suppressed.
+// POST /api/v1/devices/:id/maintenance — turn a board Off/On. Body: { enabled: boolean }
+// enabled = true → board is Off (status MAINTENANCE): readings are stored but no alerts or siren.
 router.post('/:id/maintenance', requirePermission('devices.maintenance'), async (req, res) => {
   const device = await loadScopedDevice(req, res);
   if (!device) return;
   if (device.status === 'RETIRED') return res.status(400).json({ success: false, error: 'Retired boards cannot change status.' });
   const enabled = Boolean(req.body?.enabled);
   const updated = await setNodeMaintenance(device.id, enabled, req.body?.reason, req.operator.username);
-  audit(req.operator, enabled ? 'device.maintenance_on' : 'device.maintenance_off', device.nodeCode, req.body?.reason || null);
+  audit(req.operator, enabled ? 'device.turned_off' : 'device.turned_on', device.nodeCode);
   notifyRegistryChanged();
   res.json({ success: true, data: await toPublicDevice(updated) });
 });
@@ -150,40 +205,6 @@ router.post('/:id/replace', requirePermission('devices.manage'), async (req, res
     notifyRegistryChanged();
     res.json({ success: true, data: await toPublicDevice(result.device), apiKey: result.apiKey });
   } catch (e) { fail(res, e); }
-});
-
-// POST /api/v1/devices/:id/rotate-key — issue a new API key (old key stops working)
-router.post('/:id/rotate-key', requirePermission('devices.manage'), async (req, res) => {
-  const device = await loadScopedDevice(req, res);
-  if (!device) return;
-  const result = await rotateDeviceKey(device.id, req.operator.username);
-  audit(req.operator, 'device.rotate_key', device.nodeCode);
-  res.json({ success: true, data: await toPublicDevice(result.device), apiKey: result.apiKey });
-});
-
-// PUT /api/v1/devices/:id/status — Body: { status } (e.g. RETIRED to decommission a site)
-router.put('/:id/status', requirePermission('devices.manage'), async (req, res) => {
-  const device = await loadScopedDevice(req, res);
-  if (!device) return;
-  const { status } = req.body || {};
-  if (!DEVICE_STATUSES.includes(status)) return res.status(400).json({ success: false, error: 'Invalid status.' });
-  if (status === 'MAINTENANCE') return res.status(400).json({ success: false, error: 'Use the maintenance endpoint.' });
-  const updated = await updateDevice(device.id, { status });
-  await logChange(device.id, status === 'RETIRED' ? 'RETIRED' : `STATUS_${status}`, null, req.operator.username);
-  audit(req.operator, 'device.status', device.nodeCode, status);
-  notifyRegistryChanged();
-  res.json({ success: true, data: await toPublicDevice(updated) });
-});
-
-// DELETE /api/v1/devices/:id — hard delete (SUPERADMIN). Telemetry rows keep their data.
-router.delete('/:id', requirePermission('devices.delete'), async (req, res) => {
-  const device = await loadScopedDevice(req, res);
-  if (!device) return;
-  if (device.isDefault) return res.status(400).json({ success: false, error: 'The default site cannot be deleted.' });
-  await deleteDevice(device.id);
-  audit(req.operator, 'device.delete', device.nodeCode);
-  notifyRegistryChanged();
-  res.json({ success: true });
 });
 
 export default router;

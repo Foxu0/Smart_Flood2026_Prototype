@@ -107,6 +107,7 @@ model AlertBroadcast {
   node            HardwareNode?      @relation(fields: [nodeId], references: [id])
 
   dispatchLogs    EmailDispatchLog[]
+  smsLogs         SmsLog[]
 
   @@index([triggeredAt])
   @@index([triggerLogId])
@@ -272,7 +273,8 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// ── Notifications & SMS (Phase 2) ────────────────────────────────────────────
+// ── Notifications & SMS ──────────────────────────────────────────────────────
+// SMS residents are registered by Barangay staff / CDRRMO (Alerts page).
 model Notification {
   id            Int                @id @default(autoincrement())
   createdAt     DateTime           @default(now()) @map("created_at")
@@ -322,6 +324,8 @@ model SmsLog {
   id           Int            @id @default(autoincrement())
   subscriberId Int?           @map("subscriber_id")
   subscriber   SmsSubscriber? @relation(fields: [subscriberId], references: [id])
+  broadcastId  Int?            @map("broadcast_id")   // which alert this text belongs to
+  broadcast    AlertBroadcast? @relation(fields: [broadcastId], references: [id])
   phone        String
   message      String
   provider     String         @default("LOG_ONLY")

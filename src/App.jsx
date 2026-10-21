@@ -6,10 +6,16 @@ import FloodTransition  from './components/FloodTransition.jsx';
 import ConsoleLayout    from './layouts/ConsoleLayout.jsx';
 import DevicesPage      from './pages/console/DevicesPage.jsx';
 import UsersPage        from './pages/console/UsersPage.jsx';
-import SettingsPage     from './pages/console/SettingsPage.jsx';
-import AuditPage        from './pages/console/AuditPage.jsx';
-import PlaceholderPage  from './pages/console/PlaceholderPage.jsx';
-import { STAFF_ROLES } from '../shared/roles.js';
+import AlertsPage       from './pages/console/AlertsPage.jsx';
+import ReportsPage      from './pages/console/ReportsPage.jsx';
+import MonitoringPage   from './pages/console/MonitoringPage.jsx';
+import { getUser } from './lib/session.js';
+import { STAFF_ROLES, ROLES } from '../shared/roles.js';
+
+// Each role's home: Super Admin manages the system (starts on Hardware); CDRRMO and Barangay staff watch the river
+function RoleHome() {
+  return getUser()?.role === ROLES.SUPERADMIN ? <Navigate to="/admin/devices" replace /> : <MonitoringPage />;
+}
 import './index.css';
 
 export default function App() {
@@ -29,27 +35,16 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<AdminDashboard />} />
+            <Route index element={<RoleHome />} />
             <Route path="devices" element={<DevicesPage />} />
             <Route path="users" element={<UsersPage />} />
-            <Route path="audit" element={<AuditPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="alerts" element={
-              <PlaceholderPage title="Alerts" subtitle="Active and past flood alerts across all barangays."
-                planned={['Manual alert broadcast (email + SMS)', 'Alert history with acknowledgement', 'Spill / overflow detection events']} />
-            } />
-            <Route path="thresholds" element={
-              <PlaceholderPage title="Thresholds" subtitle="Water level and current speed limits that trigger each alert level."
-                planned={['Per-board water level thresholds (Advisory / Warning / Danger)', 'Current speed thresholds (m/s)', 'Spill level per site']} />
-            } />
-            <Route path="reports" element={
-              <PlaceholderPage title="Reports" subtitle="Exportable summaries of readings, alerts and hardware health."
-                planned={['Daily / weekly water level & current speed reports', 'Alert incident report (PDF / CSV)', 'Board uptime & maintenance history']} />
-            } />
-            <Route path="notifications" element={
-              <PlaceholderPage title="Notifications" subtitle="Messages sent to staff and residents."
-                planned={['SMS notification log', 'In-app notification inbox', 'Recipient groups per barangay']} />
-            } />
+            <Route path="alerts" element={<AlertsPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            {/* Old menu items, now merged */}
+            <Route path="thresholds" element={<Navigate to="/admin/devices" replace />} />
+            <Route path="settings" element={<Navigate to="/admin" replace />} />
+            <Route path="notifications" element={<Navigate to="/admin/alerts" replace />} />
+            <Route path="audit" element={<Navigate to="/admin/reports" replace />} />
           </Route>
 
           {/* Login aliases → the guarded console shows the sign-in terminal */}

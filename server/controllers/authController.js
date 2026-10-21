@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken';
-import { verifyLogin, findUserById, updateUser, toPublicUser } from '../services/accountStore.js';
+import { verifyLogin, findUserById, toPublicUser } from '../services/accountStore.js';
 import { barangayNameById } from '../services/barangayStore.js';
 import { audit } from '../services/auditService.js';
-import { verifySecret } from '../lib/crypto.js';
 
 async function issueToken(user) {
   const payload = {
@@ -72,37 +71,6 @@ export async function me(req, res) {
     return res.status(401).json({ success: false, error: 'Account not found or disabled.', code: 'ACCOUNT_INVALID' });
   }
   return res.json({ success: true, operator: await toPublicUser(user) });
-}
-
-/** PUT /api/v1/auth/me — update own profile / password. Body: { fullName?, email?, phone?, currentPassword?, newPassword? } */
-export async function updateMe(req, res) {
-  try {
-    const user = await findUserById(req.operator.sub);
-    if (!user) return res.status(404).json({ success: false, error: 'Account not found.' });
-
-    const { fullName, email, phone, currentPassword, newPassword } = req.body || {};
-    const changes = {};
-    if (fullName) changes.fullName = fullName; // required column — ignore blanks
-    if (email !== undefined) changes.email = email || null;
-    if (phone !== undefined) changes.phone = phone || null;
-
-    if (newPassword) {
-      if (String(newPassword).length < 8) {
-        return res.status(400).json({ success: false, error: 'New password must be at least 8 characters.' });
-      }
-      if (!verifySecret(String(currentPassword || ''), user.passwordHash)) {
-        return res.status(400).json({ success: false, error: 'Current password is incorrect.' });
-      }
-      changes.password = newPassword;
-    }
-
-    const updated = await updateUser(user.id, changes);
-    audit(req.operator, 'auth.update_profile', user.username, newPassword ? 'password changed' : null);
-    return res.json({ success: true, operator: await toPublicUser(updated) });
-  } catch (err) {
-    console.error('[Auth] updateMe error:', err);
-    return res.status(500).json({ success: false, error: 'Internal server error.' });
-  }
 }
 
 /**

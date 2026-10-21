@@ -1,13 +1,12 @@
 import express from 'express';
 import { prisma } from '../db.js';
 import { broadcast } from '../websocket.js';
-import { buildHistoryBuffer, getPrediction, runPredictionInference } from '../services/dlService.js';
-import { purgeOldData } from '../services/retentionService.js';
+import { buildHistoryBuffer, getPrediction, runPredictionInference, getModelStatus } from '../services/dlService.js';
+import { getThresholds } from '../services/thresholdStore.js';
 import { broadcastEmailAlert } from '../services/emailService.js';
-import { recordPrediction, recordActualAndEvaluate, getEvaluationMetrics } from '../services/aiEvaluationService.js';
 import { requirePermission } from '../middleware/authMiddleware.js';
 import { memoryEvents } from './events.js';
-import { authenticateDeviceKey, touchDevice, findDefaultNode, getGlobalMaintenance } from '../services/deviceStore.js';
+import { authenticateDeviceKey, touchDevice, findDefaultNode } from '../services/deviceStore.js';
 
 export const memoryTelemetryLogs = [];
 let memoryLatestProjection = null;
@@ -18,26 +17,8 @@ const router = express.Router();
 const MOUNT_HEIGHT_CM  = parseFloat(process.env.SENSOR_MOUNT_HEIGHT_CM  ?? 240);  // cm above riverbed
 const BLIND_SPOT_CM    = parseFloat(process.env.SENSOR_BLIND_SPOT_CM    ?? 25);   // JSN-SR04T min range
 
-// ── Default alert thresholds (overridable via SystemSetting) ─────────────────
-const DEFAULT_THRESHOLDS = {
-  level1_watch:  1.20,
-  level2_alarm:  1.60,
-  level3_danger: 2.00,
-};
-
-async function getThresholds() {
-  try {
-    const settings = await prisma.systemSetting.findMany({
-      where: { keyName: { in: ['level1_watch', 'level2_alarm', 'level3_danger'] } },
-    });
-    const overrides = {};
-    settings.forEach((s) => { overrides[s.keyName] = parseFloat(s.value); });
-    return { ...DEFAULT_THRESHOLDS, ...overrides };
-  } catch (err) {
-    console.error('[getThresholds] Error fetching thresholds from database, falling back to defaults:', err);
-    return DEFAULT_THRESHOLDS;
-  }
-}
+// Alert thresholds are per board (see services/thresholdStore.js)
+export { getThresholds };
 
 // ── POST /api/v1/telemetry ───────────────────────────────────────────────────
 // Accepts both the new ESP32 native field names and the legacy snake_case format.
@@ -70,7 +51,7 @@ router.post('/', async (req, res) => {
       device = await findDefaultNode();
     }
     const mountHeightCm = device?.mountHeightCm ?? MOUNT_HEIGHT_CM;
-    const inMaintenance = device?.status === 'MAINTENANCE' || Boolean(await getGlobalMaintenance());
+    const inMaintenance = device?.status === 'MAINTENANCE'; // board turned Off on the Hardware page
 
     // ── 1. Resolve raw distance ────────────────────────────────────────────
     // ESP32 sends centimetres from sensor face to water surface.
@@ -151,10 +132,9 @@ router.post('/', async (req, res) => {
     if (memoryTelemetryLogs.length > 500) memoryTelemetryLogs.pop();
 
     // Evaluate actual reading against past predictions
-    recordActualAndEvaluate(log);
 
     // ── 7. Evaluate thresholds → auto event log ────────────────────────────
-    const thresholds = await getThresholds();
+    const thresholds = await getThresholds(device?.id);
     let eventCode = null;
     let eventMsg  = null;
     let severity  = 'INFO';
@@ -163,7 +143,7 @@ router.post('/', async (req, res) => {
       // Board under maintenance: readings are stored but never raise alerts
     } else if (water_level_m >= thresholds.level3_danger) {
       eventCode = 'ALERT_L3';
-      eventMsg  = `ALERT_L3: EMERGENCY — Water level critical at ${water_level_m.toFixed(2)} m. Immediate evacuation required.`;
+      eventMsg  = `ALERT_L3: SPILL — Water at ${water_level_m.toFixed(2)} m has reached the spill level. Evacuate now.`;
       severity  = 'CRITICAL';
     } else if (water_level_m >= thresholds.level2_alarm) {
       eventCode = 'ALERT_L2';
@@ -214,12 +194,15 @@ router.post('/', async (req, res) => {
       let recentLogs = [];
       try {
         recentLogs = await prisma.telemetryLog.findMany({
+          where: { nodeId: device?.id ?? null, id: { not: log.id } },
           orderBy: { recordedAt: 'desc' },
           take: 5,
           select: { waterLevelM: true },
         });
       } catch (_e) {
-        recentLogs = memoryTelemetryLogs.slice(1, 6).map(r => ({ waterLevelM: r.waterLevelM }));
+        recentLogs = memoryTelemetryLogs
+          .filter(r => r.id !== log.id && (r.nodeId ?? null) === (device?.id ?? null))
+          .slice(0, 5).map(r => ({ waterLevelM: r.waterLevelM }));
       }
 
       // Combine: older records first, newest (current) last
@@ -230,10 +213,7 @@ router.post('/', async (req, res) => {
 
       const historyBuffer = buildHistoryBuffer(chronological);
       projection = await getPrediction(historyBuffer);
-      if (projection) {
-        memoryLatestProjection = projection;
-        recordPrediction(projection);
-      }
+      if (projection) memoryLatestProjection = projection;
     } catch (inferErr) {
       console.error('[POST /telemetry] Inference error:', inferErr.message);
     }
@@ -265,9 +245,8 @@ router.post('/', async (req, res) => {
     });
 
     if (event)       broadcast({ type: 'EVENT',        data: event });
-    if (projection)  broadcast({ type: 'PROJECTION',   data: projection });
+    if (projection)  broadcast({ type: 'PROJECTION',   data: { ...projection, nodeId: device?.id ?? null } });
     broadcast({      type: 'ALERT_STATUS', data: alertStatus });
-    broadcast({      type: 'AI_EVALUATION', data: getEvaluationMetrics() });
 
     // ── 11. Trigger Email Broadcast on Level 1+ (with anti-spam cooldown) ──────
     // Level 1 (Advisory) → email advisory only (no siren)
@@ -275,12 +254,12 @@ router.post('/', async (req, res) => {
     // Level 3 (Danger)   → email + siren activated on ESP32
     if (alertStatus.level >= 1 && !inMaintenance) {
       const alertTitle = alertStatus.level === 3
-        ? 'Danger Level Reached'
+        ? 'Spill Level Reached'
         : alertStatus.level === 2
           ? 'Flood Warning Active'
           : 'Water Level Rising';
       const alertBody  = alertStatus.level === 3
-        ? `EMERGENCY: Water level reached ${water_level_m.toFixed(2)}m. Immediate evacuation required in Lower Antipolo.`
+        ? `SPILL LEVEL: Water reached ${water_level_m.toFixed(2)} m and may overflow the riverbank in Lower Antipolo. Evacuate now.`
         : alertStatus.level === 2
           ? `WARNING: Water level reached ${water_level_m.toFixed(2)}m. Prepare for potential evacuation.`
           : `ADVISORY: Water level at Lower Antipolo has reached ${water_level_m.toFixed(2)}m and is rising. Please stay alert and monitor further updates.`;
@@ -292,11 +271,11 @@ router.post('/', async (req, res) => {
         waterLevelM: water_level_m,
         source: 'AUTOMATED_SENSOR',
         triggerLogId: log.id,
+        nodeId: device?.id ?? null,
       }).catch(err => console.error('[POST /telemetry] Email Alert error:', err.message));
     }
 
-    const aiEvaluation = getEvaluationMetrics();
-    res.status(201).json({ success: true, log, event, projection, alertStatus, aiEvaluation });
+    res.status(201).json({ success: true, log, event, projection, alertStatus });
   } catch (err) {
     console.error('[POST /telemetry]', err);
     res.status(500).json({ error: 'Internal server error', detail: err.message });
@@ -307,6 +286,10 @@ router.post('/', async (req, res) => {
 // Returns latest MLProjection row; triggers a fresh DB-backed inference if stale.
 router.get('/projection', async (req, res) => {
   try {
+    if (req.query.nodeId) {
+      const fresh = await runPredictionInference(parseInt(req.query.nodeId), { save: false });
+      return res.json({ success: true, data: fresh ? { ...fresh, ...getModelStatus() } : null });
+    }
     let latest = null;
     try {
       latest = await prisma.mLProjection.findFirst({
@@ -321,13 +304,13 @@ router.get('/projection', async (req, res) => {
       try {
         const fresh = await runPredictionInference();
         if (!fresh) return res.json({ success: true, data: null, message: 'No telemetry data available for projection.' });
-        return res.json({ success: true, data: fresh });
+        return res.json({ success: true, data: { ...fresh, ...getModelStatus() } });
       } catch (_e) {
         return res.json({ success: true, data: memoryLatestProjection });
       }
     }
 
-    res.json({ success: true, data: latest });
+    res.json({ success: true, data: { ...latest, ...getModelStatus() } });
   } catch (err) {
     console.error('[GET /telemetry/projection]', err);
     res.status(500).json({ error: 'Internal server error', detail: err.message });
@@ -335,15 +318,19 @@ router.get('/projection', async (req, res) => {
 });
 
 // ── GET /api/v1/telemetry/latest ─────────────────────────────────────────────
+// Query: nodeId (optional) — latest reading of one board
 router.get('/latest', async (req, res) => {
   try {
+    const nodeId = req.query.nodeId ? parseInt(req.query.nodeId) : null;
+    const nodeWhere = nodeId ? { nodeId } : {};
     let latest = null;
     try {
       latest = await prisma.telemetryLog.findFirst({
+        where: nodeWhere,
         orderBy: { recordedAt: 'desc' },
       });
     } catch (_e) {
-      latest = memoryTelemetryLogs[0] || null;
+      latest = memoryTelemetryLogs.find(l => !nodeId || l.nodeId === nodeId) || null;
     }
 
     if (!latest) return res.json({ success: true, data: null, message: 'No telemetry data recorded yet.' });
@@ -355,11 +342,11 @@ router.get('/latest', async (req, res) => {
     let baseline = null;
     try {
       baseline = await prisma.telemetryLog.findFirst({
-        where:   { recordedAt: { lte: fifteenMinsAgo } },
+        where:   { ...nodeWhere, recordedAt: { lte: fifteenMinsAgo } },
         orderBy: { recordedAt: 'desc' },
       });
     } catch (_e) {
-      baseline = memoryTelemetryLogs.find(l => new Date(l.recordedAt).getTime() <= fifteenMinsAgo.getTime()) || null;
+      baseline = memoryTelemetryLogs.find(l => (!nodeId || l.nodeId === nodeId) && new Date(l.recordedAt).getTime() <= fifteenMinsAgo.getTime()) || null;
     }
 
     const surgeRate_m_per_hour = baseline
@@ -379,7 +366,7 @@ router.get('/latest', async (req, res) => {
         surgeRate_m_per_hour,
         blind_spot_warning: latest.rawDistanceCm <= BLIND_SPOT_CM,
         mount_height_cm: MOUNT_HEIGHT_CM,
-        thresholds: await getThresholds(),
+        thresholds: await getThresholds(latest.nodeId),
       },
     });
   } catch (err) {
@@ -391,8 +378,9 @@ router.get('/latest', async (req, res) => {
 // ── GET /api/v1/telemetry/history ────────────────────────────────────────────
 router.get('/history', async (req, res) => {
   try {
-    const { range, from, to, limit = 100 } = req.query;
+    const { range, from, to, limit = 100, nodeId } = req.query;
     const where = {};
+    if (nodeId) where.nodeId = parseInt(nodeId);
     const now   = new Date();
 
     if (range) {
@@ -438,58 +426,105 @@ router.get('/history', async (req, res) => {
 });
 
 // ── GET /api/v1/telemetry/export/csv ─────────────────────────────────────────
-router.get('/export/csv', async (req, res) => {
+// Water level report: one row per 10 minutes with the highest level in that window.
+// Query: from, to (ISO dates), nodeId (optional)
+const csvCell = (v) => {
+  const t = v == null ? '' : String(v);
+  return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+};
+const phTime = (d) => new Date(d).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' });
+
+router.get('/export/csv', requirePermission('reports.view'), async (req, res) => {
   try {
-    const { from, to, limit = 1000 } = req.query;
-    const where = {};
-    if (from || to) {
-      where.recordedAt = {};
-      if (from) where.recordedAt.gte = new Date(from);
-      if (to)   where.recordedAt.lte = new Date(to);
+    const from = req.query.from ? new Date(req.query.from) : new Date(Date.now() - 7 * 864e5);
+    const to = req.query.to ? new Date(req.query.to) : new Date();
+    const nodeId = req.query.nodeId ? parseInt(req.query.nodeId) : null;
+
+    const rows = await prisma.$queryRaw`
+      SELECT to_timestamp(floor(extract(epoch FROM recorded_at) / 600) * 600) AS slot,
+             node_id,
+             MAX(water_level_m) AS level,
+             MAX(flow_speed_ms) AS speed
+      FROM telemetry_logs
+      WHERE recorded_at BETWEEN ${from} AND ${to}
+        AND (${nodeId}::int IS NULL OR node_id = ${nodeId}::int)
+      GROUP BY slot, node_id
+      ORDER BY slot ASC`;
+
+    const nodes = await prisma.hardwareNode.findMany({ select: { id: true, name: true } });
+    const nameOf = Object.fromEntries(nodes.map((n) => [n.id, n.name]));
+    const thresholdsOf = {};
+    const levelName = async (id, level) => {
+      thresholdsOf[id] ??= await getThresholds(id);
+      const t = thresholdsOf[id];
+      if (level >= t.level3_danger) return 'Level 3 (Spill)';
+      if (level >= t.level2_alarm) return 'Level 2 (Warning)';
+      if (level >= t.level1_watch) return 'Level 1 (Advisory)';
+      return 'Normal';
+    };
+
+    const lines = ['Date & time,Board,Highest water level (m),Water speed (m/s),Alert level'];
+    for (const r of rows) {
+      const level = Number(r.level);
+      lines.push([
+        phTime(r.slot),
+        nameOf[r.node_id] || '',
+        level.toFixed(2),
+        r.speed != null ? Number(r.speed).toFixed(2) : '',
+        await levelName(r.node_id, level),
+      ].map(csvCell).join(','));
     }
 
-    const logs = await prisma.telemetryLog.findMany({
-      where,
-      orderBy: { recordedAt: 'asc' },
-      take: Math.min(parseInt(limit), 5000),
-    });
-
-    const headers = [
-      'id', 'recordedAt', 'waterLevelM', 'rawDistanceCm',
-      'flowSpeedMs', 'rssiDbm', 'supplyVoltageV', 'uptimeSec', 'sensorStatus', 'inMaintenance', 'nodeId',
-    ];
-
-    const csvRows = [
-      'ID,Recorded At,Water Level (m),Raw Distance (cm),Current Speed (m/s),RSSI (dBm),Supply Voltage (V),Uptime (s),Sensor Status,In Maintenance,Node ID',
-      ...logs.map((row) =>
-        headers.map((h) => {
-          const val = row[h];
-          return val instanceof Date ? val.toISOString() : (val ?? '');
-        }).join(',')
-      ),
-    ];
-
-    const filename = `SmartFlood_Telemetry_${new Date().toISOString().slice(0, 10)}.csv`;
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(csvRows.join('\n'));
+    res.setHeader('Content-Disposition', 'attachment; filename="SmartFlood_water_levels.csv"');
+    res.send(lines.join('\n'));
   } catch (err) {
     console.error('[GET /telemetry/export/csv]', err);
     res.status(500).json({ error: 'Internal server error', detail: err.message });
   }
 });
 
-// ── POST /api/v1/telemetry/purge ─────────────────────────────────────────────
-// Admin-authenticated endpoint to trigger database log purge older than N days.
-// Body: { days?: number } (default: 30 days)
-router.post('/purge', requirePermission('system.maintenance'), async (req, res) => {
+// ── GET /api/v1/telemetry/export/alerts-csv ──────────────────────────────────
+// Alert report: the same alert history shown on the Alerts page (emails to residents).
+// Query: from, to (ISO dates), nodeId (optional — staff-sent alerts have no board)
+router.get('/export/alerts-csv', requirePermission('reports.view'), async (req, res) => {
   try {
-    const days = parseInt(req.body.days) || 30;
-    const stats = await purgeOldData(days);
-    res.json({ success: true, ...stats });
+    const from = req.query.from ? new Date(req.query.from) : new Date(Date.now() - 7 * 864e5);
+    const to = req.query.to ? new Date(req.query.to) : new Date();
+    const nodeId = req.query.nodeId ? parseInt(req.query.nodeId) : null;
+
+    const alerts = await prisma.alertBroadcast.findMany({
+      where: {
+        triggeredAt: { gte: from, lte: to },
+        ...(nodeId ? { OR: [{ nodeId }, { triggerLog: { nodeId } }] } : {}),
+      },
+      orderBy: { triggeredAt: 'asc' },
+      include: {
+        node: { select: { name: true } },
+        triggerLog: { select: { node: { select: { name: true } } } },
+        _count: { select: { dispatchLogs: true, smsLogs: true } },
+      },
+    });
+
+    const LEVEL = { 1: 'Level 1 (Advisory)', 2: 'Level 2 (Warning)', 3: 'Level 3 (Spill)' };
+    const lines = ['Date & time,Board,Level,Message,Emails sent,SMS sent'];
+    for (const a of alerts) {
+      lines.push([
+        phTime(a.triggeredAt),
+        a.node?.name || a.triggerLog?.node?.name || '',
+        LEVEL[a.alertLevel] || `Level ${a.alertLevel}`,
+        a.message,
+        a._count.dispatchLogs,
+        a._count.smsLogs,
+      ].map(csvCell).join(','));
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="SmartFlood_alerts.csv"');
+    res.send(lines.join('\n'));
   } catch (err) {
-    console.error('[POST /telemetry/purge]', err);
-    res.status(500).json({ error: 'Failed to purge database logs', detail: err.message });
+    console.error('[GET /telemetry/export/alerts-csv]', err);
+    res.status(500).json({ error: 'Internal server error', detail: err.message });
   }
 });
 

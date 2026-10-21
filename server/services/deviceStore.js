@@ -152,14 +152,6 @@ export async function updateDevice(id, fields) {
   }
 }
 
-export async function rotateDeviceKey(id, performedBy) {
-  const { key, prefix } = generateDeviceKey();
-  const device = await updateDevice(id, { deviceKeyHash: hashSecret(key), deviceKeyPrefix: prefix });
-  if (!device) return null;
-  await logChange(id, 'KEY_ROTATED', null, performedBy);
-  return { device, apiKey: key };
-}
-
 /**
  * Swap in a new physical board at the same site. The node keeps its id, location and
  * history; board details are updated and a fresh API key is issued.
@@ -189,22 +181,8 @@ export async function replaceBoard(id, { boardSerial, firmwareVersion, mountHeig
   return { device, apiKey: key };
 }
 
-export async function deleteDevice(id) {
-  try {
-    await prisma.hardwareNode.delete({ where: { id } });
-    return true;
-  } catch (err) {
-    if (err?.code === 'P2025') return false;
-    const idx = memoryNodes.findIndex((n) => n.id === id);
-    if (idx === -1) return false;
-    memoryNodes.splice(idx, 1);
-    return true;
-  }
-}
-
 // ── Maintenance mode ─────────────────────────────────────────────────────────
-// Node maintenance sets status=MAINTENANCE and opens a maintenance_windows row (history).
-// A GLOBAL window puts every board in maintenance.
+// Turning a board Off sets status=MAINTENANCE and opens a maintenance_windows row (history).
 
 export async function setNodeMaintenance(id, enabled, reason, performedBy) {
   const device = await updateDevice(id, { status: enabled ? 'MAINTENANCE' : 'ACTIVE' });
@@ -221,35 +199,6 @@ export async function setNodeMaintenance(id, enabled, reason, performedBy) {
   }
   await logChange(id, enabled ? 'MAINTENANCE_START' : 'MAINTENANCE_END', reason || null, performedBy);
   return device;
-}
-
-export async function getGlobalMaintenance() {
-  const now = new Date();
-  try {
-    return await prisma.maintenanceWindow.findFirst({
-      where: { scope: 'GLOBAL', active: true, OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
-      orderBy: { startedAt: 'desc' },
-    });
-  } catch (_e) {
-    return memoryWindows.find((w) => w.scope === 'GLOBAL' && w.active && (!w.endsAt || w.endsAt > now)) || null;
-  }
-}
-
-/** Start/stop system-wide maintenance. */
-export async function setGlobalMaintenance(enabled, { reason, endsAt } = {}, performedBy) {
-  try {
-    await prisma.maintenanceWindow.updateMany({ where: { scope: 'GLOBAL', active: true }, data: { active: false, endedAt: new Date() } });
-    if (!enabled) return null;
-    return await prisma.maintenanceWindow.create({
-      data: { scope: 'GLOBAL', reason: reason || 'System maintenance', endsAt: endsAt ? new Date(endsAt) : null, createdByName: performedBy },
-    });
-  } catch (_e) {
-    memoryWindows.filter((w) => w.scope === 'GLOBAL' && w.active).forEach((w) => { w.active = false; w.endedAt = new Date(); });
-    if (!enabled) return null;
-    const w = { id: memoryWindows.length + 1, scope: 'GLOBAL', reason: reason || 'System maintenance', active: true, startedAt: new Date(), endsAt: endsAt ? new Date(endsAt) : null, createdByName: performedBy };
-    memoryWindows.push(w);
-    return w;
-  }
 }
 
 // ── Telemetry authentication ─────────────────────────────────────────────────

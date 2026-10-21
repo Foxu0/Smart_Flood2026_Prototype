@@ -53,7 +53,7 @@ export function Field({ label, hint, children }) {
 export const inputClass =
   'w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#123a54]/20 focus:border-[#123a54]';
 
-export function Modal({ title, onClose, children, footer, wide = false }) {
+export function Modal({ title, onClose, children, footer }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -66,7 +66,7 @@ export function Modal({ title, onClose, children, footer, wide = false }) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} max-h-[90vh] flex flex-col`}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#eef2f4]">

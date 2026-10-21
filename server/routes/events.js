@@ -15,19 +15,30 @@ export const memoryEvents = [
   }
 ];
 
-// GET /api/v1/events — Returns last 20 system events
+// GET /api/v1/events — recent system events
+// Query: limit (max 1000), severity, type=alerts (only ALERT_L1/2/3), from, to (ISO dates), nodeId
 router.get('/', async (req, res) => {
   try {
-    const { limit = 20, severity } = req.query;
+    const { limit = 20, severity, type, from, to, nodeId } = req.query;
+    const max = type === 'alerts' ? 1000 : 100;
 
-    const where = severity ? { severity } : {};
+    const where = {};
+    if (severity) where.severity = severity;
+    if (type === 'alerts') where.eventCode = { startsWith: 'ALERT_' };
+    if (nodeId) where.nodeId = parseInt(nodeId);
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt.gte = new Date(from);
+      if (to) where.createdAt.lte = new Date(to);
+    }
 
     let mappedEvents = [];
     try {
       const events = await prisma.systemEvent.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        take: Math.min(parseInt(limit), 100),
+        take: Math.min(parseInt(limit) || 20, max),
+        include: { node: { select: { nodeCode: true, name: true } } },
       });
 
       mappedEvents = events.map(e => ({
@@ -36,7 +47,9 @@ router.get('/', async (req, res) => {
         event_code: e.eventCode,
       }));
     } catch (_dbErr) {
-      mappedEvents = memoryEvents.slice(0, Math.min(parseInt(limit), 100));
+      mappedEvents = memoryEvents
+        .filter(e => type !== 'alerts' || String(e.eventCode || '').startsWith('ALERT_'))
+        .slice(0, Math.min(parseInt(limit) || 20, max));
     }
 
     res.json({ success: true, count: mappedEvents.length, data: mappedEvents });

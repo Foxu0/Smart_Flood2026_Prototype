@@ -24,18 +24,15 @@ export const STAFF_ROLES = [ROLES.SUPERADMIN, ROLES.MDRRMO, ROLES.BARANGAY];
 const { SUPERADMIN, MDRRMO, BARANGAY } = ROLES;
 
 export const PERMISSIONS = {
-  'dashboard.view':      [SUPERADMIN, MDRRMO, BARANGAY],
-  'notifications.view':  [SUPERADMIN, MDRRMO, BARANGAY],
+  'dashboard.view':      [MDRRMO, BARANGAY],               // river monitoring (Super Admin manages the system instead)
   'devices.view':        [SUPERADMIN, MDRRMO, BARANGAY],
   'devices.manage':      [SUPERADMIN, MDRRMO, BARANGAY],   // add board, edit, replace, rotate key (Barangay: own only)
   'devices.maintenance': [SUPERADMIN, MDRRMO, BARANGAY],   // toggle maintenance mode (Barangay: own only)
-  'devices.delete':      [SUPERADMIN],
-  'alerts.manage':       [SUPERADMIN, MDRRMO],             // broadcast / manage alerts
+  'alerts.view':         [MDRRMO, BARANGAY],               // alert history, sent messages, subscribers
   'thresholds.manage':   [SUPERADMIN, MDRRMO],
   'reports.view':        [SUPERADMIN, MDRRMO, BARANGAY],
-  'settings.system':     [SUPERADMIN, MDRRMO],             // system-wide settings
-  'control.siren':       [SUPERADMIN, MDRRMO, BARANGAY],
-  'subscribers.manage':  [SUPERADMIN, MDRRMO],
+  'control.siren':       [MDRRMO, BARANGAY],
+  'residents.manage':    [MDRRMO, BARANGAY],               // add/remove residents who get SMS or email alerts (Barangay: own only)
   'users.manage':        [SUPERADMIN, MDRRMO],
   'audit.view':          [SUPERADMIN],
   'system.maintenance':  [SUPERADMIN],                     // reset/purge test data
@@ -43,7 +40,7 @@ export const PERMISSIONS = {
 
 // Which roles each role may create / edit in User Management
 export const MANAGEABLE_ROLES = {
-  SUPERADMIN: [SUPERADMIN, MDRRMO, BARANGAY],
+  SUPERADMIN: [MDRRMO, BARANGAY],   // only one Super Admin (created at setup) — it can't be added or edited here
   MDRRMO:     [BARANGAY],
 };
 
@@ -54,10 +51,9 @@ export function can(role, permission) {
   return (PERMISSIONS[permission] || []).includes(role);
 }
 
-export const DEVICE_STATUSES = ['ACTIVE', 'MAINTENANCE', 'OFFLINE', 'RETIRED'];
 export const SENSOR_TYPES = {
-  WATER_LEVEL:   'Water Level (Ultrasonic)',
-  FLOW_SPEED:    'Water Current Speed',
+  WATER_LEVEL:   'Water level',
+  FLOW_SPEED:    'Water speed',
 };
 
 // Antipolo City barangays (16)

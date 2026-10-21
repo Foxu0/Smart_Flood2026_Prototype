@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import { prisma } from '../db.js';
+import { sendSmsForAlert } from './smsService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,7 +38,7 @@ function stripEmojis(str = '') {
 // ── In-memory Cooldown Tracker ───────────────────────────────────────────────
 // Prevents spamming subscribers with repeated emails if water level hovers around a threshold
 const COOLDOWN_MS = 15 * 60 * 1000; // 15 minutes for same level
-const lastBroadcastTimeByLevel = { 1: 0, 2: 0, 3: 0 };
+const lastBroadcastTime = {}; // key: "<board id>:<level>" so one board's alert doesn't block another's
 
 let transporterCache = null;
 let isEthereal = false;
@@ -625,7 +626,7 @@ function generateWelcomeEmailHtml({ recipientEmail, unsubscribeUrl, baseUrl = pr
 }
 
 /**
- * Dispatches flood alert emails to all eligible active subscribers.
+ * Sends flood alert emails to active subscribers in the alerting board's barangay (SMS follows the same rule).
  * Enforces cooldown throttling so fluctuating sensor readings don't spam recipients.
  */
 export async function broadcastEmailAlert({
@@ -636,10 +637,12 @@ export async function broadcastEmailAlert({
   source = 'AUTOMATED_SENSOR',
   force = false,
   triggerLogId = null,
+  nodeId = null,
 }) {
   try {
     const now = Date.now();
-    const lastSent = lastBroadcastTimeByLevel[level] || 0;
+    const cooldownKey = `${nodeId ?? 'none'}:${level}`;
+    const lastSent = lastBroadcastTime[cooldownKey] || 0;
     const timeSinceLast = now - lastSent;
 
     // Cooldown check: bypass only if force=true or escalating to Level 3
@@ -649,25 +652,23 @@ export async function broadcastEmailAlert({
       return { success: true, throttled: true, remainingMins };
     }
 
-    // 1. Fetch eligible subscribers
-    const subscribers = await prisma.emailSubscriber.findMany({
-      where: {
-        status: 'ACTIVE',
-        minAlertLevel: { lte: level },
-      },
-    });
-
-    if (subscribers.length === 0) {
-      console.log(`[Email] No active subscribers registered for alert level ${level}+.`);
-      return { success: true, count: 0, sent: 0, failed: 0 };
-    }
+    // 1. Only residents registered in the barangay of the board that raised the alert
+    const node = nodeId
+      ? await prisma.hardwareNode.findUnique({ where: { id: Number(nodeId) }, select: { barangay: { select: { name: true } } } })
+      : null;
+    const barangay = node?.barangay?.name;
+    const subscribers = barangay
+      ? await prisma.emailSubscriber.findMany({
+          where: { barangay, status: 'ACTIVE', minAlertLevel: { lte: level } },
+        })
+      : [];
 
     const defaultTitle =
       level === 1
         ? 'Water Level Rising'
         : level === 2
         ? 'Flood Warning Active'
-        : 'Danger Level Reached';
+        : 'Spill Level Reached';
 
     const cleanTitle = stripEmojis(title || defaultTitle) || defaultTitle;
     const cleanMessage = stripEmojis(message || 'Flood advisory issued for monitored river basin.');
@@ -682,11 +683,20 @@ export async function broadcastEmailAlert({
         rainfallRateMmh: 0,
         broadcastSource: source,
         triggerLogId: triggerLogId ? Number(triggerLogId) : null,
+        nodeId: nodeId ? Number(nodeId) : null, // which board raised it (kept even if readings are deleted)
       },
     });
 
     // Update cooldown timestamp
-    lastBroadcastTimeByLevel[level] = now;
+    lastBroadcastTime[cooldownKey] = now;
+
+    // Text the residents of the board's barangay (simulated unless SEMAPHORE_API_KEY is set)
+    const smsSent = await sendSmsForAlert({ broadcastId: broadcast.id, level, message: cleanMessage, nodeId: nodeId ? Number(nodeId) : null });
+
+    if (subscribers.length === 0) {
+      console.log(`[Email] No email subscribers in ${barangay || 'this board\'s barangay'} for level ${level}.`);
+      return { success: true, broadcastId: broadcast.id, count: 0, sent: 0, failed: 0, smsSent };
+    }
 
     const transporter = await getTransporter();
     const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:5173';
@@ -767,58 +777,12 @@ export async function broadcastEmailAlert({
       total: subscribers.length,
       sent: sentCount,
       failed: failedCount,
+      smsSent,
     };
   } catch (err) {
     console.error('[Email] Error in broadcastEmailAlert:', err);
     return { success: false, error: err.message };
   }
-}
-
-/**
- * Sends a single test email to the specified address with clean formatting.
- */
-export async function sendTestEmail({ toEmail, level = 2 }) {
-  if (!toEmail) throw new Error('Recipient email is required.');
-
-  const transporter = await getTransporter();
-  const sender = process.env.SMTP_FROM || 'SmartFlood Alerts <alerts@smartflood.local>';
-  const appBaseUrl = process.env.APP_BASE_URL || 'http://localhost:5173';
-
-  const testLevelTitles = {
-    1: 'Water Level Rising',
-    2: 'Flood Warning Active',
-    3: 'Danger Level Reached',
-  };
-
-  const emailHtml = generateAlertEmailHtml({
-    level,
-    title: testLevelTitles[level] || `Level ${level} System Advisory`,
-    message:
-      'This is an official verification broadcast from the Smart Flood Early Warning System in Antipolo City. River telemetry and email delivery services are operational.',
-    waterLevelM: level === 1 ? 1.35 : level === 2 ? 1.75 : 2.15,
-    recipientName: 'Valued Resident',
-    unsubscribeUrl: `${appBaseUrl}/#email-alerts`,
-  });
-
-  const info = await transporter.sendMail({
-    from: sender,
-    to: toEmail,
-    subject: `[Smart Flood] System Verification Alert - Level ${level}`,
-    html: emailHtml,
-    attachments: getLogoAttachment(),
-  });
-
-  const previewUrl = isEthereal ? nodemailer.getTestMessageUrl(info) : null;
-  if (previewUrl) {
-    console.log(`[Email][Test Preview URL]: ${previewUrl}`);
-  }
-
-  return {
-    success: true,
-    messageId: info.messageId,
-    previewUrl,
-    isEthereal,
-  };
 }
 
 /**

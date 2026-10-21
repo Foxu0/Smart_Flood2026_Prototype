@@ -7,6 +7,51 @@ const __filename  = fileURLToPath(import.meta.url);
 const __dirname   = path.dirname(__filename);
 const MODEL_PATH  = path.join(__dirname, '..', 'models', 'flood_lstm.onnx');
 const SCALER_PATH = path.join(__dirname, '..', 'models', 'scaler_params.json');
+const METRICS_PATH = path.join(__dirname, '..', 'models', 'test_metrics.json');
+
+// ── Model test scores (from the notebook's held-out test set) ────────────────
+// These are NOT a per-prediction "confidence". They are how well the model scored
+// on test data it never saw during training (R² / NSE: 1.0 = perfect, 0 = no skill).
+let testMetrics = null;
+export function getTestMetrics() {
+  if (testMetrics) return testMetrics;
+  try {
+    const m = JSON.parse(fs.readFileSync(METRICS_PATH, 'utf-8'));
+    testMetrics = {
+      r2_30m: Number(m.horizon_30m.NSE_R2.toFixed(3)),
+      r2_60m: Number(m.horizon_60m.NSE_R2.toFixed(3)),
+      mae_30m_m: Number(m.horizon_30m.MAE.toFixed(4)),
+      mae_60m_m: Number(m.horizon_60m.MAE.toFixed(4)),
+    };
+  } catch (_e) {
+    testMetrics = { r2_30m: null, r2_60m: null, mae_30m_m: null, mae_60m_m: null };
+  }
+  return testMetrics;
+}
+
+// Which method produced the latest forecast: 'ONNX_LSTM' (the AI model) or
+// 'SurgeRate_Fallback' (simple backup formula used if the model can't load).
+let lastMethod = null;
+export function getModelStatus() {
+  const method = lastMethod ?? (cachedSession ? 'ONNX_LSTM' : modelCheckDone ? 'SurgeRate_Fallback' : null);
+  return {
+    method,
+    methodLabel: method === 'ONNX_LSTM' ? 'AI forecast' : method ? 'Simple estimate' : 'Checking…',
+    testScores: getTestMetrics(),
+  };
+}
+
+// Called once at server start so the dashboard knows straight away whether the model loads.
+let modelCheckDone = false;
+export async function checkModel() {
+  const ortModule = await getOrt();
+  const session = ortModule ? await getSession(ortModule) : null;
+  modelCheckDone = true;
+  console.log(session
+    ? '[dlService] AI model ready: forecasts use the LSTM (flood_lstm.onnx).'
+    : '[dlService] WARNING: AI model could not load — forecasts will use the backup formula.');
+  return Boolean(session);
+}
 
 // ── Scaler Parameters Loader ─────────────────────────────────────────────────
 let scalerParams = null;
@@ -85,7 +130,7 @@ export function buildHistoryBuffer(chronologicalLogs) {
  *   1–6 entries, chronological (oldest first). Automatically padded to 6 if shorter.
  * @returns {Promise<{predicted30m, predicted60m, confidenceScore, methodUsed} | null>}
  */
-export async function getPrediction(historyBuffer) {
+export async function getPrediction(historyBuffer, { save = true } = {}) {
   if (!historyBuffer || historyBuffer.length === 0) {
     console.warn('[dlService] getPrediction called with empty historyBuffer.');
     return null;
@@ -104,8 +149,11 @@ export async function getPrediction(historyBuffer) {
 
   let predicted30m    = currentLevel;
   let predicted60m    = currentLevel;
-  let confidenceScore = 82.6;
   let methodUsed      = 'SurgeRate_Fallback';
+  // Stored in ml_projections.confidence_score for compatibility: it is the model's
+  // 30-minute TEST score (R² × 100), the same for every forecast — not a live confidence.
+  const scores        = getTestMetrics();
+  const confidenceScore = scores.r2_30m != null ? Number((scores.r2_30m * 100).toFixed(1)) : null;
 
   // ── Attempt Live ONNX Inference ───────────────────────────────────────────
   const ortModule = await getOrt();
@@ -154,10 +202,9 @@ export async function getPrediction(historyBuffer) {
         // Clamp to physically realistic bounds [0.0m, 3.5m]
         predicted30m    = parseFloat(Math.min(3.5, Math.max(0, predicted30m)).toFixed(2));
         predicted60m    = parseFloat(Math.min(3.5, Math.max(0, predicted60m)).toFixed(2));
-        confidenceScore = 82.6;
         methodUsed      = 'ONNX_LSTM';
 
-        console.log(`[dlService] ONNX_LSTM Inference → +30m: ${predicted30m}m  +60m: ${predicted60m}m (Validation R²: ${confidenceScore}%)`);
+        console.log(`[dlService] ONNX_LSTM Inference → +30m: ${predicted30m}m  +60m: ${predicted60m}m`);
       } catch (onnxErr) {
         console.error('[dlService] ONNX inference failed (reverting to fallback):', onnxErr.message);
         cachedSession = null; // reset session cache to retry on next call
@@ -175,12 +222,19 @@ export async function getPrediction(historyBuffer) {
     predicted60m = parseFloat(
       Math.min(3.5, Math.max(0, currentLevel + avgSurge * 1.0 + 0.06)).toFixed(2)
     );
-    // Empirical test dataset R² validation metric (server/models/test_metrics.json)
-    confidenceScore = 82.6;
-    console.log(`[dlService] SurgeRate_Fallback → +30m: ${predicted30m}m  +60m: ${predicted60m}m (Validation R²: ${confidenceScore}%)`);
+    console.log(`[dlService] SurgeRate_Fallback → +30m: ${predicted30m}m  +60m: ${predicted60m}m`);
   }
+  lastMethod = methodUsed;
+  const status = getModelStatus();
 
   // ── Save Projection to Database ───────────────────────────────────────────
+  if (!save) {
+    return {
+      predicted30m, predicted60m, confidenceScore, methodUsed,
+      horizon_30m_m: predicted30m, horizon_60m_m: predicted60m, confidence_score: confidenceScore,
+      methodLabel: status.methodLabel, testScores: status.testScores,
+    };
+  }
   try {
     const projection = await prisma.mLProjection.create({
       data: {
@@ -200,17 +254,25 @@ export async function getPrediction(historyBuffer) {
       predicted60m,
       confidenceScore,
       methodUsed,
+      methodLabel: status.methodLabel,
+      testScores: status.testScores,
     };
   } catch (dbErr) {
     console.error('[dlService] Failed to save MLProjection:', dbErr.message);
-    return { predicted30m, predicted60m, confidenceScore, methodUsed };
+    return {
+      predicted30m, predicted60m, confidenceScore, methodUsed,
+      horizon_30m_m: predicted30m, horizon_60m_m: predicted60m, confidence_score: confidenceScore,
+      methodLabel: status.methodLabel, testScores: status.testScores,
+    };
   }
 }
 
 // ── DB-backed Inference Helper ───────────────────────────────────────────────
-export async function runPredictionInference() {
+// nodeId: forecast for one board only (its own last 6 readings)
+export async function runPredictionInference(nodeId = null, { save = true } = {}) {
   try {
     const logs = await prisma.telemetryLog.findMany({
+      where: nodeId ? { nodeId } : {},
       orderBy: { recordedAt: 'desc' },
       take: 6,
     });
@@ -224,7 +286,7 @@ export async function runPredictionInference() {
       water_level_m: l.waterLevelM,
     })).reverse();
     const historyBuffer = buildHistoryBuffer(chronological);
-    return await getPrediction(historyBuffer);
+    return await getPrediction(historyBuffer, { save });
   } catch (err) {
     console.error('[dlService] runPredictionInference error:', err.message);
     return null;

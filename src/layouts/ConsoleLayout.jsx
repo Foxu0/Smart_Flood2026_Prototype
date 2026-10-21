@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Cpu, BellRing, SlidersHorizontal, FileBarChart, Bell, Users,
-  ScrollText, Settings, LogOut, Menu, X, MapPin,
+  LayoutDashboard, Cpu, BellRing, FileBarChart, Users, LogOut, Menu, X,
 } from 'lucide-react';
 import { api, clearSession, getUser } from '../lib/session.js';
 import { can, ROLE_LABELS } from '../../shared/roles.js';
@@ -11,29 +10,10 @@ import { can, ROLE_LABELS } from '../../shared/roles.js';
 const STAFF_MENU = [
   { to: '/admin',               label: 'Dashboard',     icon: LayoutDashboard,  perm: 'dashboard.view', end: true },
   { to: '/admin/devices',       label: 'Hardware',      icon: Cpu,              perm: 'devices.view' },
-  { to: '/admin/alerts',        label: 'Alerts',        icon: BellRing,         perm: 'alerts.manage' },
-  { to: '/admin/thresholds',    label: 'Thresholds',    icon: SlidersHorizontal, perm: 'thresholds.manage' },
+  { to: '/admin/alerts',        label: 'Alerts',        icon: BellRing,         perm: 'alerts.view' },
   { to: '/admin/reports',       label: 'Reports',       icon: FileBarChart,     perm: 'reports.view' },
-  { to: '/admin/notifications', label: 'Notifications', icon: Bell,             perm: 'notifications.view' },
-  { to: '/admin/users',         label: 'User Accounts', icon: Users,            perm: 'users.manage' },
-  { to: '/admin/audit',         label: 'Audit Log',     icon: ScrollText,       perm: 'audit.view' },
-  { to: '/admin/settings',      label: 'Settings',      icon: Settings },
+  { to: '/admin/users',         label: 'Users',         icon: Users,            perm: 'users.manage' },
 ];
-
-const ROLE_BADGE = {
-  SUPERADMIN: 'bg-amber-100 text-amber-800 border-amber-200',
-  MDRRMO:     'bg-sky-100 text-sky-800 border-sky-200',
-  BARANGAY:   'bg-emerald-100 text-emerald-800 border-emerald-200',
-  SYSTEM:     'bg-slate-100 text-slate-700 border-slate-200',
-};
-
-export function RoleBadge({ role }) {
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wide ${ROLE_BADGE[role] || ROLE_BADGE.SYSTEM}`}>
-      {ROLE_LABELS[role] || role}
-    </span>
-  );
-}
 
 export default function ConsoleLayout() {
   const navigate = useNavigate();
@@ -90,20 +70,15 @@ export default function ConsoleLayout() {
       </nav>
 
       <div className="px-4 py-4 border-t border-white/10 space-y-3">
-        <div className="min-w-0">
+        <div className="min-w-0 px-1">
           <p className="text-sm font-semibold truncate">{user?.fullName || user?.username}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <RoleBadge role={user?.role} />
-            {user?.barangay && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-sky-200/90">
-                <MapPin size={10} /> {user.barangay}
-              </span>
-            )}
-          </div>
+          <p className="text-xs text-sky-200/70 truncate">
+            {ROLE_LABELS[user?.role] || user?.role}{user?.barangay ? ` · ${user.barangay}` : ''}
+          </p>
         </div>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm font-medium transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-white/10 text-sm text-sky-100/85 hover:bg-white/10 hover:text-white transition-colors"
         >
           <LogOut size={15} /> Sign out
         </button>
