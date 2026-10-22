@@ -126,9 +126,9 @@ export function AiForecastSparkline({ currentM = 0, p30M = 0, p60M = 0, color = 
   const pt30 = { x: width * 0.5, y: getY(vals[1]) };
   const pt60 = { x: width - padX, y: getY(vals[2]) };
 
-  // Error band = the model's average test error (MAE ±1.7 cm at 30 min, ±2.3 cm at 60 min)
-  const offset30 = Math.min(12, Math.max(4, (0.017 / range) * drawH));
-  const offset60 = Math.min(16, Math.max(5, (0.023 / range) * drawH));
+  // Error band = the model's average error on flood test events (MAE ±1.3 cm at 30 min, ±2.0 cm at 60 min)
+  const offset30 = Math.min(12, Math.max(4, (0.013 / range) * drawH));
+  const offset60 = Math.min(16, Math.max(5, (0.020 / range) * drawH));
 
   const coneD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} ` +
     `L ${pt30.x.toFixed(1)} ${Math.max(2, pt30.y - offset30).toFixed(1)} ` +

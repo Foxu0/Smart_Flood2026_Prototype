@@ -105,6 +105,43 @@ async function getSession(ortModule) {
  * @param {Array<{water_level_m: number}>} chronologicalLogs
  * @returns {Array<{water_level_m: number, surge_velocity: number}>}
  */
+/**
+ * The model was trained on ONE HOUR of history sampled every 10 MINUTES (6 points).
+ * Boards send readings every few seconds, so the last hour is split into six
+ * 10-minute blocks and each block is averaged. Empty blocks in the middle repeat the
+ * previous block; blocks before the first reading are left out (getPrediction pads them).
+ *
+ * @param {Array<{waterLevelM:number, recordedAt:Date|string}>} rows readings of one board
+ * @returns {Array<{water_level_m:number}>} up to 6 points, oldest first ([] if no reading in the last hour)
+ */
+export const WINDOW_MINUTES = 60;
+const STEP_MINUTES = 10;
+export function tenMinuteAverages(rows, now = Date.now()) {
+  const start = now - WINDOW_MINUTES * 60000;
+  const blocks = Array.from({ length: WINDOW_MINUTES / STEP_MINUTES }, () => []);
+  for (const r of rows) {
+    const t = new Date(r.recordedAt).getTime();
+    const level = Number(r.waterLevelM);
+    if (!(t > start && t <= now) || !Number.isFinite(level)) continue;
+    blocks[Math.min(blocks.length - 1, Math.floor((t - start) / (STEP_MINUTES * 60000)))].push(level);
+  }
+  const points = [];
+  for (const b of blocks) {
+    if (b.length) points.push(b.reduce((a, v) => a + v, 0) / b.length);
+    else if (points.length) points.push(points[points.length - 1]);
+  }
+  return points.map((v) => ({ water_level_m: +v.toFixed(3) }));
+}
+
+/** Readings of one board from the last hour (oldest first). */
+export async function readingsLastHour(nodeId, now = Date.now()) {
+  return prisma.telemetryLog.findMany({
+    where: { ...(nodeId ? { nodeId } : {}), recordedAt: { gt: new Date(now - WINDOW_MINUTES * 60000) } },
+    orderBy: { recordedAt: 'asc' },
+    select: { id: true, waterLevelM: true, recordedAt: true },
+  });
+}
+
 export function buildHistoryBuffer(chronologicalLogs) {
   return chronologicalLogs.map((item, i) => {
     const prev = i > 0 ? chronologicalLogs[i - 1] : item;
@@ -136,12 +173,13 @@ export async function getPrediction(historyBuffer, { save = true } = {}) {
     return null;
   }
 
-  // Pad to exactly 6 timesteps (initialize with 0.35m dry baseline for cold-starts)
+  // Pad to exactly 6 timesteps. With less than an hour of data, the missing start is
+  // filled with the first real level and no rise (a flat line), never a made-up level.
   const SEQ_LEN = 6;
-  const DEFAULT_BASELINE = { water_level_m: 0.35, surge_velocity: 0.0 };
+  const flatStart = { water_level_m: historyBuffer[0].water_level_m, surge_velocity: 0.0 };
   const padded = Array(SEQ_LEN).fill(null).map((_, i) => {
     const offset = i - (SEQ_LEN - historyBuffer.length);
-    return offset >= 0 ? historyBuffer[offset] : DEFAULT_BASELINE;
+    return offset >= 0 ? historyBuffer[offset] : flatStart;
   });
 
   const current      = padded[SEQ_LEN - 1];
@@ -216,11 +254,12 @@ export async function getPrediction(historyBuffer, { save = true } = {}) {
   if (methodUsed === 'SurgeRate_Fallback') {
     const avgSurge = current.surge_velocity;
 
+    // Simple estimate: current level + (how fast it is rising) × time
     predicted30m = parseFloat(
-      Math.min(3.5, Math.max(0, currentLevel + avgSurge * 0.5 + 0.03)).toFixed(2)
+      Math.min(3.5, Math.max(0, currentLevel + avgSurge * 0.5)).toFixed(2)
     );
     predicted60m = parseFloat(
-      Math.min(3.5, Math.max(0, currentLevel + avgSurge * 1.0 + 0.06)).toFixed(2)
+      Math.min(3.5, Math.max(0, currentLevel + avgSurge * 1.0)).toFixed(2)
     );
     console.log(`[dlService] SurgeRate_Fallback → +30m: ${predicted30m}m  +60m: ${predicted60m}m`);
   }
@@ -268,24 +307,15 @@ export async function getPrediction(historyBuffer, { save = true } = {}) {
 }
 
 // ── DB-backed Inference Helper ───────────────────────────────────────────────
-// nodeId: forecast for one board only (its own last 6 readings)
+// nodeId: forecast for one board only (its own readings from the last hour)
 export async function runPredictionInference(nodeId = null, { save = true } = {}) {
   try {
-    const logs = await prisma.telemetryLog.findMany({
-      where: nodeId ? { nodeId } : {},
-      orderBy: { recordedAt: 'desc' },
-      take: 6,
-    });
-
-    if (logs.length === 0) {
-      console.log('[dlService] No telemetry logs available for inference.');
+    const points = tenMinuteAverages(await readingsLastHour(nodeId));
+    if (points.length === 0) {
+      console.log('[dlService] No readings in the last hour — no forecast.');
       return null;
     }
-
-    const chronological = [...logs].map(l => ({
-      water_level_m: l.waterLevelM,
-    })).reverse();
-    const historyBuffer = buildHistoryBuffer(chronological);
+    const historyBuffer = buildHistoryBuffer(points);
     return await getPrediction(historyBuffer, { save });
   } catch (err) {
     console.error('[dlService] runPredictionInference error:', err.message);

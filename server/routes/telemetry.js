@@ -1,7 +1,7 @@
 import express from 'express';
 import { prisma } from '../db.js';
 import { broadcast } from '../websocket.js';
-import { buildHistoryBuffer, getPrediction, runPredictionInference, getModelStatus } from '../services/dlService.js';
+import { buildHistoryBuffer, getPrediction, runPredictionInference, getModelStatus, tenMinuteAverages, readingsLastHour, WINDOW_MINUTES } from '../services/dlService.js';
 import { getThresholds } from '../services/thresholdStore.js';
 import { broadcastEmailAlert } from '../services/emailService.js';
 import { requirePermission } from '../middleware/authMiddleware.js';
@@ -198,28 +198,20 @@ router.post('/', async (req, res) => {
     // Fetch last 5 records + the new reading = sliding window of 6
     let projection = null;
     try {
-      let recentLogs = [];
+      // The model needs the last hour as six 10-minute averages (see dlService.js)
+      let hour = [];
       try {
-        recentLogs = await prisma.telemetryLog.findMany({
-          where: { nodeId: device?.id ?? null, id: { not: log.id } },
-          orderBy: { recordedAt: 'desc' },
-          take: 5,
-          select: { waterLevelM: true },
-        });
+        hour = await readingsLastHour(device?.id ?? null);
       } catch (_e) {
-        recentLogs = memoryTelemetryLogs
-          .filter(r => r.id !== log.id && (r.nodeId ?? null) === (device?.id ?? null))
-          .slice(0, 5).map(r => ({ waterLevelM: r.waterLevelM }));
+        const since = Date.now() - WINDOW_MINUTES * 60000;
+        hour = memoryTelemetryLogs
+          .filter(r => (r.nodeId ?? null) === (device?.id ?? null) && new Date(r.recordedAt).getTime() > since)
+          .map(r => ({ waterLevelM: r.waterLevelM, recordedAt: r.recordedAt }));
       }
+      if (!hour.some(r => r.id === log.id)) hour.push({ waterLevelM: water_level_m, recordedAt: log.recordedAt ?? new Date() });
 
-      // Combine: older records first, newest (current) last
-      const chronological = [
-        ...([...recentLogs].map(r => ({ water_level_m: r.waterLevelM })).reverse()),
-        { water_level_m },
-      ];
-
-      const historyBuffer = buildHistoryBuffer(chronological);
-      projection = await getPrediction(historyBuffer);
+      const points = tenMinuteAverages(hour);
+      projection = points.length ? await getPrediction(buildHistoryBuffer(points)) : null;
       if (projection) memoryLatestProjection = projection;
     } catch (inferErr) {
       console.error('[POST /telemetry] Inference error:', inferErr.message);
