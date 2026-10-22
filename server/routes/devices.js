@@ -5,7 +5,9 @@ import {
   listDevices, findDeviceById, createDevice, updateDevice, replaceBoard,
   toPublicDevice, setNodeMaintenance,
   listChangeLogs, logChange,
+  authenticateDeviceKey, boardCodeSeenRecently, nextNodeCode,
 } from '../services/deviceStore.js';
+import { normalizeBoardCode } from '../lib/crypto.js';
 import { audit } from '../services/auditService.js';
 import { getThresholds, setNodeThresholds, clearNodeThresholds, validateThresholds } from '../services/thresholdStore.js';
 import { broadcast } from '../websocket.js';
@@ -38,7 +40,7 @@ async function loadScopedDevice(req, res) {
 
 function pickDeviceFields(body) {
   const out = {};
-  for (const k of ['nodeId', 'name', 'barangay', 'locationLabel', 'firmwareVersion', 'boardSerial', 'notes']) {
+  for (const k of ['nodeId', 'name', 'barangay', 'locationLabel', 'firmwareVersion', 'notes']) {
     if (body[k] !== undefined) out[k] = body[k] === '' || body[k] === null ? null : String(body[k]).trim();
   }
   for (const k of ['latitude', 'longitude', 'mountHeightCm', 'bankHeightM']) {
@@ -55,7 +57,7 @@ function pickDeviceFields(body) {
 }
 
 function validateDevice(fields, { creating }) {
-  if (creating && (!fields.nodeId || !fields.name)) return 'Node ID and name are required.';
+  if (creating && (!fields.nodeId || !fields.name)) return 'Enter a board name.';
   if (fields.nodeId && !/^[A-Za-z0-9_-]{3,40}$/.test(fields.nodeId)) return 'Node ID must be 3–40 letters, numbers, dashes or underscores.';
   if (fields.barangay && !BARANGAYS.includes(fields.barangay)) return 'Unknown barangay.';
   if (fields.mountHeightCm !== undefined && !(fields.mountHeightCm > 0 && fields.mountHeightCm < 2000)) return 'Mount height must be between 0 and 2000 cm.';
@@ -138,19 +140,33 @@ router.delete('/:id/thresholds', requirePermission('thresholds.manage'), async (
   res.json({ success: true, data: thresholds });
 });
 
-// POST /api/v1/devices — register ("add board"). Returns the API key ONCE.
+// Checks the code typed from a board's sticker: valid, not used by another station,
+// and the board is turned on (it has sent a reading in the last few minutes).
+async function checkBoardCode(code, stationId = null) {
+  if (!normalizeBoardCode(code)) return 'Enter the 12-character code on the board sticker (e.g. 7KQ2-9XPM-H4TD).';
+  const owner = await authenticateDeviceKey(code);
+  if (owner) return owner.id === stationId ? 'This board is already used by this station.' : `This board is already assigned to ${owner.name}.`;
+  if (!boardCodeSeenRecently(code)) return 'No board with this code is turned on. Check the code on the sticker and make sure the board is on.';
+  return null;
+}
+
+// POST /api/v1/devices — assign a board to a new station.
+// Body: { boardCode, name, barangay, mountHeightCm }
 router.post('/', requirePermission('devices.manage'), async (req, res) => {
   try {
     const fields = pickDeviceFields(req.body || {});
     const scope = scopeBarangay(req);
     if (scope) fields.barangay = scope;
+    const codeErr = await checkBoardCode(req.body?.boardCode);
+    if (codeErr) return res.status(400).json({ success: false, error: codeErr });
+    fields.nodeId = await nextNodeCode();
     const err = validateDevice(fields, { creating: true });
     if (err) return res.status(400).json({ success: false, error: err });
 
-    const { device, apiKey } = await createDevice(fields, req.operator.username);
-    audit(req.operator, 'device.create', device.nodeCode, { barangay: fields.barangay });
+    const { device } = await createDevice(fields, req.operator.username, { boardCode: req.body.boardCode });
+    audit(req.operator, 'device.create', device.nodeCode, { barangay: fields.barangay, board: device.boardSerial });
     notifyRegistryChanged();
-    res.status(201).json({ success: true, data: await toPublicDevice(device), apiKey });
+    res.status(201).json({ success: true, data: await toPublicDevice(device) });
   } catch (e) { fail(res, e); }
 });
 
@@ -185,25 +201,20 @@ router.post('/:id/maintenance', requirePermission('devices.maintenance'), async 
   res.json({ success: true, data: await toPublicDevice(updated) });
 });
 
-// POST /api/v1/devices/:id/replace — swap the physical board at this site (history kept)
-// Body: { boardSerial?, firmwareVersion?, mountHeightCm?, sensors?, notes? }
+// POST /api/v1/devices/:id/replace — swap in another board (by its sticker code).
+// The station keeps its name, barangay, alert levels and history; the old board stops working.
+// Body: { boardCode }
 router.post('/:id/replace', requirePermission('devices.manage'), async (req, res) => {
   try {
     const device = await loadScopedDevice(req, res);
     if (!device) return;
-    const f = pickDeviceFields(req.body || {});
-    const err = validateDevice(f, { creating: false });
-    if (err) return res.status(400).json({ success: false, error: err });
+    const codeErr = await checkBoardCode(req.body?.boardCode, device.id);
+    if (codeErr) return res.status(400).json({ success: false, error: codeErr });
 
-    const result = await replaceBoard(device.id, {
-      boardSerial: f.boardSerial, firmwareVersion: f.firmwareVersion,
-      mountHeightCm: f.mountHeightCm,
-      sensors: f.sensors !== undefined ? (Array.isArray(f.sensors) ? f.sensors.join(',') : f.sensors) : undefined,
-      notes: f.notes,
-    }, req.operator.username);
-    audit(req.operator, 'device.replace', device.nodeCode, { boardSerial: f.boardSerial ?? null });
+    const result = await replaceBoard(device.id, { boardCode: req.body.boardCode, notes: req.body?.notes }, req.operator.username);
+    audit(req.operator, 'device.replace', device.nodeCode, { board: result.device.boardSerial });
     notifyRegistryChanged();
-    res.json({ success: true, data: await toPublicDevice(result.device), apiKey: result.apiKey });
+    res.json({ success: true, data: await toPublicDevice(result.device) });
   } catch (e) { fail(res, e); }
 });
 

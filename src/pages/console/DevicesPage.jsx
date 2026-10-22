@@ -1,12 +1,52 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Cpu, Plus, Pencil, Replace, Copy, Check, RefreshCw } from 'lucide-react';
+import { Cpu, Plus, Pencil, Replace } from 'lucide-react';
 import { api } from '../../lib/session.js';
 import { can, BARANGAYS, BARANGAY_SCOPED_ROLES } from '../../../shared/roles.js';
 import { Page, PageHeader, Card, Button, Field, inputClass, Modal, ErrorNote, EmptyState } from '../../components/console/ui.jsx';
 
-// A board needs only a name, its barangay and how high the sensor is mounted.
-const EMPTY_FORM = { nodeId: '', name: '', barangay: 'Mayamot', mountHeightCm: 240 };
+// A board needs its sticker code, a name, its barangay and how high the sensor is mounted.
+const EMPTY_FORM = { boardCode: '', name: '', barangay: 'Mayamot', mountHeightCm: 240 };
+
+// The code printed on the board's sticker, e.g. 7KQ2-9XPM-H4TD
+function BoardCodeInput({ value, onChange }) {
+  return (
+    <Field label="Board code" hint="Printed on the sticker of the board. The board must be turned on.">
+      <input
+        className={`${inputClass} font-mono tracking-wider uppercase`}
+        value={value}
+        onChange={onChange}
+        placeholder="XXXX-XXXX-XXXX"
+        autoComplete="off"
+        spellCheck={false}
+      />
+    </Field>
+  );
+}
+
+/** Swap board: type the sticker code of the new board for this station. */
+function SwapModal({ device, onCancel, onSwap }) {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true); setError('');
+    try { await onSwap(code); } catch (e) { setError(e.message); setBusy(false); }
+  };
+  return (
+    <Modal title={`Swap board · ${device.name}`} onClose={onCancel} footer={<>
+      <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+      <Button onClick={save} disabled={busy || !code.trim()}>Swap</Button>
+    </>}>
+      <ErrorNote>{error}</ErrorNote>
+      <p className="text-sm text-[#3f5361] mb-3">
+        Use this when a board is broken or replaced. The new board takes over this station: its name,
+        barangay, alert levels and past readings stay the same, and the old board stops working.
+      </p>
+      <BoardCodeInput value={code} onChange={(e) => setCode(e.target.value)} />
+    </Modal>
+  );
+}
 
 // One plain status per board
 function statusOf(d) {
@@ -25,32 +65,6 @@ function timeAgo(value) {
   return `Last reading ${Math.round(hrs / 24)} days ago`;
 }
 
-// Suggest the next free Node ID, e.g. NODE-002
-function nextNodeId(devices) {
-  const nums = devices.map((d) => parseInt(String(d.nodeId).replace(/\D/g, ''), 10)).filter(Number.isFinite);
-  return `NODE-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0')}`;
-}
-
-/** Shown once after adding or replacing a board — the server never shows the key again. */
-function KeyModal({ result, onClose }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(result.apiKey); setCopied(true); } catch { /* clipboard blocked */ }
-  };
-  return (
-    <Modal title="Save this board key" onClose={onClose} footer={<Button onClick={onClose}>Done</Button>}>
-      <p className="text-sm text-[#3f5361] mb-3">
-        Copy this key into the ESP32 program for <b>{result.device.nodeId}</b>. It works like a password for the
-        board and is shown <b>only once</b>.
-      </p>
-      <div className="flex items-stretch gap-2">
-        <code className="flex-1 min-w-0 break-all bg-[#0a1826] text-emerald-300 text-xs rounded-xl px-3 py-2.5 font-mono">{result.apiKey}</code>
-        <Button variant="secondary" onClick={copy} aria-label="Copy key">{copied ? <Check size={15} /> : <Copy size={15} />}</Button>
-      </div>
-    </Modal>
-  );
-}
-
 // Water level (m) where each alert starts. Level 3 = spill level.
 const LEVELS = [
   { key: 'level1_watch',  label: 'Level 1 (Advisory)' },
@@ -61,7 +75,7 @@ const LEVELS = [
 // Add (create) or Edit a board
 function DeviceForm({ initial, mode, lockBarangay, showLevels, onCancel, onSubmit }) {
   const [form, setForm] = useState(() => ({
-    nodeId: initial.nodeId,
+    boardCode: initial.boardCode,
     name: initial.name,
     barangay: initial.barangay,
     mountHeightCm: initial.mountHeightCm,
@@ -84,6 +98,7 @@ function DeviceForm({ initial, mode, lockBarangay, showLevels, onCancel, onSubmi
     </>}>
       <ErrorNote>{error}</ErrorNote>
       <div className="space-y-3">
+        {mode === 'create' && <BoardCodeInput value={form.boardCode} onChange={set('boardCode')} />}
         <Field label="Board name">
           <input className={inputClass} value={form.name} onChange={set('name')} placeholder="Payagwan Bridge" />
         </Field>
@@ -123,7 +138,7 @@ export default function DevicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editor, setEditor] = useState(null); // { mode, device }
-  const [keyResult, setKeyResult] = useState(null);
+  const [swapping, setSwapping] = useState(null);
 
   const canManage = can(user?.role, 'devices.manage');
   const canMaint = can(user?.role, 'devices.maintenance');
@@ -131,7 +146,6 @@ export default function DevicesPage() {
   const scoped = BARANGAY_SCOPED_ROLES.includes(user?.role);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const json = await api('/devices');
       setDevices(json.data); setError('');
@@ -139,7 +153,12 @@ export default function DevicesPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  // Refresh every 10 s so Online / Offline stays current
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 10000);
+    return () => clearInterval(t);
+  }, [load]);
 
   const act = async (fn) => {
     try { await fn(); await load(); } catch (e) { setError(e.message); }
@@ -152,23 +171,21 @@ export default function DevicesPage() {
     act(() => api(`/devices/${d.id}/maintenance`, { method: 'POST', body: { enabled: turningOff, reason: 'Turned off' } }));
   };
 
-  // Replace = a new ESP32 at the same place: new key, old key stops working, readings history stays
-  const replaceBoard = (d) => {
-    if (!window.confirm(`Replace the ESP32 at ${d.name}?\n\nYou'll get a new key for the new board. The old key will stop working. Past readings are kept.`)) return;
-    act(async () => {
-      const json = await api(`/devices/${d.id}/replace`, { method: 'POST', body: {} });
-      setKeyResult({ device: json.data, apiKey: json.apiKey });
-    });
+  // Swap = another board at the same station (old one stops working, history stays)
+  const swapBoard = async (boardCode) => {
+    await api(`/devices/${swapping.id}/replace`, { method: 'POST', body: { boardCode } });
+    setSwapping(null);
+    load();
   };
 
   const handleSubmit = async (form) => {
     const body = { ...form };
     if (editor.mode === 'create') {
-      const json = await api('/devices', { method: 'POST', body });
-      setKeyResult({ device: json.data, apiKey: json.apiKey });
+      delete body.levels;
+      await api('/devices', { method: 'POST', body });
     } else {
       const { levels } = body;
-      delete body.nodeId; delete body.levels; delete body.thresholds;
+      delete body.boardCode; delete body.levels; delete body.thresholds;
       // Alert levels first: if they're invalid, nothing is saved
       const t = editor.device.thresholds || {};
       const changed = canLevels && levels && Object.keys(levels).some((k) => Number(levels[k]) !== t[k]);
@@ -191,24 +208,25 @@ export default function DevicesPage() {
       <PageHeader
         title="Hardware"
         subtitle={scoped ? `Sensor boards in Barangay ${user?.barangay}.` : 'All sensor boards on the river.'}
-        actions={<>
-          <Button variant="secondary" onClick={load}><RefreshCw size={15} /> Refresh</Button>
-          {canManage && (
-            <Button onClick={() => setEditor({ mode: 'create', device: { ...EMPTY_FORM, nodeId: nextNodeId(devices), barangay: scoped ? user.barangay : 'Mayamot' } })}>
-              <Plus size={15} /> Add board
-            </Button>
-          )}
-        </>}
+        actions={canManage && (
+          <Button onClick={() => setEditor({ mode: 'create', device: { ...EMPTY_FORM, barangay: scoped ? user.barangay : 'Mayamot' } })}>
+            <Plus size={15} /> Add board
+          </Button>
+        )}
       />
 
       <ErrorNote>{error}</ErrorNote>
 
-      <Card>
+      <Card className="overflow-hidden">
+        <div className="px-4 py-3 border-b border-[#eef2f4] flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-[#123a54]">Stations{loading ? '' : ` · ${visible.length}`}</p>
+          <p className="text-[11px] text-[#8a9ca7]">Updates automatically</p>
+        </div>
         {loading ? (
           <p className="text-sm text-[#6d818d] px-4 py-8 text-center">Loading…</p>
         ) : visible.length === 0 ? (
           <EmptyState icon={Cpu} title="No boards yet">
-            {canManage ? 'Click “Add board” to add your first ESP32.' : 'Ask an administrator to add a board.'}
+            {canManage ? 'Turn on the board, then click “Add board” and type the code on its sticker.' : 'Ask an administrator to add a board.'}
           </EmptyState>
         ) : (
           <ul className="divide-y divide-[#eef2f4]">
@@ -222,7 +240,7 @@ export default function DevicesPage() {
                       <span className={`px-2 py-0.5 rounded-md border text-[11px] font-semibold ${st.style}`}>{st.label}</span>
                     </div>
                     <p className="text-xs text-[#6d818d] mt-1">
-                      {d.nodeId} · {d.barangay} · {timeAgo(d.lastSeenAt)}
+                      {d.barangay}{d.boardSerial ? ` · Board ••••-••••-${d.boardSerial}` : ''} · {timeAgo(d.lastSeenAt)}
                     </p>
                   </div>
 
@@ -243,7 +261,7 @@ export default function DevicesPage() {
                     )}
                     {canManage && <>
                       <Button size="sm" variant="secondary" onClick={() => setEditor({ mode: 'edit', device: { ...EMPTY_FORM, ...d } })}><Pencil size={13} /> Edit</Button>
-                      <Button size="sm" variant="secondary" onClick={() => replaceBoard(d)}><Replace size={13} /> Replace</Button>
+                      <Button size="sm" variant="secondary" onClick={() => setSwapping(d)}><Replace size={13} /> Swap board</Button>
                     </>}
                   </div>
                 </li>
@@ -263,7 +281,7 @@ export default function DevicesPage() {
           onSubmit={handleSubmit}
         />
       )}
-      {keyResult && <KeyModal result={keyResult} onClose={() => setKeyResult(null)} />}
+      {swapping && <SwapModal device={swapping} onCancel={() => setSwapping(null)} onSwap={swapBoard} />}
     </Page>
   );
 }

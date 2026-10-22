@@ -21,7 +21,7 @@ function saveFile(name, blob) {
 const ACTION_TEXT = {
   'device.create':           (t) => `added board ${t}`,
   'device.update':           (t) => `edited board ${t}`,
-  'device.replace':          (t) => `replaced the ESP32 of ${t}`,
+  'device.replace':          (t) => `swapped the board of ${t}`,
   'device.thresholds':       (t) => `changed the alert levels of ${t}`,
   'device.thresholds_reset': (t) => `reset the alert levels of ${t}`,
   'device.turned_off':       (t) => `turned off ${t}`,

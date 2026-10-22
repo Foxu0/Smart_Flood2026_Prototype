@@ -1,5 +1,5 @@
 import { prisma } from '../db.js';
-import { hashSecret, verifySecret, generateDeviceKey, parseDeviceKeyPrefix } from '../lib/crypto.js';
+import { hashSecret, verifySecret, parseDeviceKeyPrefix, normalizeBoardCode, boardCodeLookup } from '../lib/crypto.js';
 import { barangayIdByName, barangayNameById, defaultCoordinates } from './barangayStore.js';
 
 /**
@@ -7,8 +7,8 @@ import { barangayIdByName, barangayNameById, defaultCoordinates } from './barang
  * the physical ESP32 keeps the node and its telemetry history — the swap is logged in
  * hardware_change_logs and the API key is rotated.
  *
- * Each board authenticates telemetry with its own API key (X-Device-Key header).
- * Only a hash is stored; the plaintext key is returned once on create/rotate/replace.
+ * Each board authenticates telemetry with its own board code (X-Device-Key header),
+ * see "Board codes" below. Only a hash is stored.
  * Prisma-backed with an in-memory fallback.
  *
  * The API speaks { nodeId (= node_code), barangay: name, sensors: [] }.
@@ -20,6 +20,46 @@ let memoryNextId = 1;
 
 // A board that has not reported for this long is shown as "Not reporting"
 const OFFLINE_AFTER_MS = parseInt(process.env.DEVICE_OFFLINE_AFTER_SEC || '120') * 1000;
+
+// ── Board codes ─────────────────────────────────────────────────────────────
+// Every ESP32 has its own permanent code (set in its firmware, printed on its sticker).
+// The board sends the code with every reading. Staff assign a board to a station by
+// typing that code on the Hardware page. Only a hash of the code is stored.
+//
+// Boards that are on but not assigned yet are remembered for 10 minutes (by a short
+// lookup id, never the code itself), so the Hardware page can tell staff whether the
+// board they are adding is actually turned on.
+const UNASSIGNED_TTL_MS = 10 * 60 * 1000;
+const unassignedSeen = new Map(); // lookup id → last time seen
+
+export function rememberUnassignedCode(code) {
+  const normalized = normalizeBoardCode(code);
+  if (!normalized) return;
+  unassignedSeen.set(boardCodeLookup(normalized), Date.now());
+  if (unassignedSeen.size > 200) unassignedSeen.delete(unassignedSeen.keys().next().value);
+}
+
+export function boardCodeSeenRecently(code) {
+  const normalized = normalizeBoardCode(code);
+  const seen = normalized && unassignedSeen.get(boardCodeLookup(normalized));
+  return Boolean(seen && Date.now() - seen < UNASSIGNED_TTL_MS);
+}
+
+/** Hash + lookup id to store for a board code; the last 4 characters are kept to show on screen. */
+function boardCodeFields(code) {
+  const normalized = normalizeBoardCode(code);
+  return {
+    deviceKeyHash: hashSecret(normalized),
+    deviceKeyPrefix: boardCodeLookup(normalized),
+    boardSerial: normalized.slice(-4),
+  };
+}
+
+/** Next free station code: NODE-001, NODE-002, … */
+export async function nextNodeCode() {
+  const nums = (await listDevices()).map((n) => parseInt(String(n.nodeCode).replace(/\D/g, ''), 10)).filter(Number.isFinite);
+  return `NODE-${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, '0')}`;
+}
 
 export async function toPublicDevice(n) {
   if (!n) return null;
@@ -111,8 +151,7 @@ export async function findDefaultNode() {
   }
 }
 
-export async function createDevice(fields, performedBy) {
-  const { key, prefix } = generateDeviceKey();
+export async function createDevice(fields, performedBy, { boardCode } = {}) {
   const row = await toRow(fields);
   if (row.latitude == null || row.longitude == null) {
     const c = await defaultCoordinates(row.barangayId);
@@ -122,8 +161,7 @@ export async function createDevice(fields, performedBy) {
   const data = {
     sensors: 'WATER_LEVEL,FLOW_SPEED',
     ...row,
-    deviceKeyHash: hashSecret(key),
-    deviceKeyPrefix: prefix,
+    ...boardCodeFields(boardCode),
   };
   let device;
   try {
@@ -140,7 +178,8 @@ export async function createDevice(fields, performedBy) {
     memoryNodes.push(device);
   }
   await logChange(device.id, 'ADDED', fields.notes || null, performedBy);
-  return { device, apiKey: key };
+  unassignedSeen.delete(data.deviceKeyPrefix);
+  return { device };
 }
 
 export async function updateDevice(id, fields) {
@@ -158,32 +197,29 @@ export async function updateDevice(id, fields) {
 }
 
 /**
- * Swap in a new physical board at the same site. The node keeps its id, location and
- * history; board details are updated and a fresh API key is issued.
+ * Swap in another board (by its code) at the same station. The station keeps its id,
+ * barangay, alert levels and history; the old board's code stops working.
  */
-export async function replaceBoard(id, { boardSerial, firmwareVersion, mountHeightCm, sensors, notes }, performedBy) {
+export async function replaceBoard(id, { boardCode, notes }, performedBy) {
   const old = await findDeviceById(id);
   if (!old) return null;
   if (old.status === 'RETIRED') throw Object.assign(new Error('This site is retired.'), { status: 400 });
 
-  const { key, prefix } = generateDeviceKey();
+  const code = boardCodeFields(boardCode);
   const changes = {
-    boardSerial: boardSerial ?? null,
-    firmwareVersion: firmwareVersion ?? null,
-    deviceKeyHash: hashSecret(key),
-    deviceKeyPrefix: prefix,
+    ...code,
+    firmwareVersion: null,
     installedAt: new Date(),
     lastSeenAt: null,
     ...(old.status === 'OFFLINE' ? { status: 'ACTIVE' } : {}),
   };
-  if (mountHeightCm !== undefined) changes.mountHeightCm = mountHeightCm;
-  if (sensors !== undefined) changes.sensors = sensors;
   const device = await updateDevice(id, changes);
 
   await logChange(id, 'REPLACED', JSON.stringify({
-    oldBoardSerial: old.boardSerial, newBoardSerial: boardSerial ?? null, notes: notes ?? null,
+    oldBoard: old.boardSerial, newBoard: code.boardSerial, notes: notes ?? null,
   }), performedBy);
-  return { device, apiKey: key };
+  unassignedSeen.delete(code.deviceKeyPrefix);
+  return { device };
 }
 
 // ── Maintenance mode ─────────────────────────────────────────────────────────
@@ -208,9 +244,20 @@ export async function setNodeMaintenance(id, enabled, reason, performedBy) {
 
 // ── Telemetry authentication ─────────────────────────────────────────────────
 
-/** Resolve a board from its API key; null if unknown, retired or wrong key. */
+/** Resolve a board from its code (or an older sfk_ key); null if unknown, retired or wrong. */
 export async function authenticateDeviceKey(key) {
   if (!key) return null;
+  const code = normalizeBoardCode(key);
+  if (code) {
+    const lookup = boardCodeLookup(code);
+    let rows;
+    try {
+      rows = await prisma.hardwareNode.findMany({ where: { deviceKeyPrefix: lookup, status: { not: 'RETIRED' } } });
+    } catch (_e) {
+      rows = memoryNodes.filter((n) => n.deviceKeyPrefix === lookup && n.status !== 'RETIRED');
+    }
+    return rows.find((n) => verifySecret(code, n.deviceKeyHash)) || null;
+  }
   const prefix = parseDeviceKeyPrefix(key);
   let candidates;
   try {

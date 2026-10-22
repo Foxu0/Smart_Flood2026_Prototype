@@ -6,7 +6,8 @@ import { getThresholds } from '../services/thresholdStore.js';
 import { broadcastEmailAlert } from '../services/emailService.js';
 import { requirePermission } from '../middleware/authMiddleware.js';
 import { memoryEvents } from './events.js';
-import { authenticateDeviceKey, touchDevice, findDefaultNode, listDevices } from '../services/deviceStore.js';
+import { authenticateDeviceKey, touchDevice, findDefaultNode, listDevices, rememberUnassignedCode } from '../services/deviceStore.js';
+import { normalizeBoardCode } from '../lib/crypto.js';
 import { barangayNameById } from '../services/barangayStore.js';
 
 export const memoryTelemetryLogs = [];
@@ -37,14 +38,19 @@ router.post('/', async (req, res) => {
     const now  = new Date();
 
     // ── 0. Identify the board ──────────────────────────────────────────────
-    // Registered boards send their API key in the X-Device-Key header.
-    // Unkeyed posts are still accepted (simulators / legacy firmware) unless
-    // REQUIRE_DEVICE_KEY=true, and are attributed to the default site (is_default)
-    // so its maintenance mode and mount height still apply.
+    // Each board sends its own code (the one on its sticker) in the X-Device-Key header.
+    // A code that is not assigned to a station yet is remembered for a few minutes, so
+    // staff can add it on the Hardware page; its readings are not saved until then.
+    // Posts without a code (current firmware / simulators) go to the default site
+    // unless REQUIRE_DEVICE_KEY=true.
     const deviceKey = req.get('X-Device-Key') || body.deviceKey || null;
     let device = null;
     if (deviceKey) {
       device = await authenticateDeviceKey(deviceKey);
+      if (!device && normalizeBoardCode(deviceKey)) {
+        rememberUnassignedCode(deviceKey);
+        return res.status(202).json({ status: 'NOT_ASSIGNED', message: 'Board is on. Add it on the Hardware page using the code on its sticker.' });
+      }
       if (!device) return res.status(401).json({ error: 'Unknown, retired or invalid device key.' });
     } else if (process.env.REQUIRE_DEVICE_KEY === 'true') {
       return res.status(401).json({ error: 'Missing X-Device-Key header.' });

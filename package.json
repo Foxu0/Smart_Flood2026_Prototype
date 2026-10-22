@@ -8,6 +8,8 @@
     "dev:api": "node server/index.js",
     "start": "node server/index.js",
     "virtual-esp32": "node tools/virtual-esp32.js",
+    "simulate:board": "node tools/simulate-board.js",
+    "board:new-code": "node tools/new-board-code.js",
     "simulator-gui": "node tools/server-simulator-gui.js",
     "wiring": "node tools/server-wiring.js",
     "showcase": "node tools/admin-showcase.js",
