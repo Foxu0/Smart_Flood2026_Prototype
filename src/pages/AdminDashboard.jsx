@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   AlertTriangle, Bell, CheckCircle2, Info, MapPin, Volume2, VolumeX, Zap, Timer, TrendingUp,
 } from 'lucide-react';
-import WeatherMapCard from '../WeatherMapCard.jsx';
+import FloodHeatMap from '../components/dashboard/FloodHeatMap.jsx';
 import WaterTankGauge from '../components/WaterTankGauge.jsx';
 import ToastContainer, { useToast } from '../components/ToastNotification.jsx';
 import SkeletonDashboard from '../components/SkeletonDashboard.jsx';
@@ -679,11 +679,11 @@ export default function FloodMonitoringDashboard({ nodeId = null }) {
 
           </div>
 
-          {/* RIGHT COLUMN: Weather Map & ESP32 Controls (5/12 width) */}
+          {/* RIGHT COLUMN: Flood map & siren (5/12 width) */}
           <div className="lg:col-span-5 min-w-0 w-full flex flex-col gap-4">
 
-            {/* Interactive Dynamic Leaflet Weather Map Card with severity beacon */}
-            <WeatherMapCard severity={floodLevel.id} />
+            {/* Flood heat map: every station's level, this station highlighted */}
+            <FloodHeatMap highlightId={nodeId} />
 
             {/* ── SYSTEM CONTROLS & ALERTS CARD ─────────────────────────────── */}
             <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] p-4 sm:p-5 space-y-5">

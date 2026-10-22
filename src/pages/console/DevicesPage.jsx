@@ -79,6 +79,7 @@ function DeviceForm({ initial, mode, lockBarangay, showLevels, onCancel, onSubmi
     name: initial.name,
     barangay: initial.barangay,
     mountHeightCm: initial.mountHeightCm,
+    location: initial.latitude != null ? `${initial.latitude}, ${initial.longitude}` : '',
     levels: Object.fromEntries(LEVELS.map(({ key }) => [key, initial.thresholds?.[key] ?? ''])),
   }));
   const [error, setError] = useState('');
@@ -110,6 +111,11 @@ function DeviceForm({ initial, mode, lockBarangay, showLevels, onCancel, onSubmi
         <Field label="Sensor height (cm)" hint="How high the sensor is above the dry riverbed">
           <input className={inputClass} type="number" value={form.mountHeightCm} onChange={set('mountHeightCm')} />
         </Field>
+        {mode === 'edit' && (
+          <Field label="Map location" hint="Where the board is installed. In Google Maps, right-click the spot and click the numbers to copy them.">
+            <input className={inputClass} value={form.location} onChange={set('location')} placeholder="14.5869, 121.1754" />
+          </Field>
+        )}
         {mode === 'edit' && showLevels && (
           <div>
             <span className="block text-xs font-semibold text-slate-700">Alert levels</span>
@@ -181,11 +187,17 @@ export default function DevicesPage() {
   const handleSubmit = async (form) => {
     const body = { ...form };
     if (editor.mode === 'create') {
-      delete body.levels;
+      delete body.levels; delete body.location;
       await api('/devices', { method: 'POST', body });
     } else {
-      const { levels } = body;
-      delete body.boardCode; delete body.levels; delete body.thresholds;
+      const { levels, location } = body;
+      delete body.boardCode; delete body.levels; delete body.thresholds; delete body.location;
+      // "14.5869, 121.1754" → latitude / longitude
+      if (location && location.trim()) {
+        const [lat, lng] = location.split(',').map((v) => parseFloat(v));
+        if (!(lat >= 4 && lat <= 22 && lng >= 116 && lng <= 127)) throw new Error('Map location should look like 14.5869, 121.1754');
+        body.latitude = lat; body.longitude = lng;
+      }
       // Alert levels first: if they're invalid, nothing is saved
       const t = editor.device.thresholds || {};
       const changed = canLevels && levels && Object.keys(levels).some((k) => Number(levels[k]) !== t[k]);

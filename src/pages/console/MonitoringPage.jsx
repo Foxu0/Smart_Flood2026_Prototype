@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { api } from '../../lib/session.js';
 import AdminDashboard from '../AdminDashboard.jsx';
 import StationOverview from '../../components/console/StationOverview.jsx';
+import FloodHeatMap from '../../components/dashboard/FloodHeatMap.jsx';
 import { LEVEL_TAG, OFF_TAG } from '../../lib/floodLevels.js';
 
 /**
@@ -49,6 +50,9 @@ export default function MonitoringPage() {
           <div className="pb-8">
             <h1 className="font-display text-2xl font-bold text-[#123a54] leading-tight">Barangay stations</h1>
             <p className="text-sm text-[#6d818d] mt-1 mb-5">Water level and forecast for each barangay with a station.</p>
+            <div className="mb-5">
+              <FloodHeatMap title="Flood map of Antipolo" height={340} />
+            </div>
             <StationOverview boards={boards} />
           </div>
         ) : current && (

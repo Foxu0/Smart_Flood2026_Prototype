@@ -5,7 +5,7 @@ import {
   Zap, Timer, Lock,
   LifeBuoy
 } from 'lucide-react';
-import WeatherMapCard from '../WeatherMapCard.jsx';
+import FloodHeatMap from '../components/dashboard/FloodHeatMap.jsx';
 import WaterTankGauge from '../components/WaterTankGauge.jsx';
 import SkeletonDashboard from '../components/SkeletonDashboard.jsx';
 import AlertSignupCard from '../components/AlertSignupCard.jsx';
@@ -659,11 +659,11 @@ export default function PublicPortal() {
 
           </div>
 
-          {/* RIGHT COLUMN: Weather map + flood alert sign-up (5/12 width) */}
+          {/* RIGHT COLUMN: Flood map + flood alert sign-up (5/12 width) */}
           <div className="lg:col-span-5 min-w-0 w-full flex flex-col gap-4">
 
-            {/* Weather Map Component */}
-            <WeatherMapCard severity={floodLevel.id} />
+            {/* Flood heat map of Antipolo (the resident's barangay is highlighted) */}
+            <FloodHeatMap highlightId={stationId} title="Flood map of Antipolo" />
 
             {/* Sign up for flood alerts (SMS or email, by barangay) */}
             <div id="alert-signup">

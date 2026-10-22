@@ -282,17 +282,33 @@ router.post('/', async (req, res) => {
 });
 
 // ── GET /api/v1/telemetry/stations (public) ─────────────────────────────────
-// Which barangays have a station, so residents can pick theirs on the public page.
-// Only the name and barangay are shared — no keys or settings.
+// Every station with its map location and current flood level — used by the barangay
+// picker and the flood heat map. Only public information (no keys or settings).
 router.get('/stations', async (_req, res) => {
   try {
     const nodes = (await listDevices()).filter((n) => n.status !== 'RETIRED');
-    const data = await Promise.all(nodes.map(async (n) => ({
-      id: n.id,
-      name: n.name,
-      barangay: await barangayNameById(n.barangayId),
-      off: n.status === 'MAINTENANCE',
-    })));
+    const data = await Promise.all(nodes.map(async (n) => {
+      let latest = null;
+      try {
+        latest = await prisma.telemetryLog.findFirst({
+          where: { nodeId: n.id }, orderBy: { recordedAt: 'desc' }, select: { waterLevelM: true, recordedAt: true },
+        });
+      } catch (_e) { /* no database */ }
+      const t = await getThresholds(n.id);
+      const m = latest?.waterLevelM;
+      return {
+        id: n.id,
+        name: n.name,
+        barangay: await barangayNameById(n.barangayId),
+        off: n.status === 'MAINTENANCE',
+        latitude: n.latitude,
+        longitude: n.longitude,
+        waterLevelM: m ?? null,
+        recordedAt: latest?.recordedAt ?? null,
+        level: m == null ? null : m >= t.level3_danger ? 3 : m >= t.level2_alarm ? 2 : m >= t.level1_watch ? 1 : 0,
+        spillAtM: t.level3_danger,
+      };
+    }));
     data.sort((a, b) => a.barangay.localeCompare(b.barangay));
     res.json({ success: true, data });
   } catch (err) {
