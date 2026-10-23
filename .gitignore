@@ -25,3 +25,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# scratch
+.tmp-pull/
+
+# Private account list
+ACCOUNTS.md

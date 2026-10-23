@@ -1,7 +1,8 @@
 import express from 'express';
 import { prisma } from '../db.js';
 import { broadcast } from '../websocket.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { requirePermission } from '../middleware/authMiddleware.js';
+import { audit } from '../services/auditService.js';
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ const router = express.Router();
 //   ENABLE   — Manually turn siren ON (alias for persistent activation)
 //   DISABLE  — Turn siren OFF (alias for MUTE without critical log)
 // ---------------------------------------------------------------------------
-router.post('/siren', authMiddleware, async (req, res) => {
+router.post('/siren', requirePermission('control.siren'), async (req, res) => {
   try {
     const { action, durationMs } = req.body;
     const operator = req.operator?.username || 'EOC Operator';
@@ -91,6 +92,22 @@ router.post('/siren', authMiddleware, async (req, res) => {
 
     // Broadcast siren state change to all connected WebSocket clients
     broadcast({ type: 'SIREN_CONTROL', data: payload });
+    audit(req.operator, `siren.${action.toLowerCase()}`);
+
+    // A test only lasts a few seconds: switch back to OFF afterwards, so the
+    // siren isn't shown as "sounding" forever on dashboards opened later.
+    if (action === 'TEST') {
+      setTimeout(async () => {
+        try {
+          await prisma.systemSetting.upsert({
+            where: { keyName: 'siren_state' },
+            update: { value: 'OFF' },
+            create: { keyName: 'siren_state', value: 'OFF' },
+          });
+        } catch (_e) { /* no database */ }
+        broadcast({ type: 'SIREN_CONTROL', data: { action: 'TEST_END', sirenState: 'OFF', operator } });
+      }, testDurationMs);
+    }
 
     res.json({ success: true, ...payload });
   } catch (err) {

@@ -1,6 +1,6 @@
 import { prisma } from '../db.js';
-import { getEvaluationMetrics, resetEvaluation } from '../services/aiEvaluationService.js';
 import { broadcast } from '../websocket.js';
+import { audit } from '../services/auditService.js';
 
 /**
  * POST /api/v1/test/reset
@@ -16,8 +16,6 @@ export async function resetTestData(req, res) {
       prisma.mLProjection.deleteMany({}),
     ]);
 
-    resetEvaluation();
-
     const result = {
       success: true,
       message: 'Test environment reset complete. Database tables truncated.',
@@ -28,6 +26,8 @@ export async function resetTestData(req, res) {
       },
     };
 
+    audit(req.operator, 'logs.reset', null, result.deletedRecords);
+
     // Broadcast reset event over WebSocket
     broadcast({ type: 'TEST_RESET', data: result });
 
@@ -35,19 +35,5 @@ export async function resetTestData(req, res) {
   } catch (err) {
     console.error('[POST /test/reset]', err);
     res.status(500).json({ error: 'Failed to reset test data', detail: err.message });
-  }
-}
-
-/**
- * GET /api/v1/test/ai-evaluation
- * Returns overall model metrics (MAE, RMSE, Accuracy %) and time-series comparison rows.
- */
-export async function getAiEvaluation(req, res) {
-  try {
-    const metrics = getEvaluationMetrics();
-    res.json({ success: true, data: metrics });
-  } catch (err) {
-    console.error('[GET /test/ai-evaluation]', err);
-    res.status(500).json({ error: 'Failed to retrieve AI evaluation metrics', detail: err.message });
   }
 }

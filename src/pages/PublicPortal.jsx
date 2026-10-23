@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  AlertTriangle, CheckCircle2, Info, CloudRain,
-  Droplets, Phone, MapPin, ChevronDown, ChevronUp,
-  Zap, Shield, Timer, Lock,
+  AlertTriangle, CheckCircle2, Info,
+  Phone, MapPin, ChevronDown, ChevronUp,
+  Zap, Timer, Lock,
   LifeBuoy
 } from 'lucide-react';
-import RainOverlay from '../RainOverlay.jsx';
-import WeatherMapCard from '../WeatherMapCard.jsx';
+import FloodHeatMap from '../components/dashboard/FloodHeatMap.jsx';
 import WaterTankGauge from '../components/WaterTankGauge.jsx';
 import SkeletonDashboard from '../components/SkeletonDashboard.jsx';
-import EmailSubscriptionCard from '../components/EmailSubscriptionCard.jsx';
+import AlertSignupCard from '../components/AlertSignupCard.jsx';
 import useCountUp from '../hooks/useCountUp.js';
 import { API_BASE_URL, WS_BASE_URL } from '../config.js';
+import { FLOOD_LEVELS, getFloodLevel } from '../lib/floodLevels.js';
+import { WaterLevelSparkline, AiForecastSparkline } from '../components/dashboard/Sparklines.jsx';
 
 // ─── Helper: live Philippine Standard Time clock ─────────────────────────────
 function usePSTClock() {
@@ -32,27 +33,6 @@ function usePSTClock() {
   return { pst, date };
 }
 
-function formatTimeOffset(minutesOffset = 0) {
-  const d = new Date(Date.now() + minutesOffset * 60000);
-  return new Intl.DateTimeFormat('en-PH', {
-    timeZone: 'Asia/Manila',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(d);
-}
-
-// ─── Flood level thresholds & theme configuration ────────────────────────────
-const FLOOD_LEVELS = [
-  { id: 0, min: 0, max: 1.2, label: 'All Clear', color: '#2f9463', soft: '#e5f6ec', border: '#bfe6cf' },
-  { id: 1, min: 1.2, max: 1.6, label: 'Advisory', color: '#2b6e8f', soft: '#e6f2f8', border: '#bfdbe8' },
-  { id: 2, min: 1.6, max: 2.0, label: 'Watch Closely', color: '#e69138', soft: '#fdf1de', border: '#f4d6a4' },
-  { id: 3, min: 2.0, max: 2.4, label: 'EVACUATE NOW', color: '#e0522f', soft: '#fce7e0', border: '#f2bfab' },
-];
-
-function getFloodLevel(waterM) {
-  return FLOOD_LEVELS.find(l => waterM >= l.min && waterM < l.max) || FLOOD_LEVELS[3];
-}
 
 function getFriendlyContent(level, telemetry, aiPrediction) {
   switch (level.id) {
@@ -72,7 +52,7 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
       return {
         badge: 'Water Rising', icon: Info,
         heroTitle: 'Water Level Rising',
-        heroMsg: 'Rainfall has increased upstream water levels. The river channel is slightly elevated but remains within monitored advisory limits.',
+        heroMsg: 'The river is rising. The water level is slightly elevated but remains within monitored advisory limits.',
         actionTitle: 'Precautionary Steps',
         actionItems: [
           'Charge your phones, power banks, and emergency flashlights.',
@@ -94,9 +74,9 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
       };
     case 3:
       return {
-        badge: 'DANGER LEVEL', icon: AlertTriangle,
-        heroTitle: 'Danger Level Reached',
-        heroMsg: 'Water levels have reached critical danger thresholds. Please move immediately to designated high-ground evacuation shelters.',
+        badge: 'SPILL LEVEL', icon: AlertTriangle,
+        heroTitle: 'River Is Spilling Over',
+        heroMsg: 'The water has reached the spill level and may overflow onto roads and homes. Please move immediately to designated high-ground evacuation shelters.',
         actionTitle: 'Immediate Evacuation Order',
         actionItems: [
           'Evacuate immediately — do not wait for floodwaters to enter your home.',
@@ -107,245 +87,6 @@ function getFriendlyContent(level, telemetry, aiPrediction) {
     default:
       return getFriendlyContent(FLOOD_LEVELS[0], telemetry, aiPrediction);
   }
-}
-
-function rainDescription(mmHr) {
-  if (mmHr < 2.5) return 'No rain / Dry';
-  if (mmHr < 7.5) return 'Light rain';
-  if (mmHr < 15) return 'Moderate rain';
-  if (mmHr < 30) return 'Heavy rain';
-  return 'Torrential rain';
-}
-
-function rainIntensityKey(mmHr) {
-  if (mmHr < 2.5) return 'none';
-  if (mmHr < 8) return 'light';
-  if (mmHr < 25) return 'moderate';
-  return 'heavy';
-}
-
-// ─── Line Graph for Water Level (Bottom: Timeframe, Right: Meter Scale) ──────
-function WaterLevelSparkline({ history = [], currentLevel = 0.35, color = '#2f9463' }) {
-  const width = 240;
-  const height = 72;
-  const padY = 8;
-  const padX = 8;
-  const drawW = width - padX * 2;
-  const drawH = height - padY * 2;
-
-  // Build a normalized series of 6 to 12 points
-  const ptsRaw = (Array.isArray(history) && history.length >= 2)
-    ? history
-    : [
-        +(currentLevel * 0.96).toFixed(2),
-        +(currentLevel * 0.98).toFixed(2),
-        +(currentLevel * 0.97).toFixed(2),
-        +(currentLevel * 0.99).toFixed(2),
-        +(currentLevel * 1.00).toFixed(2),
-        +currentLevel.toFixed(2),
-      ];
-
-  const dataMin = Math.min(...ptsRaw);
-  const dataMax = Math.max(...ptsRaw);
-  const rawSpan = dataMax - dataMin;
-  const minV = rawSpan >= 0.02 ? dataMin : Math.max(0, dataMin - 0.02);
-  const maxV = rawSpan >= 0.02 ? dataMax : dataMax + 0.02;
-  const range = (maxV - minV) || 0.04;
-  const midV = (minV + maxV) / 2;
-
-  const coords = ptsRaw.map((v, i) => ({
-    x: padX + (i / Math.max(1, ptsRaw.length - 1)) * drawW,
-    y: padY + drawH - ((v - minV) / range) * drawH,
-  }));
-
-  let pathD = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
-  for (let i = 0; i < coords.length - 1; i++) {
-    const c = coords[i];
-    const n = coords[i + 1];
-    const mx = (c.x + n.x) / 2;
-    pathD += ` C ${mx.toFixed(1)} ${c.y.toFixed(1)}, ${mx.toFixed(1)} ${n.y.toFixed(1)}, ${n.x.toFixed(1)} ${n.y.toFixed(1)}`;
-  }
-
-  const last = coords[coords.length - 1];
-  const first = coords[0];
-  const areaD = `${pathD} L ${last.x.toFixed(1)} ${height} L ${first.x.toFixed(1)} ${height} Z`;
-  const gradId = `waterSparkGrad_${color.replace(/[^a-zA-Z0-9]/g, '')}`;
-
-  const time30mAgo = formatTimeOffset(-30);
-  const time15mAgo = formatTimeOffset(-15);
-  const timeNow = formatTimeOffset(0);
-
-  return (
-    <div className="w-full pt-2 border-t border-[#f1f5f6] select-none">
-      <div className="grid grid-cols-[1fr_auto] gap-x-2 items-stretch">
-        {/* Plot Area with Grid & Axes */}
-        <div className="relative bg-[#f8fbfc] border-b border-r border-[#cbdbe2] rounded-tl-lg overflow-hidden">
-          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-20 block">
-            <defs>
-              <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity="0.28" />
-                <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-              </linearGradient>
-            </defs>
-
-            {/* Horizontal Y-axis grid lines (Top, Mid, Bottom) */}
-            <line x1="0" y1={padY} x2={width} y2={padY} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-            <line x1="0" y1={padY + drawH * 0.5} x2={width} y2={padY + drawH * 0.5} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-            <line x1="0" y1={padY + drawH} x2={width} y2={padY + drawH} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-
-            {/* Vertical X-axis timeframe grid lines (Left, Center, Right) */}
-            <line x1={padX} y1="0" x2={padX} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-            <line x1={width * 0.5} y1="0" x2={width * 0.5} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-            <line x1={width - padX} y1="0" x2={width - padX} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-
-            {/* Gradient fill under curve */}
-            <path d={areaD} fill={`url(#${gradId})`} />
-
-            {/* Line graph stroke */}
-            <path d={pathD} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-
-            {/* Start & Live endpoint markers */}
-            <circle cx={first.x} cy={first.y} r="2.8" fill="#ffffff" stroke={color} strokeWidth="1.8" />
-            <circle cx={last.x} cy={last.y} r="3.8" fill={color} stroke="#ffffff" strokeWidth="1.5" />
-          </svg>
-        </div>
-
-        {/* Right Side: Y-Axis Meter Scale */}
-        <div className="flex flex-col justify-between text-[10.5px] font-mono font-semibold text-[#5a7180] py-1 text-right min-w-[44px]">
-          <span className="leading-none" style={{ color }}>{maxV.toFixed(2)} m</span>
-          <span className="leading-none">{midV.toFixed(2)} m</span>
-          <span className="leading-none">{minV.toFixed(2)} m</span>
-        </div>
-
-        {/* Bottom: X-Axis Timeframe Scale */}
-        <div className="flex items-center justify-between text-[10.5px] text-[#5a7180] pt-1.5">
-          <span className="font-medium">{time30mAgo}</span>
-          <span className="font-medium text-[#7b909d]">{time15mAgo}</span>
-          <span className="font-bold text-[#123a54]">{timeNow} (Now)</span>
-        </div>
-
-        {/* Bottom-Right Empty Corner */}
-        <div />
-      </div>
-    </div>
-  );
-}
-
-// ─── AI Forecast Line Graph (Bottom: Timeframe, Right: Meter Scale) ──────────
-function AiForecastSparkline({ currentM = 0.35, p30M = 0.38, p60M = 0.41, color = '#e69138' }) {
-  const width = 240;
-  const height = 72;
-  const padY = 8;
-  const padX = 10;
-  const drawW = width - padX * 2;
-  const drawH = height - padY * 2;
-
-  const vals = [Number(currentM) || 0, Number(p30M) || 0, Number(p60M) || 0];
-  const dataMin = Math.min(...vals);
-  const dataMax = Math.max(...vals);
-  const rawSpan = dataMax - dataMin;
-  const minV = rawSpan >= 0.02 ? dataMin : Math.max(0, dataMin - 0.02);
-  const maxV = rawSpan >= 0.02 ? dataMax : dataMax + 0.02;
-  const range = (maxV - minV) || 0.04;
-  const midV = (minV + maxV) / 2;
-
-  const getY = (val) => padY + drawH - ((val - minV) / range) * drawH;
-
-  const pt0 = { x: padX, y: getY(vals[0]) };
-  const pt30 = { x: width * 0.5, y: getY(vals[1]) };
-  const pt60 = { x: width - padX, y: getY(vals[2]) };
-
-  // Confidence error margins (±1.5cm at 30m, ±2.2cm at 60m)
-  const offset30 = Math.min(12, Math.max(4, (0.015 / range) * drawH));
-  const offset60 = Math.min(16, Math.max(5, (0.022 / range) * drawH));
-
-  const coneD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} ` +
-    `L ${pt30.x.toFixed(1)} ${Math.max(2, pt30.y - offset30).toFixed(1)} ` +
-    `L ${pt60.x.toFixed(1)} ${Math.max(2, pt60.y - offset60).toFixed(1)} ` +
-    `L ${pt60.x.toFixed(1)} ${Math.min(height - 2, pt60.y + offset60).toFixed(1)} ` +
-    `L ${pt30.x.toFixed(1)} ${Math.min(height - 2, pt30.y + offset30).toFixed(1)} Z`;
-
-  const lineD = `M ${pt0.x.toFixed(1)} ${pt0.y.toFixed(1)} L ${pt30.x.toFixed(1)} ${pt30.y.toFixed(1)} L ${pt60.x.toFixed(1)} ${pt60.y.toFixed(1)}`;
-  const areaD = `${lineD} L ${pt60.x.toFixed(1)} ${height} L ${pt0.x.toFixed(1)} ${height} Z`;
-
-  const timeNow = formatTimeOffset(0);
-  const time30m = formatTimeOffset(30);
-  const time60m = formatTimeOffset(60);
-
-  return (
-    <div className="w-full pt-2 border-t border-[#f1f5f6] select-none">
-      <div className="grid grid-cols-[1fr_auto] gap-x-2 items-stretch">
-        {/* Plot Area with Grid & Axes */}
-        <div className="relative bg-[#f8fbfc] border-b border-r border-[#cbdbe2] rounded-tl-lg overflow-hidden">
-          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-20 block">
-            <defs>
-              <linearGradient id="aiForecastArea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity="0.26" />
-                <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-              </linearGradient>
-              <linearGradient id="aiConfidenceCone" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor={color} stopOpacity="0.08" />
-                <stop offset="100%" stopColor={color} stopOpacity="0.22" />
-              </linearGradient>
-            </defs>
-
-            {/* Horizontal Y-axis grid lines (Top, Mid, Bottom) */}
-            <line x1="0" y1={padY} x2={width} y2={padY} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-            <line x1="0" y1={padY + drawH * 0.5} x2={width} y2={padY + drawH * 0.5} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-            <line x1="0" y1={padY + drawH} x2={width} y2={padY + drawH} stroke="#dde8ed" strokeWidth="1" strokeDasharray="3 3" />
-
-            {/* Vertical X-axis timeframe grid lines (Now, +30m, +60m) */}
-            <line x1={pt0.x} y1="0" x2={pt0.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-            <line x1={pt30.x} y1="0" x2={pt30.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-            <line x1={pt60.x} y1="0" x2={pt60.x} y2={height} stroke="#e6eff2" strokeWidth="1" strokeDasharray="2 3" />
-
-            {/* Shaded Confidence Cone */}
-            <path d={coneD} fill="url(#aiConfidenceCone)" />
-
-            {/* Under-line gradient */}
-            <path d={areaD} fill="url(#aiForecastArea)" />
-
-            {/* Forecast Trajectory Line */}
-            <path
-              d={lineD}
-              fill="none"
-              stroke={color}
-              strokeWidth="2.5"
-              strokeDasharray="5 3.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-
-            {/* Point: Now */}
-            <circle cx={pt0.x} cy={pt0.y} r="3.2" fill="#123a54" stroke="#ffffff" strokeWidth="1.4" />
-
-            {/* Point: +30m */}
-            <circle cx={pt30.x} cy={pt30.y} r="3.6" fill={color} stroke="#ffffff" strokeWidth="1.5" />
-
-            {/* Point: +60m */}
-            <circle cx={pt60.x} cy={pt60.y} r="3.6" fill="#ffffff" stroke={color} strokeWidth="2" />
-          </svg>
-        </div>
-
-        {/* Right Side: Y-Axis Meter Scale */}
-        <div className="flex flex-col justify-between text-[10.5px] font-mono font-semibold text-[#5a7180] py-0.5 text-right min-w-[44px]">
-          <span className="leading-none" style={{ color }}>{maxV.toFixed(2)} m</span>
-          <span className="leading-none">{midV.toFixed(2)} m</span>
-          <span className="leading-none text-[#123a54]">{minV.toFixed(2)} m</span>
-        </div>
-
-        {/* Bottom: X-Axis Timeframe Scale */}
-        <div className="grid grid-cols-3 items-center text-[10.5px] text-[#5a7180] pt-1.5">
-          <span className="text-left font-medium text-[#123a54]">{timeNow} (Now)</span>
-          <span className="text-center font-bold" style={{ color }}>{time30m}</span>
-          <span className="text-right font-medium">{time60m}</span>
-        </div>
-
-        {/* Bottom-Right Empty Corner */}
-        <div />
-      </div>
-    </div>
-  );
 }
 
 // ─── Stat Card component ──────────────────────────────────────────────────────
@@ -426,10 +167,10 @@ function AnimatedStatCard({
       {/* Bottom Full-Width Graph with Crisp Time and Meter Labels */}
       <div className="w-full">
         {variant === 'water' && (
-          <WaterLevelSparkline history={history} currentLevel={validNum} color={color} />
+          <WaterLevelSparkline history={history} currentLevel={validNum} color={color} framed />
         )}
         {variant === 'ai' && (
-          <AiForecastSparkline currentM={currentLevel} p30M={predicted30m} p60M={predicted60m} color={color} />
+          <AiForecastSparkline currentM={currentLevel} p30M={predicted30m} p60M={predicted60m} color={color} framed />
         )}
       </div>
     </div>
@@ -463,7 +204,6 @@ export default function PublicPortal() {
   const [telemetry, setTelemetry] = useState({
     waterLevelM: 0.00,
     waterDistanceCm: 240,
-    rainRateMmHr: 0.0,
   });
 
   const [aiPrediction, setAiPrediction] = useState({
@@ -471,7 +211,7 @@ export default function PublicPortal() {
     predicted30m: 0.00,
     predicted60m: 0.00,
     timeToCriticalMins: null,
-    modelConfidence: 96.5,
+    methodLabel: 'Loading…', testScores: null,
   });
 
   const [secondsAgo, setSecondsAgo] = useState(0);
@@ -490,24 +230,64 @@ export default function PublicPortal() {
     return () => { if (secRef.current) clearInterval(secRef.current); };
   }, []);
 
+  const [thresholds, setThresholds] = useState({});
+
+  // ── Which station the resident is looking at (remembered on this phone) ──
+  const [stations, setStations] = useState([]);
+  const [stationId, setStationId] = useState(() => {
+    try { return Number(localStorage.getItem('sf_station')) || null; } catch { return null; }
+  });
+  const stationRef = useRef(stationId);
+  useEffect(() => { stationRef.current = stationId; }, [stationId]);
+
+  useEffect(() => {
+    const loadStations = () => fetch(`${API_BASE_URL}/api/v1/telemetry/stations`)
+      .then(r => r.json())
+      .then(j => {
+        const list = j.data || [];
+        setStations(list);
+        // Keep the saved station if it still exists, otherwise show the first one
+        setStationId(cur => (list.some(s => s.id === cur) ? cur : list[0]?.id ?? null));
+      })
+      .catch(() => {});
+    loadStations();
+    const t = setInterval(loadStations, 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  const chooseStation = (id) => {
+    setStationId(id);
+    try { localStorage.setItem('sf_station', String(id)); } catch { /* private mode */ }
+  };
+  const station = stations.find(s => s.id === stationId);
+  const forStation = (sep) => (stationId ? `${sep}nodeId=${stationId}` : '');
+
+  // Clear the old station's numbers when switching
+  useEffect(() => {
+    setTelemetry({ waterLevelM: 0.00, waterDistanceCm: 240 });
+    setLevelHistory([]);
+    setAiPrediction(prev => ({ ...prev, predicted30m: 0.00, predicted60m: 0.00 }));
+    setThresholds({});
+  }, [stationId]);
+
   // Poll latest telemetry from GET /api/v1/telemetry/latest every 3s
   useEffect(() => {
     async function fetchLatest() {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/latest`);
+        if (!stationId) return;
+        const res = await fetch(`${API_BASE_URL}/api/v1/telemetry/latest${forStation('?')}`);
         if (!res.ok) return;
         const json = await res.json();
         if (json.success && json.data) {
           const d = json.data;
           const level = parseFloat(d.water_level_m ?? d.waterLevelM ?? 0.00);
           const dist = parseFloat(d.raw_distance_cm ?? d.rawDistanceCm ?? Math.round((2.4 - level) * 100));
-          const rain = parseFloat(d.rainfallRateMmh ?? d.rainfall_rate_mm_h ?? d.rainfall_rate ?? 0.0);
           setTelemetry(prev => ({
             ...prev,
             waterLevelM: level,
             waterDistanceCm: dist,
-            rainRateMmHr: Number.isNaN(rain) ? 0.0 : rain,
           }));
+          if (d.thresholds) setThresholds(d.thresholds);
           if (!Number.isNaN(level)) {
             setLevelHistory(prev => {
               if (prev.length === 0) return [level];
@@ -521,7 +301,6 @@ export default function PublicPortal() {
           setTelemetry({
             waterLevelM: 0.00,
             waterDistanceCm: 240,
-            rainRateMmHr: 0.0,
           });
           setLevelHistory([0.00]);
           setAiPrediction(prev => ({
@@ -541,7 +320,7 @@ export default function PublicPortal() {
     fetchLatest();
     const interval = setInterval(fetchLatest, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [stationId]);
 
   // ── Real-Time WebSocket Telemetry Stream ───────────────────────────────────
   useEffect(() => {
@@ -560,15 +339,14 @@ export default function PublicPortal() {
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
-          if (msg.type === 'TELEMETRY' && msg.data) {
+          const fromOtherStation = (d) => d?.nodeId != null && Number(d.nodeId) !== stationRef.current;
+          if (msg.type === 'TELEMETRY' && msg.data && !fromOtherStation(msg.data)) {
             const d = msg.data;
-            const rain = parseFloat(d.rainfallRateMmh ?? d.rainfall_rate_mm_h ?? d.rainfall_rate ?? d.rain_rate_mm_hr ?? 0.0);
             const newLevel = parseFloat(d.water_level_m ?? d.waterLevel ?? 0.0);
             setTelemetry(prev => ({
               ...prev,
               waterLevelM: parseFloat(d.water_level_m ?? d.waterLevel ?? prev.waterLevelM),
               waterDistanceCm: parseInt(d.water_distance_cm ?? d.waterDistanceCm ?? prev.waterDistanceCm),
-              rainRateMmHr: Number.isNaN(rain) ? prev.rainRateMmHr : rain,
             }));
             if (!Number.isNaN(newLevel)) {
               setLevelHistory(prev => {
@@ -590,21 +368,20 @@ export default function PublicPortal() {
               predicted30m: 0.00,
               predicted60m: 0.00,
               timeToCriticalMins: null,
-              modelConfidence: 96.5,
+              methodLabel: 'Loading…', testScores: null,
             });
             resetSecondsAgo();
           }
-          if (msg.type === 'PROJECTION' && msg.data) {
+          if (msg.type === 'PROJECTION' && msg.data && !fromOtherStation(msg.data)) {
             const p = msg.data;
             const p30 = parseFloat(p.horizon30mM ?? p.predicted30m ?? p.horizon_30m_m ?? 0.00);
             const p60 = parseFloat(p.horizon60mM ?? p.predicted60m ?? p.horizon_60m_m ?? 0.00);
-            const conf = Math.round(parseFloat(p.confidenceScore ?? p.confidence_score ?? prev.modelConfidence));
             setAiPrediction(prev => ({
               ...prev,
               predicted30m: Number.isNaN(p30) ? 0.00 : p30,
               predicted60m: Number.isNaN(p60) ? 0.00 : p60,
               riskScore: Math.round(parseFloat(p.risk_score ?? prev.riskScore)),
-              modelConfidence: Number.isNaN(conf) ? 96.5 : conf,
+              methodLabel: p.methodLabel ?? prev.methodLabel, testScores: p.testScores ?? prev.testScores,
             }));
           }
         } catch (err) {
@@ -622,7 +399,8 @@ export default function PublicPortal() {
 
   // ── Initial Fetch for Latest Telemetry & Projection ───────────────────────
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/v1/telemetry/latest`)
+    if (!stationId) return;
+    fetch(`${API_BASE_URL}/api/v1/telemetry/latest${forStation('?')}`)
       .then(r => r.json())
       .then(j => {
         if (j.success && j.data) {
@@ -634,26 +412,25 @@ export default function PublicPortal() {
         }
       }).catch(() => {});
 
-    fetch(`${API_BASE_URL}/api/v1/telemetry/projection`)
+    fetch(`${API_BASE_URL}/api/v1/telemetry/projection${forStation('?')}`)
       .then(r => r.json())
       .then(j => {
         if (j.success && j.data) {
           const p = j.data;
           const p30 = parseFloat(p.horizon30mM ?? p.predicted30m ?? p.horizon_30m_m ?? 0.00);
           const p60 = parseFloat(p.horizon60mM ?? p.predicted60m ?? p.horizon_60m_m ?? 0.00);
-          const conf = Math.round(parseFloat(p.confidenceScore ?? p.confidence_score ?? 96.5));
           setAiPrediction(prev => ({
             ...prev,
             predicted30m: Number.isNaN(p30) ? 0.00 : p30,
             predicted60m: Number.isNaN(p60) ? 0.00 : p60,
             riskScore: Math.round(parseFloat(p.risk_score ?? prev.riskScore)),
-            modelConfidence: Number.isNaN(conf) ? 96.5 : conf,
+            methodLabel: p.methodLabel ?? prev.methodLabel, testScores: p.testScores ?? prev.testScores,
           }));
         }
       }).catch(() => {});
 
     // Fetch initial 30m historical trend for the sparkline graph
-    fetch(`${API_BASE_URL}/api/v1/telemetry/history?range=30m`)
+    fetch(`${API_BASE_URL}/api/v1/telemetry/history?range=30m${forStation('&')}`)
       .then(r => r.json())
       .then(j => {
         if (j.success && Array.isArray(j.data) && j.data.length > 0) {
@@ -661,11 +438,10 @@ export default function PublicPortal() {
           if (pts.length > 0) setLevelHistory(pts.slice(-15));
         }
       }).catch(() => {});
-  }, []);
+  }, [stationId]);
 
-  const floodLevel = getFloodLevel(telemetry.waterLevelM);
+  const floodLevel = getFloodLevel(telemetry.waterLevelM, thresholds);
   const friendly = getFriendlyContent(floodLevel, telemetry, aiPrediction);
-  const rainKey = rainIntensityKey(telemetry.rainRateMmHr);
   const surgeDelta = +(aiPrediction.predicted60m - telemetry.waterLevelM).toFixed(2);
   const surgeRateText = surgeDelta > 0.01 ? `+${surgeDelta.toFixed(2)} m/h` : '0.00 m/h (Steady)';
 
@@ -698,7 +474,30 @@ export default function PublicPortal() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
+            <div className="flex items-center gap-3 sm:gap-5 flex-wrap justify-center">
+              {/* Your barangay (only barangays with a flood station) — the whole page follows this.
+                  Shown as plain white text like the clock; an invisible dropdown on top opens the list. */}
+              {stations.length > 0 && (
+                <div className="sm:pr-5 sm:border-r sm:border-white/20">
+                  <label className="relative inline-flex items-center gap-1.5 text-white cursor-pointer hover:text-sky-100" title={station ? `Showing ${station.name}` : undefined}>
+                    <MapPin size={16} className="text-sky-200 flex-shrink-0" />
+                    <span className="text-base font-semibold">{station?.barangay ?? 'Choose barangay'}</span>
+                    <ChevronDown size={15} className="text-sky-200" />
+                    <select
+                      value={stationId ?? ''}
+                      onChange={(e) => chooseStation(Number(e.target.value))}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer bg-white text-black"
+                      aria-label="Choose your barangay"
+                    >
+                      {/* Dark text on white in the opened list (the header text is white) */}
+                      {stations.map(st => (
+                        <option key={st.id} value={st.id} style={{ color: '#000', backgroundColor: '#fff' }}>{st.barangay}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+
               {/* Local Clock */}
               <div className="text-right hidden sm:block">
                 <p className="text-[9px] text-sky-200 uppercase tracking-wide">Local time</p>
@@ -718,7 +517,6 @@ export default function PublicPortal() {
             {/* ── HERO STATUS CARD ────────────────────────────────────────── */}
             <div className="relative overflow-hidden rounded-[24px] border shadow-sm p-5 sm:p-7 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-5 items-center card-enter card-enter-d1"
               style={{ background: `linear-gradient(135deg, ${floodLevel.soft}, #ffffff 70%)`, borderColor: floodLevel.border }}>
-              <RainOverlay intensity={rainKey} />
               <div className="relative z-[1]">
                 <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: floodLevel.color }}>
                   <MapPin size={13} /> Resident Status Advisory
@@ -757,15 +555,7 @@ export default function PublicPortal() {
                 value={`${telemetry.waterLevelM.toFixed(2)} m`}
                 numericValue={telemetry.waterLevelM}
                 decimals={2}
-                trendText={
-                  telemetry.waterLevelM < 1.2
-                    ? 'Normal'
-                    : telemetry.waterLevelM < 1.6
-                    ? 'Advisory'
-                    : telemetry.waterLevelM < 2.0
-                    ? 'Warning'
-                    : 'Danger'
-                }
+                trendText={['Normal', 'Advisory', 'Warning', 'Spill'][floodLevel.id]}
                 sub={
                   telemetry.waterDistanceCm <= 25
                     ? 'Sensor Limit Reached'
@@ -789,7 +579,7 @@ export default function PublicPortal() {
                 numericValue={aiPrediction.predicted30m}
                 decimals={2}
                 color="#e69138"
-                tooltip="Antipolo river level forecast for the next 30 and 60 minutes based on real-time upstream conditions"
+                tooltip="Forecast of the river level 30 and 60 minutes from now, based on the last hour of readings from the river sensor"
                 delay={4}
                 variant="ai"
                 currentLevel={telemetry.waterLevelM}
@@ -870,18 +660,21 @@ export default function PublicPortal() {
               )}
             </div>
 
-            {/* Emergency Email Subscription Card */}
-            <div id="email-alerts">
-              <EmailSubscriptionCard />
-            </div>
-
           </div>
 
-          {/* RIGHT COLUMN: Interactive Weather Map Card (5/12 width) */}
+          {/* RIGHT COLUMN: Flood map + flood alert sign-up (5/12 width) */}
           <div className="lg:col-span-5 min-w-0 w-full flex flex-col gap-4">
 
-            {/* Weather Map Component */}
-            <WeatherMapCard severity={floodLevel.id} />
+            {/* Flood heat map of Antipolo (the resident's barangay is highlighted) */}
+            <FloodHeatMap highlightId={stationId} onSelect={chooseStation} title="Flood map of Antipolo" />
+
+            {/* Sign up for flood alerts (SMS or email, by barangay) */}
+            <div id="alert-signup">
+              <AlertSignupCard
+                barangays={[...new Set(stations.map(s => s.barangay))]}
+                defaultBarangay={station?.barangay}
+              />
+            </div>
 
           </div>
 

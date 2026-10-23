@@ -1,11 +1,10 @@
 import express from 'express';
-import { resetTestData, getAiEvaluation } from '../controllers/testController.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { resetTestData } from '../controllers/testController.js';
+import { requirePermission } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// ── Production Maintenance & AI Evaluation Endpoints ──────────────────────
-router.post('/reset', authMiddleware, resetTestData);
-router.get('/ai-evaluation', getAiEvaluation);
+// Super Admin: delete all readings, events and forecasts (Reports → Reset logs)
+router.post('/reset', requirePermission('system.maintenance'), resetTestData);
 
 export default router;

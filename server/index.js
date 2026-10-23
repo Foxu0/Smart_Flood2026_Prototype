@@ -9,17 +9,20 @@ import { initWebSocketServer } from './websocket.js';
 import telemetryRouter from './routes/telemetry.js';
 import eventsRouter from './routes/events.js';
 import controlRouter from './routes/control.js';
-import settingsRouter from './routes/settings.js';
-import weatherRouter from './routes/weather.js';
 import subscribersRouter from './routes/subscribers.js';
 import testRouter from './routes/testRoutes.js';
-import { startWeatherPoller } from './services/weatherService.js';
 import { startRetentionScheduler } from './services/retentionService.js';
-import { login, logout } from './controllers/authController.js';
+import usersRouter from './routes/users.js';
+import devicesRouter from './routes/devices.js';
+import smsResidentsRouter from './routes/smsResidents.js';
+import { login, logout, me } from './controllers/authController.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
+import { seedAccounts } from './services/accountStore.js';
+import { checkModel } from './services/dlService.js';
 import { prisma } from './db.js';
 
 const app = express();
+app.set('trust proxy', 1); // behind Render's proxy: use the visitor's real IP (for the sign-up limit)
 const PORT = process.env.PORT || process.env.API_PORT || 3001;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,7 +43,7 @@ app.use(cors({
     callback(new Error(`CORS blocked: ${origin}`));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Key'],
   credentials: true,
 }));
 app.use(express.json());
@@ -56,15 +59,17 @@ app.use((req, _res, next) => {
 // ── Auth Routes (public — issues JWT) ──────────────────────────────────────
 app.post('/api/v1/auth/login', login);
 app.post('/api/v1/auth/logout', authMiddleware, logout);
+app.get('/api/v1/auth/me', authMiddleware, me);
 
 // ── REST Routes ─────────────────────────────────────────────────────────────
 app.use('/api/v1/telemetry', telemetryRouter);
 app.use('/api/v1/events', eventsRouter);
 app.use('/api/v1/control', controlRouter);
-app.use('/api/v1/settings', settingsRouter);
-app.use('/api/v1/weather', weatherRouter);
 app.use('/api/v1/subscribers', subscribersRouter);
 app.use('/api/v1/test', testRouter);
+app.use('/api/v1/users', usersRouter);
+app.use('/api/v1/devices', devicesRouter);
+app.use('/api/v1/sms-residents', smsResidentsRouter);
 
 // ── Health Check ─────────────────────────────────────────────────────────────
 app.get('/api/v1/health', (_req, res) => {
@@ -106,8 +111,8 @@ app.use((err, _req, res, _next) => {
 const server = http.createServer(app);
 initWebSocketServer(server);
 
-// Start automated weather poller (fetches every 10 mins)
-startWeatherPoller();
+// Check once whether the AI model loads (shown on the dashboard)
+checkModel();
 
 // Start automated data retention scheduler (daily purge of logs > 30 days)
 startRetentionScheduler(parseInt(process.env.DATA_RETENTION_DAYS || '30'));
@@ -129,13 +134,12 @@ async function verifyDatabaseSchema() {
     console.warn('[DB] Schema check notice:', err.message);
   }
 }
-verifyDatabaseSchema();
+verifyDatabaseSchema().then(() => seedAccounts()).catch((err) => console.error('[Accounts] Seed failed:', err.message));
 
 server.listen(PORT, () => {
   console.log(`\n🌊 SmartFlood API Server running`);
   console.log(`   REST     → http://localhost:${PORT}/api/v1`);
   console.log(`   Auth     → POST http://localhost:${PORT}/api/v1/auth/login`);
-  console.log(`   Weather  → http://localhost:${PORT}/api/v1/weather`);
   console.log(`   WS       → ws://localhost:${PORT}`);
   console.log(`   Health   → http://localhost:${PORT}/api/v1/health\n`);
 });

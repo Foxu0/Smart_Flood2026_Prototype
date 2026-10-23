@@ -1,0 +1,80 @@
+{
+  "all_test_events": {
+    "windows": 14457,
+    "Persistence (level stays the same)": {
+      "30_min": {
+        "MAE_cm": 3.17,
+        "RMSE_cm": 4.71,
+        "R2": 0.977
+      },
+      "60_min": {
+        "MAE_cm": 5.8,
+        "RMSE_cm": 8.82,
+        "R2": 0.918
+      }
+    },
+    "Simple formula (level + surge rate x time)": {
+      "30_min": {
+        "MAE_cm": 3.39,
+        "RMSE_cm": 4.5,
+        "R2": 0.979
+      },
+      "60_min": {
+        "MAE_cm": 6.44,
+        "RMSE_cm": 8.92,
+        "R2": 0.916
+      }
+    },
+    "LSTM (Smart Flood model)": {
+      "30_min": {
+        "MAE_cm": 1.25,
+        "RMSE_cm": 1.95,
+        "R2": 0.996
+      },
+      "60_min": {
+        "MAE_cm": 1.81,
+        "RMSE_cm": 3.11,
+        "R2": 0.99
+      }
+    }
+  },
+  "flood_events_only": {
+    "windows": 9964,
+    "Persistence (level stays the same)": {
+      "30_min": {
+        "MAE_cm": 4.03,
+        "RMSE_cm": 5.55,
+        "R2": 0.971
+      },
+      "60_min": {
+        "MAE_cm": 7.61,
+        "RMSE_cm": 10.46,
+        "R2": 0.895
+      }
+    },
+    "Simple formula (level + surge rate x time)": {
+      "30_min": {
+        "MAE_cm": 3.46,
+        "RMSE_cm": 4.69,
+        "R2": 0.979
+      },
+      "60_min": {
+        "MAE_cm": 6.67,
+        "RMSE_cm": 9.5,
+        "R2": 0.914
+      }
+    },
+    "LSTM (Smart Flood model)": {
+      "30_min": {
+        "MAE_cm": 1.33,
+        "RMSE_cm": 2.13,
+        "R2": 0.996
+      },
+      "60_min": {
+        "MAE_cm": 1.98,
+        "RMSE_cm": 3.38,
+        "R2": 0.989
+      }
+    }
+  }
+}

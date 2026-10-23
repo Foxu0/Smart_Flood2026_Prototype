@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, User, Eye, EyeOff, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { API_BASE_URL } from '../config.js';
+import { setSession } from '../lib/session.js';
 
 export default function EocLoginTerminal({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -35,10 +36,9 @@ export default function EocLoginTerminal({ onLoginSuccess }) {
       const json = await res.json();
 
       if (res.ok && json.success) {
-        sessionStorage.setItem('sf_token', json.token);
-        sessionStorage.setItem('sf_operator', json.operator?.username || username.trim());
+        setSession(json.token, json.operator);
         if (onLoginSuccess) {
-          onLoginSuccess(json.token);
+          onLoginSuccess(json.token, json.operator);
         }
       } else {
         setError(json.error || 'Invalid operator credentials.');
@@ -78,10 +78,10 @@ export default function EocLoginTerminal({ onLoginSuccess }) {
       <div className="flex-1 bg-white p-6 sm:p-8 flex flex-col justify-between text-slate-800 min-w-0">
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-[#0c2333] tracking-tight font-display mb-1">
-            Operator Access
+            Account Sign In
           </h2>
           <p className="text-xs text-slate-500 mb-5">
-            Sign in to access real-time telemetry and controls.
+            For Super Admin, MDRRMO and Barangay DRRM staff.
           </p>
 
           {/* Error Notice */}
@@ -163,7 +163,7 @@ export default function EocLoginTerminal({ onLoginSuccess }) {
               ) : (
                 <>
                   <Lock size={14} />
-                  <span>Access Command Center</span>
+                  <span>Sign In</span>
                 </>
               )}
             </button>

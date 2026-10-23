@@ -1,32 +1,48 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 import EocLoginTerminal from './EocLoginTerminal.jsx';
+import { getToken, getUser, homePathFor } from '../lib/session.js';
 
 /**
- * ProtectedRoute — Guards /admin from unauthenticated access.
- * Reads the JWT from sessionStorage. If valid, renders children.
- * If unauthenticated, renders children (AdminDashboard) covered by a steady
- * flood water overlay with a centered EOC terminal modal on top.
+ * ProtectedRoute — Guards a console route by role.
+ *   roles    — roles allowed on this route (from shared/roles.js)
+ *   backdrop — element shown blurred behind the login overlay
+ * Signed-in users with a different role are redirected to their own home.
+ * Unauthenticated visitors get the flood-water overlay with the login terminal.
  */
-export default function ProtectedRoute({ children }) {
-  const [token, setToken] = useState(() => sessionStorage.getItem('sf_token'));
+export default function ProtectedRoute({ roles, backdrop = null, children }) {
+  const navigate = useNavigate();
+  const [session, setSessionState] = useState(() => ({ token: getToken(), user: getUser() }));
   const [receding, setReceding] = useState(false);
 
-  const handleLoginSuccess = (newToken) => {
+  useEffect(() => {
+    const onExpired = () => { setReceding(false); setSessionState({ token: '', user: null }); };
+    window.addEventListener('sf-session-expired', onExpired);
+    return () => window.removeEventListener('sf-session-expired', onExpired);
+  }, []);
+
+  const handleLoginSuccess = (newToken, operator) => {
+    if (!roles.includes(operator?.role)) {
+      navigate(homePathFor(operator?.role), { replace: true });
+      return;
+    }
     setReceding(true);
     setTimeout(() => {
-      setToken(newToken);
+      setSessionState({ token: newToken, user: operator });
     }, 700);
   };
 
-  if (token) {
-    return children;
+  // Tokens issued before role-based accounts have no stored user → force re-login
+  if (session.token && session.user) {
+    if (roles.includes(session.user.role)) return children;
+    return <Navigate to={homePathFor(session.user.role)} replace />;
   }
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
       {/* ── Background: Covered Admin Dashboard ───────────────────────── */}
       <div className="pointer-events-none select-none filter blur-[2px] opacity-40">
-        {children}
+        {backdrop}
       </div>
 
       {/* ── Steady Flood Overlay (Water covering background view) ─────── */}

@@ -1,11 +1,37 @@
 import jwt from 'jsonwebtoken';
+import { verifyLogin, findUserById, toPublicUser } from '../services/accountStore.js';
+import { barangayNameById } from '../services/barangayStore.js';
+import { audit } from '../services/auditService.js';
+
+async function issueToken(user) {
+  const payload = {
+    sub: user.id,
+    username: user.username,
+    role: user.role,
+    barangay: await barangayNameById(user.barangayId),
+    iss: 'SmartFlood-EOC',
+  };
+  return jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+  });
+}
+
+async function sessionResponse(user) {
+  return {
+    success: true,
+    token: await issueToken(user),
+    operator: await toPublicUser(user),
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+  };
+}
 
 /**
  * POST /api/v1/auth/login
- * Validates operator credentials against env vars and issues a signed JWT.
+ * Validates credentials against the account store and issues a signed JWT
+ * carrying the user's role and barangay.
  *
  * Request body: { username: string, password: string }
- * Response:     { success: true, token: string, operator: { username } }
+ * Response:     { success: true, token, operator: { id, username, role, barangay, ... } }
  */
 export async function login(req, res) {
   try {
@@ -18,14 +44,8 @@ export async function login(req, res) {
       });
     }
 
-    const validUsername = process.env.ADMIN_USERNAME;
-    const validPassword = process.env.ADMIN_PASSWORD;
-
-    // Constant-time-ish string compare to avoid timing attacks
-    const usernameMatch = username === validUsername;
-    const passwordMatch = password === validPassword;
-
-    if (!usernameMatch || !passwordMatch) {
+    const user = await verifyLogin(String(username).trim(), String(password));
+    if (!user) {
       // Log failed attempt with timestamp for audit trail
       console.warn(`[Auth] Failed login attempt for username: "${username}" from ${req.ip}`);
       return res.status(401).json({
@@ -34,29 +54,23 @@ export async function login(req, res) {
       });
     }
 
-    const payload = {
-      username,
-      role: 'admin',
-      iss: 'SmartFlood-EOC',
-      iat: Math.floor(Date.now() / 1000),
-    };
+    console.log(`[Auth] ${user.role} "${user.username}" logged in successfully from ${req.ip}`);
+    audit({ sub: user.id, username: user.username, role: user.role }, 'auth.login');
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-    });
-
-    console.log(`[Auth] Operator "${username}" logged in successfully from ${req.ip}`);
-
-    return res.json({
-      success: true,
-      token,
-      operator: { username, role: 'admin' },
-      expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-    });
+    return res.json(await sessionResponse(user));
   } catch (err) {
     console.error('[Auth] Login error:', err);
     return res.status(500).json({ success: false, error: 'Internal server error.' });
   }
+}
+
+/** GET /api/v1/auth/me — current account profile */
+export async function me(req, res) {
+  const user = req.operator?.sub ? await findUserById(req.operator.sub) : null;
+  if (!user || user.status !== 'ACTIVE') {
+    return res.status(401).json({ success: false, error: 'Account not found or disabled.', code: 'ACCOUNT_INVALID' });
+  }
+  return res.json({ success: true, operator: await toPublicUser(user) });
 }
 
 /**
@@ -67,5 +81,6 @@ export async function login(req, res) {
 export function logout(req, res) {
   const username = req.operator?.username || 'unknown';
   console.log(`[Auth] Operator "${username}" logged out from ${req.ip}`);
+  audit(req.operator, 'auth.logout');
   return res.json({ success: true, message: 'Logged out successfully.' });
 }

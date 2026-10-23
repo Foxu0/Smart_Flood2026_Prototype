@@ -1,7 +1,11 @@
 import express from 'express';
 import { prisma } from '../db.js';
-import { broadcastEmailAlert, sendTestEmail, sendWelcomeConfirmationEmail } from '../services/emailService.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { sendWelcomeConfirmationEmail } from '../services/emailService.js';
+import { requirePermission } from '../middleware/authMiddleware.js';
+import { audit } from '../services/auditService.js';
+import { BARANGAYS, BARANGAY_SCOPED_ROLES } from '../../shared/roles.js';
+import { signupLimit } from '../middleware/signupLimit.js';
+import { barangayHasStation } from '../services/deviceStore.js';
 
 const router = express.Router();
 
@@ -11,7 +15,7 @@ function isValidEmail(email) {
 }
 
 // ── POST /api/v1/subscribers (Public Subscription) ───────────────────────────
-router.post('/', async (req, res) => {
+router.post('/', signupLimit, async (req, res) => {
   try {
     const { email, fullName, barangay, minAlertLevel, subscriberRole } = req.body;
 
@@ -19,9 +23,16 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ success: false, error: 'A valid email address is required.' });
     }
 
+    if (!BARANGAYS.includes(barangay)) {
+      return res.status(400).json({ success: false, error: 'Choose your barangay.' });
+    }
+    if (!(await barangayHasStation(barangay))) {
+      return res.status(400).json({ success: false, error: 'There is no flood station in your barangay yet.' });
+    }
+
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = fullName ? fullName.trim().slice(0, 100) : null;
-    const cleanBarangay = barangay ? barangay.trim().slice(0, 80) : 'Antipolo';
+    const cleanBarangay = barangay;
     const alertLevel = [1, 2, 3].includes(Number(minAlertLevel)) ? Number(minAlertLevel) : 1;
     const role = ['RESIDENT', 'OFFICIAL', 'RESPONDER'].includes(subscriberRole) ? subscriberRole : 'RESIDENT';
 
@@ -140,9 +151,12 @@ router.get('/unsubscribe/:token', async (req, res) => {
 });
 
 // ── GET /api/v1/subscribers (Admin Listing + Stats) ──────────────────────────
-router.get('/', async (req, res) => {
+// Staff only (residents' emails are personal data — RA 10173). Barangay staff see their barangay.
+router.get('/', requirePermission('alerts.view'), async (req, res) => {
   try {
+    const where = req.operator.role === 'BARANGAY' && req.operator.barangay ? { barangay: req.operator.barangay } : {};
     const subscribers = await prisma.emailSubscriber.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -180,17 +194,64 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ── DELETE /api/v1/subscribers/:id (Admin Deletion) ──────────────────────────
-router.delete('/:id', authMiddleware, async (req, res) => {
+// Barangay staff only manage residents of their own barangay
+const scopeBarangay = (req) => (BARANGAY_SCOPED_ROLES.includes(req.operator.role) ? req.operator.barangay : null);
+
+// ── POST /api/v1/subscribers/manual (Staff adds a resident's email) ──────────
+// Body: { fullName, email, barangay? }. The resident gets the welcome email with an unsubscribe link.
+router.post('/manual', requirePermission('residents.manage'), async (req, res) => {
+  try {
+    const { email, fullName } = req.body || {};
+    if (!isValidEmail(email)) return res.status(400).json({ success: false, error: 'Enter a valid email address.' });
+    const barangay = scopeBarangay(req) || req.body?.barangay;
+    if (!BARANGAYS.includes(barangay)) return res.status(400).json({ success: false, error: 'Choose a barangay.' });
+
+    const cleanEmail = email.trim().toLowerCase();
+    if (await prisma.emailSubscriber.findUnique({ where: { email: cleanEmail } })) {
+      return res.status(409).json({ success: false, error: 'This email is already on the list.' });
+    }
+
+    const subscriber = await prisma.emailSubscriber.create({
+      data: {
+        email: cleanEmail,
+        fullName: fullName ? fullName.trim().slice(0, 100) : null,
+        barangay,
+        minAlertLevel: 1, // gets every alert level
+        status: 'ACTIVE',
+      },
+    });
+    audit(req.operator, 'subscriber.add', cleanEmail, { barangay });
+
+    setImmediate(() => {
+      sendWelcomeConfirmationEmail({ toEmail: cleanEmail, unsubscribeToken: subscriber.unsubscribeToken })
+        .catch((err) => console.warn('[Subscribers] Welcome email notice:', err.message));
+    });
+
+    return res.status(201).json({ success: true, data: subscriber });
+  } catch (err) {
+    console.error('[POST /subscribers/manual] Error:', err);
+    return res.status(500).json({ success: false, error: 'Could not add the email.' });
+  }
+});
+
+// ── DELETE /api/v1/subscribers/:id (Staff removes a resident's email) ────────
+router.delete('/:id', requirePermission('residents.manage'), async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ success: false, error: 'Invalid subscriber ID.' });
     }
 
-    await prisma.emailSubscriber.delete({
+    const found = await prisma.emailSubscriber.findUnique({ where: { id } });
+    const scope = scopeBarangay(req);
+    if (!found || (scope && found.barangay !== scope)) {
+      return res.status(404).json({ success: false, error: 'Subscriber not found.' });
+    }
+    await prisma.emailDispatchLog.updateMany({ where: { subscriberId: id }, data: { subscriberId: null } }).catch(() => {});
+    const removed = await prisma.emailSubscriber.delete({
       where: { id },
     });
+    audit(req.operator, 'subscriber.delete', removed.email);
 
     return res.json({ success: true, message: 'Subscriber deleted successfully.' });
   } catch (err) {
@@ -199,60 +260,19 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// ── POST /api/v1/subscribers/test-email (Admin Test Email) ───────────────────
-router.post('/test-email', async (req, res) => {
-  try {
-    const { toEmail, level } = req.body;
-    if (!toEmail || !isValidEmail(toEmail)) {
-      return res.status(400).json({ success: false, error: 'Valid recipient email is required.' });
-    }
-
-    const result = await sendTestEmail({
-      toEmail: toEmail.trim(),
-      level: Number(level) || 1,
-    });
-
-    return res.json({
-      success: true,
-      message: 'Test email successfully dispatched!',
-      data: result,
-    });
-  } catch (err) {
-    console.error('[POST /subscribers/test-email] Error:', err);
-    return res.status(500).json({ success: false, error: 'Failed to send test email', detail: err.message });
-  }
-});
-
-// ── POST /api/v1/subscribers/broadcast (Manual Admin Broadcast) ──────────────
-router.post('/broadcast', authMiddleware, async (req, res) => {
-  try {
-    const { title, message, level = 2, waterLevelM = 1.5, force = true } = req.body;
-
-    const result = await broadcastEmailAlert({
-      title: title || 'MANUAL FLOOD ADVISORY',
-      message: message || 'CDRRMO Operator initiated emergency advisory.',
-      level: Number(level),
-      waterLevelM: Number(waterLevelM),
-      source: 'MANUAL_OPERATOR',
-      force: Boolean(force),
-    });
-
-    return res.json({ success: true, data: result });
-  } catch (err) {
-    console.error('[POST /subscribers/broadcast] Error:', err);
-    return res.status(500).json({ success: false, error: 'Failed to broadcast email alert', detail: err.message });
-  }
-});
-
 // ── GET /api/v1/subscribers/broadcasts (Broadcast History) ────────────────────
-router.get('/broadcasts', async (req, res) => {
+router.get('/broadcasts', requirePermission('alerts.view'), async (req, res) => {
   try {
+    // Barangay staff only see alerts from their own barangay's boards
+    const scope = scopeBarangay(req);
     const broadcasts = await prisma.alertBroadcast.findMany({
+      where: scope ? { node: { barangay: { name: scope } } } : {},
       take: 20,
       orderBy: { triggeredAt: 'desc' },
       include: {
+        node: { select: { name: true } },
         _count: {
-          select: { dispatchLogs: true },
+          select: { dispatchLogs: true, smsLogs: true },
         },
       },
     });

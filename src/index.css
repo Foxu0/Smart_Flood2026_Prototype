@@ -2,9 +2,12 @@
 @import "tailwindcss";
 
 /* ── Base reset ──────────────────────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  max-width: 100%;
+/* In the base layer so Tailwind width classes (max-w-md, max-w-7xl…) can override it */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    max-width: 100%;
+  }
 }
 
 html {
@@ -19,7 +22,7 @@ html {
   background-position: center center;
   background-attachment: fixed;
   background-color: #eaf6fb;
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
 }
 
@@ -224,30 +227,6 @@ input[type="range"]::-moz-range-thumb {
 .ping-ring-2 { animation-delay: 0.6s; }
 .ping-ring-3 { animation-delay: 1.2s; }
 
-/* ── Animated rain (used by RainOverlay.jsx) ────────────────────────────── */
-.raindrop-layer {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-.raindrop {
-  position: absolute;
-  top: -12%;
-  width: 2px;
-  height: 18px;
-  border-radius: 2px;
-  background: linear-gradient(180deg, transparent, #7fc4e0);
-  animation-name: raindrop-fall;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-@keyframes raindrop-fall {
-  0%   { transform: translate(0, 0); }
-  100% { transform: translate(var(--drift), 340px); }
-}
-
 /* Water-surface wave used inside the jar/tank gauge */
 .water-wave { animation: water-wave 3.2s ease-in-out infinite; }
 
@@ -358,7 +337,7 @@ input[type="range"]::-moz-range-thumb {
 
 /* ── Reduced motion ─────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .raindrop, .water-wave, .bubble, .card-enter,
+  .water-wave, .bubble, .card-enter,
   .glow-tail, .siren-shake, .float-badge,
   .ping-ring, .toast-enter, .toast-exit,
   .shimmer, .metric-flash { animation: none !important; }
@@ -369,7 +348,7 @@ body {
   padding: 0;
   min-height: 100vh;
   width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   background: transparent;
 }
 
