@@ -16,7 +16,7 @@ Post-defense revisions for the final defense (November 2026).
 | 7 | Reports: CSV downloads + activity log | ✅ | |
 | 8 | CDRRMO dashboard: water level + forecast per barangay station | ✅ | |
 | 9 | Resident page: choose your barangay; sign up for SMS/email | ✅ | Only barangays with a station |
-| 10 | Heat map (replace PAGASA/RainViewer) | ✅ | Flood map of Antipolo: a glow per station coloured by its live level; on the resident page and both dashboards. **Set each station's real location** in Hardware → Edit → Map location (current points are barangay placeholders) |
+| 10 | Heat map (replace PAGASA/RainViewer) | ✅ | Flood map of Antipolo: a glow per station coloured by its live level; on the resident page and both dashboards. New stations: tap **Use my location** in Add board while standing at the site (phone GPS). **Existing 4 stations still use barangay placeholders**: open Edit at each site and tap it |
 
 ## Hardware
 

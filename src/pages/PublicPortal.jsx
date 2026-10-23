@@ -241,7 +241,7 @@ export default function PublicPortal() {
   useEffect(() => { stationRef.current = stationId; }, [stationId]);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/v1/telemetry/stations`)
+    const loadStations = () => fetch(`${API_BASE_URL}/api/v1/telemetry/stations`)
       .then(r => r.json())
       .then(j => {
         const list = j.data || [];
@@ -250,6 +250,9 @@ export default function PublicPortal() {
         setStationId(cur => (list.some(s => s.id === cur) ? cur : list[0]?.id ?? null));
       })
       .catch(() => {});
+    loadStations();
+    const t = setInterval(loadStations, 30000);
+    return () => clearInterval(t);
   }, []);
 
   const chooseStation = (id) => {
@@ -485,31 +488,45 @@ export default function PublicPortal() {
         {/* ── MAIN GRID LAYOUT ────────────────────────────────────────────── */}
         <main className="bg-white/80 backdrop-blur-md px-3 sm:px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
 
+          {/* ── CHOOSE YOUR BARANGAY (only barangays with a flood station) ── */}
+          {stations.length > 0 && (
+            <div className="lg:col-span-12 min-w-0 bg-white rounded-2xl shadow-sm border border-[#e4edf0] px-4 py-3">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="text-xs font-bold text-[#123a54] flex items-center gap-1.5">
+                  <MapPin size={14} className="text-[#2b6e8f]" /> Choose your barangay
+                </p>
+                <p className="text-[10px] text-[#6d818d] hidden sm:block">Only barangays with a flood station are listed</p>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" role="tablist" aria-label="Barangay">
+                {stations.map(s => {
+                  const active = s.id === stationId;
+                  const dot = s.off || s.level == null ? '#94a3b8' : FLOOD_LEVELS[s.level].color;
+                  return (
+                    <button
+                      key={s.id}
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => chooseStation(s.id)}
+                      className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm font-semibold transition cursor-pointer ${
+                        active ? 'bg-[#123a54] border-[#123a54] text-white shadow-sm' : 'bg-[#f8fafc] border-[#d9e2ec] text-[#123a54] hover:border-[#2b6e8f]'
+                      }`}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full ring-2 ring-white/70" style={{ background: dot }} />
+                      {s.barangay}
+                    </button>
+                  );
+                })}
+              </div>
+              {station && (
+                <p className="text-[11px] text-[#6d818d] mt-1.5">
+                  Showing <b className="text-[#3f5361]">{station.name}</b>{station.off ? ' (turned off for maintenance)' : ''}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* LEFT COLUMN: Hero Status, Water Gauge, Metrics & Safety Guidelines (7/12 width) */}
           <div className="lg:col-span-7 min-w-0 w-full flex flex-col justify-start space-y-4">
-
-            {/* ── WHICH BARANGAY ──────────────────────────────────────────── */}
-            {stations.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-[#e4edf0] px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <MapPin size={16} className="text-[#2b6e8f] flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#6d818d]">Your barangay</p>
-                    <p className="text-xs text-[#3f5361] truncate">
-                      Showing {station?.name || 'station'}{station?.off ? ' (turned off for maintenance)' : ''}
-                    </p>
-                  </div>
-                </div>
-                <select
-                  value={stationId ?? ''}
-                  onChange={(e) => chooseStation(Number(e.target.value))}
-                  className="text-sm font-semibold px-3 py-2 rounded-xl bg-[#f8fafc] border border-[#d9e2ec] text-[#123a54] focus:outline-none focus:ring-2 focus:ring-[#2b6e8f]"
-                  aria-label="Choose your barangay"
-                >
-                  {stations.map(s => <option key={s.id} value={s.id}>{s.barangay}</option>)}
-                </select>
-              </div>
-            )}
 
             {/* ── HERO STATUS CARD ────────────────────────────────────────── */}
             <div className="relative overflow-hidden rounded-[24px] border shadow-sm p-5 sm:p-7 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-5 items-center card-enter card-enter-d1"
@@ -663,7 +680,7 @@ export default function PublicPortal() {
           <div className="lg:col-span-5 min-w-0 w-full flex flex-col gap-4">
 
             {/* Flood heat map of Antipolo (the resident's barangay is highlighted) */}
-            <FloodHeatMap highlightId={stationId} title="Flood map of Antipolo" />
+            <FloodHeatMap highlightId={stationId} onSelect={chooseStation} title="Flood map of Antipolo" />
 
             {/* Sign up for flood alerts (SMS or email, by barangay) */}
             <div id="alert-signup">

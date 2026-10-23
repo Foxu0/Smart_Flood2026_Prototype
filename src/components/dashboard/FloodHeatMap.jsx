@@ -38,7 +38,7 @@ function FitToStations({ stations, highlight }) {
   return null;
 }
 
-export default function FloodHeatMap({ highlightId = null, height = 320, title = 'Flood map' }) {
+export default function FloodHeatMap({ highlightId = null, onSelect = null, height = 320, title = 'Flood map' }) {
   const [stations, setStations] = useState([]);
 
   useEffect(() => {
@@ -94,6 +94,7 @@ export default function FloodHeatMap({ highlightId = null, height = 320, title =
                   center={[s.latitude, s.longitude]}
                   radius={s.id === highlightId ? 9 : 7}
                   pathOptions={{ color: '#ffffff', weight: 2, fillColor: c, fillOpacity: 1 }}
+                  eventHandlers={onSelect ? { click: () => onSelect(s.id) } : undefined}
                 >
                   <Tooltip direction="top" offset={[0, -6]}>
                     <div className="text-xs">

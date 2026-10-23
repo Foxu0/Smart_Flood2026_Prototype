@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { Cpu, Plus, Pencil, Replace } from 'lucide-react';
+import { Cpu, Plus, Pencil, Replace, LocateFixed } from 'lucide-react';
 import { api } from '../../lib/session.js';
 import { can, BARANGAYS, BARANGAY_SCOPED_ROLES } from '../../../shared/roles.js';
 import { Page, PageHeader, Card, Button, Field, inputClass, Modal, ErrorNote, EmptyState } from '../../components/console/ui.jsx';
@@ -22,6 +22,46 @@ function BoardCodeInput({ value, onChange }) {
       />
     </Field>
   );
+}
+
+/**
+ * Where the station is on the flood map. Staff add a board while standing at the river,
+ * so one tap on "Use my current location" takes the position from the phone's GPS.
+ */
+function LocationInput({ value, onChange }) {
+  const [status, setStatus] = useState('');
+  const useMyLocation = () => {
+    if (!navigator.geolocation) { setStatus('This device cannot share its location. Type it instead.'); return; }
+    setStatus('Getting your location…');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+        onChange(`${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+        setStatus(`Location set (accurate to about ${Math.round(accuracy)} m).`);
+      },
+      (err) => setStatus(err.code === 1
+        ? 'Location permission was denied. Allow it in the browser, or type the location.'
+        : 'Could not get your location. Go outside or type the location.'),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  };
+  return (
+    <Field label="Map location" hint="Stand next to the board and tap the button, or paste the numbers from Google Maps.">
+      <div className="flex gap-2">
+        <input className={`${inputClass} flex-1 min-w-0`} value={value} onChange={(e) => onChange(e.target.value)} placeholder="14.5869, 121.1754" />
+        <Button type="button" variant="secondary" onClick={useMyLocation}><LocateFixed size={14} /> Use my location</Button>
+      </div>
+      {status && <p className="text-[11px] text-[#6d818d] mt-1">{status}</p>}
+    </Field>
+  );
+}
+
+/** "14.5869, 121.1754" → { latitude, longitude } (empty → nothing). Throws if it is not a Philippine location. */
+function parseLocation(text) {
+  if (!text || !text.trim()) return {};
+  const [lat, lng] = text.split(',').map((v) => parseFloat(v));
+  if (!(lat >= 4 && lat <= 22 && lng >= 116 && lng <= 127)) throw new Error('Map location should look like 14.5869, 121.1754');
+  return { latitude: lat, longitude: lng };
 }
 
 /** Swap board: type the sticker code of the new board for this station. */
@@ -111,11 +151,7 @@ function DeviceForm({ initial, mode, lockBarangay, showLevels, onCancel, onSubmi
         <Field label="Sensor height (cm)" hint="How high the sensor is above the dry riverbed">
           <input className={inputClass} type="number" value={form.mountHeightCm} onChange={set('mountHeightCm')} />
         </Field>
-        {mode === 'edit' && (
-          <Field label="Map location" hint="Where the board is installed. In Google Maps, right-click the spot and click the numbers to copy them.">
-            <input className={inputClass} value={form.location} onChange={set('location')} placeholder="14.5869, 121.1754" />
-          </Field>
-        )}
+        <LocationInput value={form.location} onChange={(v) => setForm((f) => ({ ...f, location: v }))} />
         {mode === 'edit' && showLevels && (
           <div>
             <span className="block text-xs font-semibold text-slate-700">Alert levels</span>
@@ -186,18 +222,15 @@ export default function DevicesPage() {
 
   const handleSubmit = async (form) => {
     const body = { ...form };
+    // Without a location, a new station is placed at its barangay's centre
+    Object.assign(body, parseLocation(body.location));
+    delete body.location;
     if (editor.mode === 'create') {
-      delete body.levels; delete body.location;
+      delete body.levels;
       await api('/devices', { method: 'POST', body });
     } else {
-      const { levels, location } = body;
-      delete body.boardCode; delete body.levels; delete body.thresholds; delete body.location;
-      // "14.5869, 121.1754" → latitude / longitude
-      if (location && location.trim()) {
-        const [lat, lng] = location.split(',').map((v) => parseFloat(v));
-        if (!(lat >= 4 && lat <= 22 && lng >= 116 && lng <= 127)) throw new Error('Map location should look like 14.5869, 121.1754');
-        body.latitude = lat; body.longitude = lng;
-      }
+      const { levels } = body;
+      delete body.boardCode; delete body.levels; delete body.thresholds;
       // Alert levels first: if they're invalid, nothing is saved
       const t = editor.device.thresholds || {};
       const changed = canLevels && levels && Object.keys(levels).some((k) => Number(levels[k]) !== t[k]);
