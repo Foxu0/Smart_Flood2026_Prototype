@@ -474,7 +474,30 @@ export default function PublicPortal() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
+            <div className="flex items-center gap-3 sm:gap-5 flex-wrap justify-center">
+              {/* Your barangay (only barangays with a flood station) — the whole page follows this.
+                  Shown as plain white text like the clock; an invisible dropdown on top opens the list. */}
+              {stations.length > 0 && (
+                <div className="sm:pr-5 sm:border-r sm:border-white/20">
+                  <label className="relative inline-flex items-center gap-1.5 text-white cursor-pointer hover:text-sky-100" title={station ? `Showing ${station.name}` : undefined}>
+                    <MapPin size={16} className="text-sky-200 flex-shrink-0" />
+                    <span className="text-base font-semibold">{station?.barangay ?? 'Choose barangay'}</span>
+                    <ChevronDown size={15} className="text-sky-200" />
+                    <select
+                      value={stationId ?? ''}
+                      onChange={(e) => chooseStation(Number(e.target.value))}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer bg-white text-black"
+                      aria-label="Choose your barangay"
+                    >
+                      {/* Dark text on white in the opened list (the header text is white) */}
+                      {stations.map(st => (
+                        <option key={st.id} value={st.id} style={{ color: '#000', backgroundColor: '#fff' }}>{st.barangay}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+
               {/* Local Clock */}
               <div className="text-right hidden sm:block">
                 <p className="text-[9px] text-sky-200 uppercase tracking-wide">Local time</p>
@@ -487,43 +510,6 @@ export default function PublicPortal() {
 
         {/* ── MAIN GRID LAYOUT ────────────────────────────────────────────── */}
         <main className="bg-white/80 backdrop-blur-md px-3 sm:px-6 py-4 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-
-          {/* ── CHOOSE YOUR BARANGAY (only barangays with a flood station) ── */}
-          {stations.length > 0 && (
-            <div className="lg:col-span-12 min-w-0 bg-white rounded-2xl shadow-sm border border-[#e4edf0] px-4 py-3">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <p className="text-xs font-bold text-[#123a54] flex items-center gap-1.5">
-                  <MapPin size={14} className="text-[#2b6e8f]" /> Choose your barangay
-                </p>
-                <p className="text-[10px] text-[#6d818d] hidden sm:block">Only barangays with a flood station are listed</p>
-              </div>
-              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" role="tablist" aria-label="Barangay">
-                {stations.map(s => {
-                  const active = s.id === stationId;
-                  const dot = s.off || s.level == null ? '#94a3b8' : FLOOD_LEVELS[s.level].color;
-                  return (
-                    <button
-                      key={s.id}
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => chooseStation(s.id)}
-                      className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm font-semibold transition cursor-pointer ${
-                        active ? 'bg-[#123a54] border-[#123a54] text-white shadow-sm' : 'bg-[#f8fafc] border-[#d9e2ec] text-[#123a54] hover:border-[#2b6e8f]'
-                      }`}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full ring-2 ring-white/70" style={{ background: dot }} />
-                      {s.barangay}
-                    </button>
-                  );
-                })}
-              </div>
-              {station && (
-                <p className="text-[11px] text-[#6d818d] mt-1.5">
-                  Showing <b className="text-[#3f5361]">{station.name}</b>{station.off ? ' (turned off for maintenance)' : ''}
-                </p>
-              )}
-            </div>
-          )}
 
           {/* LEFT COLUMN: Hero Status, Water Gauge, Metrics & Safety Guidelines (7/12 width) */}
           <div className="lg:col-span-7 min-w-0 w-full flex flex-col justify-start space-y-4">
